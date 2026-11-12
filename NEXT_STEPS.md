@@ -18,6 +18,18 @@
   the link uses Yani's OpenRouter key, so their AI photo/text checks spend HER credit.
   A simple passcode could be a later round.
 
+## ▶ NEXT ROUND (she asked for it, 2026-11-12): weight tracker
+- Log weight per day (any day, not forced daily); show a simple line by day + a weekly summary
+  (weekly average, change vs last week, progress toward the target weight in Profile).
+- Local-first like everything else (localStorage, `yfd:v1:` keys), Thai/English via tr().
+- Steps from iPhone: a web app CANNOT read Apple Health directly. Possible later idea:
+  an Apple Shortcut that reads today's steps and opens `<app>/steps?n=…` so the app saves it.
+  Or she types steps by hand. Not decided — ask her first.
+
+## Small fix (2026-11-12): "keep this page open" warning
+- Analyze waiting screen (`app/add/[mode]/page.tsx`) and AI-chat sending (`MealReview.tsx`) now say:
+  don't close this page or switch apps, or you may need to start again. Checked in the test app.
+
 ## ▶ NEXT: ideas for a later round (nothing agreed yet)
 
 - Try Round 4 on her iPhone: Profile → English, then one real photo/text AI check

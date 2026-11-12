@@ -213,6 +213,12 @@ function AddInner() {
           <div className="h-12 w-12 animate-spin rounded-full border-4 border-olive-soft border-t-olive" />
           <p className="text-[18px]">{tr("กำลังวิเคราะห์อาหาร…", "Checking your food…")}</p>
           <p className="text-[14px] text-muted">{tr("อาจใช้เวลาสักครู่", "This may take a moment")}</p>
+          <p className="mx-6 rounded-2xl bg-warn px-4 py-3 text-[15px] text-warn-ink" data-testid="stay-note">
+            {tr(
+              "อย่าปิดหน้านี้หรือสลับไปแอปอื่นนะ ถ้าปิดไป อาจต้องเริ่มใหม่",
+              "Please keep this page open and don't switch apps. If you close it, you may need to start again.",
+            )}
+          </p>
         </div>
       )}
 

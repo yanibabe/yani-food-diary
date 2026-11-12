@@ -358,6 +358,11 @@ export function MealReview({
             <div ref={chatEnd} />
           </div>
         )}
+        {sending && (
+          <p className="rounded-2xl bg-warn px-4 py-2.5 text-[14px] text-warn-ink" data-testid="stay-note">
+            {tr("AI กำลังแก้ให้… อย่าปิดหน้านี้นะ ถ้าปิดไป อาจต้องเริ่มใหม่", "The AI is updating it… Please keep this page open. If you close it, you may need to start again.")}
+          </p>
+        )}
         {chatEnabled ? (
           <div className="flex items-end gap-2">
             <textarea
