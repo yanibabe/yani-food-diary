@@ -16,6 +16,39 @@
 - Note: anyone with the link can use the AI (spends key credit). Diary data stays on the
   phone. A simple passcode could be a later round.
 
+## ▶ NEXT: Round 3 — first-run onboarding + Profile page (agreed 2026-11-13, NOT built yet)
+
+Yani's request (from using it on her iPhone). The app is for HER OWN use, not other people —
+keep it simple, don't over-engineer for "other users".
+
+1. **Locked first-run onboarding.** If no completed profile is saved (no `name` yet), every
+   screen redirects to an onboarding flow; she can't use the app until it's done. One step
+   per screen, big buttons:
+   1. Name (ชื่อ)
+   2. Age, height, weight, sex (เพศที่ใช้ในสมการ)
+   3. Daily activity + exercise frequency (same choices as now)
+   4. Reason for using the app: ลดน้ำหนัก / เพิ่มกล้ามเนื้อ / เพิ่มน้ำหนัก / รักษาน้ำหนัก
+      - lose / gain → ask target weight + time (reuse `weightPlan()`, safe-pace cap, warnings)
+      - build muscle → small surplus (~+10% of maintenance) and protein target ~1.6 g/kg
+        (cite ISSN position stand on protein, Jäger et al. 2017: 1.4–2.0 g/kg/day)
+      - maintain → maintenance
+   5. Result: ONE big "suggested target" number. Do NOT show the separate "maintenance"
+      number anymore. Tap the number to edit it by hand. Button "เริ่มใช้งาน" saves.
+   - **No pregnancy / breastfeeding question in onboarding.**
+   - Under 18 still gets no automatic suggestion (enter own target).
+   - Her existing phone data: profile without `name`/`reason` → she goes through onboarding
+     once, with old values pre-filled.
+2. **Profile page (โปรไฟล์)** replaces the "เป้าหมาย" tab: shows name, body info, activity,
+   reason/plan, and the daily kcal target (tap to edit by hand any time). "แก้ข้อมูล" edits
+   the same fields; a new suggestion still waits for her confirmation before replacing the
+   target. Keep the method + references section (collapsed).
+   - **Agreed middle path:** a small "ตั้งครรภ์หรือให้นมลูก" checkbox lives ONLY here,
+     unticked by default (when ticked: no automatic suggestion). Low priority — she won't use it.
+3. Today page: greet by name (e.g. "สวัสดี ยานี่").
+4. Macro targets: keep 20/50/30 except "build muscle" uses the protein target above.
+5. Tests for the new reason math; check onboarding gate + old-profile migration in the
+   browser at iPhone size; deploy (push to GitHub auto-deploys) and confirm live.
+
 ## Round 2 (2026-11-13) — weight goal as "target weight + time"
 
 Yani's feedback from her iPhone: pick the weight she hopes to reach and how long
