@@ -21,6 +21,7 @@
 ## ▶ NEXT: ideas for a later round (nothing agreed yet)
 
 - Try Round 4 on her iPhone: Profile → English, then one real photo/text AI check
+- Re-try the "700 vs 520 kcal" meal photo after the calorie-prompt fix; if still low, tune the prompt again
   (should answer in English).
 - Try Round 3 on her real iPhone: her saved data should send her through setup once,
   with old values filled in.
@@ -28,6 +29,17 @@
   closing Safari.
 - Ideas from the brief: weekly charts · backup/export of local data · allergy warnings ·
   a simple passcode so strangers with the link can't spend AI credit.
+
+## Fix (2026-11-12) — photo calorie guesses came out low
+- Her report: one meal photo was 700 kcal in another app, 520 kcal in ours.
+- Nothing in the app lowers the AI's numbers; the gap came from the AI prompt.
+- Changed `app/lib/server/ai.ts` (ANALYZE_SYSTEM + item schema):
+  - AI now estimates grams eaten first (new optional `grams` field, placed before kcal), judged against plate size, then kcal from cooked-dish values.
+  - Counts hidden oil / coconut milk / sugar (in the dish OR as one "extra", never both).
+  - When unsure between two sizes, picks the larger typical shop portion.
+  - Checks kcal ≈ P×4 + C×4 + F×9.
+- NOT tested with a real (paid) AI call yet. Next: she re-takes / re-adds the same 700-kcal photo and compares.
+- Neither number is "the truth": photo guesses are usually ±20–30%.
 
 ## Round 4 (2026-11-12) — Thai / English language switch ✅
 

@@ -22,7 +22,8 @@ const ItemSchema = z.object({
   name: z.string().describe("Food name"),
   amount: num.describe("How much was EATEN, as a number"),
   unit: z.string().catch("").describe("Unit word, e.g. จาน ชิ้น ถ้วย ช้อนโต๊ะ กรัม (Thai) or plate piece cup tbsp g (English)"),
-  kcal: num,
+  grams: num.optional().describe("Your estimate of the weight EATEN in grams. Work this out BEFORE kcal."),
+  kcal: num.describe("kcal for the amount eaten, including the oil/fat/sugar it was cooked with"),
   protein: num.describe("grams"),
   carbs: num.describe("grams"),
   fat: num.describe("grams"),
@@ -71,11 +72,17 @@ Rules:
 - ${languageRule(lang)}
 - List each separate food on the plate as its own item. Numbers are for the amount actually EATEN, using the user's note (e.g. "ate half the chicken" → half portion).
 - If the user mentions oil, sauce, dressing, sugar or other add-ons, list each as its own item with kind "extra".
-- Cooking oil you cannot see: only add it if the cooking method clearly uses oil (fried, stir-fried); mark it estimated and say so in note.
+- How to estimate each food, step by step:
+  1) Judge its size against the plate, bowl, spoon or hand in the photo. Standard Thai plates are about 23–26 cm wide; a plate of rice is often 150–250 g of cooked rice.
+  2) Write the eaten weight in grams.
+  3) Work out kcal from grams using values for the dish AS COOKED in Thai shops and homes (cooked rice ≈ 130 kcal/100 g), not for plain raw ingredients.
+- Thai dishes are often cooked with a lot of oil, coconut milk, sugar and fatty meat. Count this hidden energy: stir-fried, deep-fried and fried-egg dishes soak up oil (often 1–2 tbsp = 120–240 kcal per plate); curries with coconut milk, sweet sauces and pork belly add a lot too. Include it in the dish's kcal, or list cooking oil as its own "extra" item (estimated=true, say so in note) — never both.
+- Photo estimates usually come out TOO LOW, because portions look smaller in photos and hidden oil is missed. When you are unsure between two sizes, pick the larger, typical restaurant portion.
+- Check your numbers: kcal should be close to protein×4 + carbs×4 + fat×9.
 - Set estimated=true whenever portion size or recipe is a guess.
 - box: when there is a photo and you can locate the food, give its bounding box as fractions (0..1) of the image. Otherwise null.
 - question: ask at most ONE short question only if the answer would change calories a lot. Otherwise null.
-- Use typical Thai portion sizes and Thai food composition values. Be realistic, not optimistic.
+- Use typical Thai portion sizes and Thai food composition values (e.g. INMU Thai Food Composition Table). Be realistic: do not shrink portions or leave out cooking fat.
 Return ONLY a JSON object matching this JSON Schema:
 ${shapeOf(AnalysisSchema)}`;
 
