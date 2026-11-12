@@ -6,9 +6,19 @@
 
 ---
 
-## Where we are (Round 1 — built 2026-11-12, local only)
+## LIVE (2026-11-12)
 
-Built and tested on the Mac (not deployed, not on GitHub yet):
+- **App:** https://yani-food-diary.vercel.app  (Vercel, exm-labs account, free)
+- **Code:** https://github.com/yanibabe/yani-food-diary  (private; pushes auto-deploy)
+- `OPENROUTER_API_KEY` is set in Vercel (Production + Preview), encrypted.
+- Checked live: home, manifest, icon load; `/api/status` says configured; one real AI
+  call ("กล้วยหอม 1 ลูก" → 120 kcal) worked.
+- Note: anyone with the link can use the AI (spends key credit). Diary data stays on the
+  phone. A simple passcode could be a later round.
+
+## Where we are (Round 1 — built 2026-11-12)
+
+Built and tested on the Mac:
 
 - **วันนี้ (Today):** kcal eaten vs daily target (ring), protein/carbs/fat pastel
   cards, meals grouped มื้อสาย / มื้อเย็น / ของว่าง, day back/forward, Thai time
@@ -58,7 +68,6 @@ Built and tested on the Mac (not deployed, not on GitHub yet):
 
 - Real phone-camera food photos (only a drawn plate was tested so far).
 - On a real iPhone: camera, home-screen install, storage after closing Safari.
-- Deploy (Vercel) and GitHub repo — not done this round.
 
 ## Next round ideas (from the brief, deliberately left out)
 
