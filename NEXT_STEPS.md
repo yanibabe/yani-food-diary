@@ -16,6 +16,19 @@
 - Note: anyone with the link can use the AI (spends key credit). Diary data stays on the
   phone. A simple passcode could be a later round.
 
+## Round 2 (2026-11-13) — weight goal as "target weight + time"
+
+Yani's feedback from her iPhone: pick the weight she hopes to reach and how long
+(days / weeks / months) instead of fixed speeds.
+- `weightPlan()` in `app/lib/energy.ts`: kg ÷ weeks → kcal/day (× 7,700 ÷ 7).
+- Safe pace cap: lose ≤ 1 kg/week and ≤ 1% body weight/week; gain ≤ 0.5 kg/week.
+  Too fast → warning, shows the shortest safe time + "เปลี่ยนเป็น N เดือน" button.
+- Plan card shows kg to change, kg/week, and the Thai date the goal is reached.
+- BMI < 18.5 target → warning to see a doctor. 1,200/1,500 kcal floor still applies.
+- Old saved profiles (with the old speed choice) open fine: target starts at current
+  weight, 3 months.
+- Tests: 16 pass (4 new). Checked in browser at iPhone size.
+
 ## Where we are (Round 1 — built 2026-11-12)
 
 Built and tested on the Mac:

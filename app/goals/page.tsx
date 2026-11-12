@@ -5,13 +5,14 @@ import {
   ACTIVITY_LEVELS,
   DAILY_LABEL,
   EXERCISE_LABEL,
-  GOAL_LABEL,
+  UNIT_TH,
   estimateEnergy,
   macroTargets,
 } from "../lib/energy";
+import { shiftDateKey, thaiDateKey, thaiDateLabel } from "../lib/date";
 import { fmtKcal } from "../lib/nutrition";
 import { useStore } from "../lib/store";
-import type { DailyActivity, ExerciseFreq, Goals, Profile, Sex, WeightGoal } from "../lib/types";
+import type { DailyActivity, DurationUnit, ExerciseFreq, Goals, Profile, Sex } from "../lib/types";
 
 const EMPTY: Profile = {
   age: 0,
@@ -20,10 +21,26 @@ const EMPTY: Profile = {
   sex: "female",
   daily: "sitting",
   exercise: "none",
-  goal: "maintain",
+  targetWeightKg: 0,
+  duration: 3,
+  durationUnit: "month",
   pregnant: false,
   breastfeeding: false,
 };
+
+/** Profiles saved before "target weight + time" existed get sensible starting values. */
+function fillProfile(pr: Profile | null): Profile | null {
+  if (!pr) return null;
+  const { targetWeightKg, duration, durationUnit } = pr as Partial<Profile>;
+  return {
+    ...pr,
+    targetWeightKg: targetWeightKg ?? pr.weightKg,
+    duration: duration ?? 3,
+    durationUnit: durationUnit ?? "month",
+  };
+}
+
+const kg = (n: number) => (Math.round(n * 10) / 10).toString();
 
 function Choice<T extends string>({
   value,
@@ -52,6 +69,55 @@ function Choice<T extends string>({
   );
 }
 
+function PlanSummary({
+  p,
+  plan,
+  onUseSafe,
+}: {
+  p: Profile;
+  plan: import("../lib/energy").WeightPlan;
+  onUseSafe: (months: number) => void;
+}) {
+  const today = thaiDateKey();
+  if (plan.direction === "keep") {
+    return (
+      <p className="rounded-2xl bg-paper px-4 py-3 text-[15px]" data-testid="plan-summary">
+        แผน: <b>รักษาน้ำหนัก</b> ไว้ที่ {kg(p.weightKg)} กก.
+      </p>
+    );
+  }
+  const verb = plan.direction === "lose" ? "ลด" : "เพิ่ม";
+  const reachDays = plan.tooFast ? plan.safeWeeks * 7 : plan.days;
+  return (
+    <div className="space-y-2" data-testid="plan-summary">
+      <div className="rounded-2xl bg-paper px-4 py-3 text-[15px]">
+        <div>
+          แผน: <b>{verb} {kg(plan.changeKg)} กก.</b> ({kg(p.weightKg)} → {kg(p.targetWeightKg)} กก.) ภายใน {p.duration} {UNIT_TH[p.durationUnit]}
+        </div>
+        <div className="text-muted">
+          ≈ {kg(plan.usedKgPerWeek)} กก./สัปดาห์ · ถึงเป้าประมาณ {thaiDateLabel(shiftDateKey(today, Math.round(reachDays)))}
+        </div>
+      </div>
+      {plan.tooFast && (
+        <div className="space-y-2 rounded-2xl bg-warn px-4 py-3 text-[15px] text-warn-ink" role="alert">
+          <p>
+            เร็วเกินไปสำหรับร่างกาย: ต้อง{verb} {kg(plan.wantedKgPerWeek)} กก./สัปดาห์ แต่ไม่ควรเกิน {kg(plan.safeMaxKgPerWeek)} กก./สัปดาห์
+            — ควรใช้เวลาอย่างน้อยประมาณ <b>{plan.safeMonths} เดือน</b> ({plan.safeWeeks} สัปดาห์) แอปจึงคำนวณด้วยความเร็วที่ปลอดภัยแทน
+          </p>
+          <button className="btn-soft !min-h-[44px] !bg-paper" onClick={() => onUseSafe(plan.safeMonths)}>
+            เปลี่ยนเป็น {plan.safeMonths} เดือน
+          </button>
+        </div>
+      )}
+      {plan.direction === "lose" && plan.targetBmi < 18.5 && (
+        <p className="rounded-2xl bg-warn px-4 py-3 text-[15px] text-warn-ink" role="alert">
+          น้ำหนักที่อยากเป็นนี้ทำให้ BMI ≈ {kg(plan.targetBmi)} ซึ่งต่ำกว่าเกณฑ์ปกติ (18.5) ควรปรึกษาแพทย์ก่อนตั้งเป้านี้
+        </p>
+      )}
+    </div>
+  );
+}
+
 export default function GoalsPage() {
   const { ready, goals } = useStore();
   if (!ready) return <main className="page" />;
@@ -61,7 +127,7 @@ export default function GoalsPage() {
 function GoalsForm({ goals }: { goals: Goals }) {
   const { setGoals } = useStore();
   const [manual, setManual] = useState<number | null>(goals.targetKcal);
-  const [p, setP] = useState<Profile>(goals.profile ?? EMPTY);
+  const [p, setP] = useState<Profile>(fillProfile(goals.profile) ?? EMPTY);
   const [skip, setSkip] = useState(goals.skippedEstimate);
   const [saved, setSaved] = useState<string | null>(null);
   const set = (patch: Partial<Profile>) => setP((x) => ({ ...x, ...patch }));
@@ -72,9 +138,9 @@ function GoalsForm({ goals }: { goals: Goals }) {
     setManual(goals.targetKcal);
   }
 
-  const filled = p.age > 0 && p.heightCm > 0 && p.weightKg > 0;
+  const filled = p.age > 0 && p.heightCm > 0 && p.weightKg > 0 && p.targetWeightKg > 0;
   const result = useMemo(() => (filled ? estimateEnergy(p) : null), [p, filled]);
-  const profileChanged = JSON.stringify(p) !== JSON.stringify(goals.profile);
+  const profileChanged = JSON.stringify(p) !== JSON.stringify(fillProfile(goals.profile));
   const isNew = result?.ok && (result.suggested !== goals.targetKcal || profileChanged);
   const mt = macroTargets(goals.targetKcal);
 
@@ -186,9 +252,35 @@ function GoalsForm({ goals }: { goals: Goals }) {
               <span className="label">ออกกำลังกายบ่อยแค่ไหน</span>
               <Choice<ExerciseFreq> value={p.exercise} options={EXERCISE_LABEL} onChange={(v) => set({ exercise: v })} />
             </div>
-            <div>
-              <span className="label">เป้าหมายด้านน้ำหนัก</span>
-              <Choice<WeightGoal> value={p.goal} options={GOAL_LABEL} onChange={(v) => set({ goal: v })} />
+            <div className="space-y-3">
+              <span className="label !mb-0 text-[16px] font-semibold text-ink">เป้าหมายด้านน้ำหนัก</span>
+              <div>
+                <label className="label" htmlFor="target-weight">น้ำหนักที่อยากเป็น (กก.)</label>
+                <NumberField id="target-weight" value={p.targetWeightKg || null} onChange={(n) => set({ targetWeightKg: n ?? 0 })} />
+              </div>
+              <div>
+                <label className="label" htmlFor="duration">ภายในเวลา</label>
+                <div className="flex gap-2">
+                  <NumberField id="duration" className="field num !w-24" value={p.duration || null} onChange={(n) => set({ duration: n ?? 0 })} />
+                  <div className="grid flex-1 grid-cols-3 gap-2">
+                    {(["day", "week", "month"] as DurationUnit[]).map((u) => (
+                      <button
+                        key={u}
+                        onClick={() => set({ durationUnit: u })}
+                        aria-pressed={p.durationUnit === u}
+                        className={`min-h-[48px] rounded-2xl text-[16px] ${p.durationUnit === u ? "bg-olive font-medium text-white" : "bg-cream"}`}
+                      >
+                        {UNIT_TH[u]}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              {p.weightKg > 0 && p.targetWeightKg !== p.weightKg && (
+                <button className="text-[15px] text-olive-dark underline" onClick={() => set({ targetWeightKg: p.weightKg })}>
+                  แค่อยากรักษาน้ำหนักเดิม
+                </button>
+              )}
             </div>
 
             {result && !result.ok && (
@@ -209,6 +301,7 @@ function GoalsForm({ goals }: { goals: Goals }) {
                     <div className="text-[13px] text-muted">kcal/วัน</div>
                   </div>
                 </div>
+                <PlanSummary p={p} plan={result.plan} onUseSafe={(m) => set({ duration: m, durationUnit: "month" })} />
                 <p className="text-[15px]">
                   ระดับกิจกรรมที่ใช้: <b>{result.level.label}</b> (×{result.level.factor}) — {result.level.description}
                 </p>
@@ -235,7 +328,7 @@ function GoalsForm({ goals }: { goals: Goals }) {
                     >
                       ใช้ {fmtKcal(result.suggested)} kcal เป็นเป้า
                     </button>
-                    <button className="btn-soft" onClick={() => setP(goals.profile ?? EMPTY)}>ยังไม่ใช้</button>
+                    <button className="btn-soft" onClick={() => setP(fillProfile(goals.profile) ?? EMPTY)}>ยังไม่ใช้</button>
                   </div>
                 ) : (
                   <p className="text-center text-[14px] text-olive-dark">เป้าที่ใช้อยู่ตรงกับผลคำนวณนี้แล้ว</p>
@@ -254,7 +347,7 @@ function GoalsForm({ goals }: { goals: Goals }) {
         <p><b>2. ระดับกิจกรรม</b> — รวมคำตอบเรื่องชีวิตประจำวันกับการออกกำลังกาย แล้วเลือกตัวคูณมาตรฐานที่ใกล้ที่สุด:{" "}
           {ACTIVITY_LEVELS.map((l) => `${l.label} ×${l.factor}`).join(" · ")}<br />
           แนวคิดระดับกิจกรรม (PAL): FAO/WHO/UNU, Human Energy Requirements, 2004.</p>
-        <p><b>3. เป้าน้ำหนัก</b> — ประมาณ 7,700 kcal ≈ 1 กก. (ค่าประมาณทั่วไป แต่ละคนต่างกัน): ลด 0.5 กก./สัปดาห์ ≈ −550 kcal/วัน</p>
+        <p><b>3. เป้าน้ำหนัก</b> — น้ำหนักที่ต้องเปลี่ยน ÷ จำนวนสัปดาห์ = กก./สัปดาห์ แล้วคูณ 7,700 ÷ 7 เป็น kcal/วัน (7,700 kcal ≈ 1 กก. เป็นค่าประมาณทั่วไป แต่ละคนต่างกัน) · ความเร็วที่ปลอดภัย: ลดไม่เกิน 1 กก./สัปดาห์ และไม่เกิน 1% ของน้ำหนักตัว (NIH/NHLBI แนะนำราว 0.5–1 กก./สัปดาห์) · เพิ่มไม่เกิน 0.5 กก./สัปดาห์</p>
         <p><b>4. ขั้นต่ำเพื่อความปลอดภัย</b> — ไม่แนะนำต่ำกว่า 1,200 (หญิง) / 1,500 (ชาย) kcal/วัน หากไม่มีแพทย์ดูแล · NIH/NHLBI Clinical Guidelines on Overweight and Obesity in Adults, 1998.</p>
         <p className="text-muted">เป็นค่าประมาณเพื่อช่วยวางแผน ไม่ใช่คำแนะนำทางการแพทย์ ไม่ใช้กับผู้ที่อายุต่ำกว่า 18 ปี ตั้งครรภ์ หรือให้นม</p>
       </section>

@@ -100,7 +100,7 @@ export type Entry = {
 export type Sex = "female" | "male";
 export type DailyActivity = "sitting" | "light" | "standing" | "physical";
 export type ExerciseFreq = "none" | "1-2" | "3-5" | "6-7" | "twice";
-export type WeightGoal = "lose-0.5" | "lose-0.25" | "maintain" | "gain-0.25";
+export type DurationUnit = "day" | "week" | "month";
 
 export type Profile = {
   age: number;
@@ -109,7 +109,10 @@ export type Profile = {
   sex: Sex;
   daily: DailyActivity;
   exercise: ExerciseFreq;
-  goal: WeightGoal;
+  /** The weight the user hopes to reach, and by when. */
+  targetWeightKg: number;
+  duration: number;
+  durationUnit: DurationUnit;
   pregnant: boolean;
   breastfeeding: boolean;
 };

@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { mealFromRecipe, recipeTotals, ingredientMacros } from "../app/lib/recipe.ts";
-import { estimateEnergy, activityLevel, bmrMifflin } from "../app/lib/energy.ts";
+import { estimateEnergy, activityLevel, bmrMifflin, weightPlan } from "../app/lib/energy.ts";
 import { thaiDateKey, shiftDateKey } from "../app/lib/date.ts";
 import { changeAmount, blankItem } from "../app/lib/nutrition.ts";
 import type { Ingredient, Profile } from "../app/lib/types.ts";
@@ -79,7 +79,7 @@ test("Mifflin–St Jeor matches the published formula", () => {
 test("energy estimate: maintenance separate from suggested target", () => {
   const p: Profile = {
     age: 30, heightCm: 160, weightKg: 55, sex: "female",
-    daily: "sitting", exercise: "3-5", goal: "lose-0.25",
+    daily: "sitting", exercise: "3-5", targetWeightKg: 52, duration: 3, durationUnit: "month",
     pregnant: false, breastfeeding: false,
   };
   const r = estimateEnergy(p);
@@ -94,7 +94,7 @@ test("energy estimate: maintenance separate from suggested target", () => {
 test("no automatic estimate for under 18, pregnant, breastfeeding", () => {
   const base: Profile = {
     age: 30, heightCm: 160, weightKg: 55, sex: "female",
-    daily: "sitting", exercise: "none", goal: "maintain",
+    daily: "sitting", exercise: "none", targetWeightKg: 55, duration: 3, durationUnit: "month",
     pregnant: false, breastfeeding: false,
   };
   assert.equal(estimateEnergy({ ...base, age: 16 }).ok, false);
@@ -105,7 +105,7 @@ test("no automatic estimate for under 18, pregnant, breastfeeding", () => {
 test("safety floor applies", () => {
   const r = estimateEnergy({
     age: 60, heightCm: 150, weightKg: 45, sex: "female",
-    daily: "sitting", exercise: "none", goal: "lose-0.5",
+    daily: "sitting", exercise: "none", targetWeightKg: 40, duration: 2, durationUnit: "month",
     pregnant: false, breastfeeding: false,
   });
   assert.ok(r.ok && r.suggested === 1200 && r.floorApplied);
@@ -129,4 +129,48 @@ test("changing amount scales the item (half the chicken = half the kcal)", () =>
   const half = changeAmount(chicken, 0.5);
   close(half.kcal, 150);
   close(half.fat, 9);
+});
+
+const base: Profile = {
+  age: 29, heightCm: 150, weightKg: 79.35, sex: "female",
+  daily: "sitting", exercise: "none", targetWeightKg: 70, duration: 6, durationUnit: "month",
+  pregnant: false, breastfeeding: false,
+};
+
+test("target weight + time: 9.35 kg in 6 months", () => {
+  const plan = weightPlan(base);
+  assert.equal(plan.direction, "lose");
+  close(plan.changeKg, 9.35, 1e-9);
+  close(plan.wantedKgPerWeek, 9.35 / ((6 * 30.44) / 7));
+  assert.equal(plan.tooFast, false);
+  close(plan.dailyDelta, -(plan.wantedKgPerWeek * 7700) / 7);
+  const r = estimateEnergy(base);
+  assert.ok(r.ok);
+  if (r.ok) {
+    assert.equal(r.maintenance, Math.round(1425.25 * 1.2));
+    assert.equal(r.suggested, Math.round((1425.25 * 1.2 + plan.dailyDelta) / 10) * 10);
+  }
+});
+
+test("too fast: capped at the safe pace (1% body weight/week, max 1 kg)", () => {
+  const plan = weightPlan({ ...base, duration: 1 });
+  assert.equal(plan.tooFast, true);
+  close(plan.safeMaxKgPerWeek, 0.7935);
+  close(plan.usedKgPerWeek, 0.7935);
+  assert.equal(plan.safeWeeks, Math.ceil(9.35 / 0.7935));
+  const r = estimateEnergy({ ...base, duration: 1 });
+  assert.ok(r.ok && r.floorApplied && r.suggested === 1200);
+});
+
+test("same weight = keep; gain is capped at 0.5 kg/week", () => {
+  assert.equal(weightPlan({ ...base, targetWeightKg: 79.2 }).direction, "keep");
+  const g = weightPlan({ ...base, targetWeightKg: 85, duration: 2, durationUnit: "week" });
+  assert.equal(g.direction, "gain");
+  assert.ok(g.tooFast);
+  close(g.usedKgPerWeek, 0.5);
+});
+
+test("days and weeks units", () => {
+  close(weightPlan({ ...base, duration: 70, durationUnit: "day" }).wantedKgPerWeek, 9.35 / 10);
+  close(weightPlan({ ...base, duration: 20, durationUnit: "week" }).wantedKgPerWeek, 9.35 / 20);
 });
