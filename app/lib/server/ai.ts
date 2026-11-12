@@ -5,7 +5,7 @@
 import { z } from "zod";
 
 const ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
-export const MODEL = "google/gemini-3.5-flash";
+export const MODEL = "google/gemini-3.8-flash";
 const TIMEOUT_MS = 50_000;
 
 const num = z.coerce.number().catch(0);

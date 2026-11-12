@@ -15,7 +15,7 @@ A Thai-language food diary, iPhone-first. Read `NEXT_STEPS.md` first in every ch
 - Everything is saved on the device: diary, recipes, goals in localStorage
   (`app/lib/store.tsx`), photos in IndexedDB (`app/lib/photos.ts`). No backend.
 
-## AI (playground rule: OpenRouter + google/gemini-3.5-flash)
+## AI (OpenRouter, model google/gemini-3.8-flash — Yani's choice for this app)
 - All AI calls go through the server (`app/lib/server/ai.ts`, routes in `app/api/`).
 - Key: `OPENROUTER_API_KEY` in `.env.local` only (Machina gives it). NEVER commit it,
   NEVER paste it in chat. If it's missing, ask Machina — never sign up for anything paid.

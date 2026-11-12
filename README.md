@@ -27,7 +27,7 @@ npm test
 
 ## Set up the AI (needed for photo and chat analysis)
 
-AI goes through OpenRouter with the model `google/gemini-3.5-flash`, using the
+AI goes through OpenRouter with the model `google/gemini-3.8-flash`, using the
 key Machina gives you. Don't sign up for anything paid.
 
 1. Create a file named `.env.local` in this folder with one line:

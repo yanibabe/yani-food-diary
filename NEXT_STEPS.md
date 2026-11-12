@@ -31,8 +31,7 @@ Built and tested on the Mac (not deployed, not on GitHub yet):
   references shown, new results wait for confirmation, manual kcal/day any time,
   skip option, no automatic estimate for under 18 / pregnant / breastfeeding.
 - **AI:** OpenRouter through server routes (`/api/analyze`, `/api/refine`, `/api/status`),
-  model `google/gemini-3.5-flash`, key `OPENROUTER_API_KEY` in `.env.local` (not set yet —
-  ask Machina). Switched from the Claude API on 2026-11-12 at Yani's choice.
+  model `google/gemini-3.8-flash`, key `OPENROUTER_API_KEY` in `.env.local` (set 2026-11-12). Switched from the Claude API on 2026-11-12, then to gemini-3.8-flash, both at Yani's choice.
 
 ## Tested for real (2026-11-12)
 
@@ -49,7 +48,7 @@ Built and tested on the Mac (not deployed, not on GitHub yet):
 
 ## NOT tested yet
 
-- Real AI answers (needs `OPENROUTER_API_KEY` from Machina). Photo labels (boxes) depend on
+- Real AI answers (key is set; first real test still to run). Photo labels (boxes) depend on
   how well Gemini places them — check on real photos.
 - On a real iPhone: camera, home-screen install, storage after closing Safari.
 - Deploy (Vercel) and GitHub repo — not done this round.
