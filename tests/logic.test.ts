@@ -2,7 +2,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { mealFromRecipe, recipeTotals, ingredientMacros } from "../app/lib/recipe.ts";
-import { estimateEnergy, activityLevel, bmrMifflin, weightPlan } from "../app/lib/energy.ts";
+import { estimateEnergy, activityLevel, bmrMifflin, weightPlan, macroTargets, proteinTargetG } from "../app/lib/energy.ts";
+import { fillProfile, isOnboarded } from "../app/lib/profile.ts";
 import { thaiDateKey, shiftDateKey } from "../app/lib/date.ts";
 import { changeAmount, blankItem } from "../app/lib/nutrition.ts";
 import type { Ingredient, Profile } from "../app/lib/types.ts";
@@ -173,4 +174,57 @@ test("same weight = keep; gain is capped at 0.5 kg/week", () => {
 test("days and weeks units", () => {
   close(weightPlan({ ...base, duration: 70, durationUnit: "day" }).wantedKgPerWeek, 9.35 / 10);
   close(weightPlan({ ...base, duration: 20, durationUnit: "week" }).wantedKgPerWeek, 9.35 / 20);
+});
+
+// ---- Round 3: reason for using the app ----
+
+test("maintain: target = maintenance, target weight is ignored", () => {
+  const r = estimateEnergy({ ...base, reason: "maintain", targetWeightKg: 60 });
+  assert.ok(r.ok);
+  if (r.ok) {
+    assert.equal(r.plan.direction, "keep");
+    assert.equal(r.suggested, Math.round((1425.25 * 1.2) / 10) * 10);
+    assert.equal(r.proteinG, null);
+  }
+});
+
+test("build muscle: +10% of maintenance and protein 1.6 g/kg", () => {
+  const r = estimateEnergy({ ...base, reason: "muscle", targetWeightKg: 60 });
+  assert.ok(r.ok);
+  if (r.ok) {
+    const maint = 1425.25 * 1.2;
+    assert.equal(r.suggested, Math.round((maint * 1.1) / 10) * 10);
+    assert.equal(r.proteinG, Math.round(79.35 * 1.6));
+  }
+  assert.equal(proteinTargetG({ ...base, reason: "lose" }), null);
+});
+
+test("lose / gain must point the right way", () => {
+  assert.ok(estimateEnergy({ ...base, reason: "lose" }).ok);
+  const wrong = estimateEnergy({ ...base, reason: "gain" }); // target 70 < 79.35
+  assert.equal(wrong.ok, false);
+  const r = estimateEnergy({ ...base, reason: "gain", targetWeightKg: 82, duration: 6 });
+  assert.ok(r.ok && r.plan.direction === "gain" && r.suggested > r.maintenance);
+});
+
+test("macro targets: default 20/50/30, muscle uses the protein target", () => {
+  const d = macroTargets(2000);
+  close(d.protein, 100);
+  close(d.carbs, 250);
+  const m = macroTargets(2000, 127);
+  assert.equal(m.protein, 127);
+  close(m.fat, 600 / 9);
+  close(m.carbs, (2000 - 127 * 4 - 600) / 4);
+});
+
+test("old profile (no name/reason) is not onboarded and gets a pre-filled reason", () => {
+  const old = { ...base } as Profile; // saved before Round 3: no name, no reason
+  const goals = { targetKcal: 1500, targetSource: "calc" as const, profile: old, maintenanceKcal: 1710, skippedEstimate: false };
+  assert.equal(isOnboarded(goals), false);
+  const filled = fillProfile(old)!;
+  assert.equal(filled.reason, "lose");
+  assert.equal(filled.name, "");
+  assert.equal(filled.age, 29);
+  assert.equal(isOnboarded({ ...goals, profile: { ...filled, name: "ยานี่" } }), true);
+  assert.equal(isOnboarded({ ...goals, profile: null }), false);
 });

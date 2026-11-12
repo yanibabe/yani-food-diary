@@ -101,8 +101,13 @@ export type Sex = "female" | "male";
 export type DailyActivity = "sitting" | "light" | "standing" | "physical";
 export type ExerciseFreq = "none" | "1-2" | "3-5" | "6-7" | "twice";
 export type DurationUnit = "day" | "week" | "month";
+/** Why she uses the app. Decides how the daily target is set. */
+export type Reason = "lose" | "muscle" | "gain" | "maintain";
 
 export type Profile = {
+  /** Missing on profiles saved before onboarding existed. */
+  name?: string;
+  reason?: Reason;
   age: number;
   heightCm: number;
   weightKg: number;
@@ -113,6 +118,7 @@ export type Profile = {
   targetWeightKg: number;
   duration: number;
   durationUnit: DurationUnit;
+  /** One checkbox on the Profile page sets both ("pregnant or breastfeeding"). */
   pregnant: boolean;
   breastfeeding: boolean;
 };
@@ -123,7 +129,7 @@ export type Goals = {
   targetSource: "default" | "calc" | "manual";
   /** The last profile the user saved (may be null if they skipped). */
   profile: Profile | null;
-  /** Maintenance estimate from the last CONFIRMED calculation. */
+  /** Maintenance estimate from the last CONFIRMED calculation (kept, no longer shown). */
   maintenanceKcal: number | null;
   skippedEstimate: boolean;
 };

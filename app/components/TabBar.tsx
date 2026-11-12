@@ -5,13 +5,13 @@ import { usePathname } from "next/navigation";
 const TABS = [
   { href: "/", label: "วันนี้", icon: "🍽️" },
   { href: "/recipes", label: "สูตรของฉัน", icon: "📖" },
-  { href: "/goals", label: "เป้าหมาย", icon: "🎯" },
+  { href: "/profile", label: "โปรไฟล์", icon: "🙂" },
 ];
 
 /** Bottom tabs. Hidden on full-screen flows (adding food, editing). */
 export function TabBar() {
   const path = usePathname();
-  if (path.startsWith("/add") || path.startsWith("/entry") || /^\/recipes\/.+/.test(path)) return null;
+  if (path === "/welcome" || path.startsWith("/add") || path.startsWith("/entry") || /^\/recipes\/.+/.test(path)) return null;
   return (
     <nav
       className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-paper/95 backdrop-blur safe-bottom"

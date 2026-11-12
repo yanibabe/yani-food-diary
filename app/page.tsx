@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { MacroCards, Sheet, StoredPhoto } from "./components/ui";
 import { shiftDateKey, thaiDateKey, thaiDateLabel } from "./lib/date";
-import { macroTargets } from "./lib/energy";
+import { macroTargets, proteinTargetG } from "./lib/energy";
 import { fmtKcal, pickMacros, sumMacros } from "./lib/nutrition";
 import { useStore } from "./lib/store";
 import { SLOT_LABEL, SLOTS, type Entry } from "./lib/types";
@@ -54,6 +54,9 @@ function TodayInner() {
           ‹
         </button>
         <div className="text-center">
+          {goals.profile?.name && date === today && (
+            <p className="text-[15px] text-olive-dark" data-testid="greeting">สวัสดี {goals.profile.name} 🌿</p>
+          )}
           <h1 className="text-[24px] font-bold">{date === today ? "วันนี้" : "ย้อนดู"}</h1>
           <p className="text-[14px] text-muted">{thaiDateLabel(date)}</p>
         </div>
@@ -89,7 +92,7 @@ function TodayInner() {
           {left >= 0 ? `เหลืออีก ${fmtKcal(left)} kcal` : `เกินเป้า ${fmtKcal(-left)} kcal`}
         </p>
         <div className="mt-4 w-full">
-          <MacroCards m={total} targets={macroTargets(target)} />
+          <MacroCards m={total} targets={macroTargets(target, proteinTargetG(goals.profile))} />
         </div>
       </section>
 

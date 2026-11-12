@@ -4,6 +4,7 @@ import { Noto_Sans_Thai } from "next/font/google";
 import "./globals.css";
 import { DataProvider } from "./lib/store";
 import { TabBar } from "./components/TabBar";
+import { OnboardingGate } from "./components/OnboardingGate";
 
 const thai = Noto_Sans_Thai({
   variable: "--font-thai",
@@ -35,9 +36,11 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="th" className={`${thai.variable} h-full antialiased`}>
       <body className="min-h-full">
         <DataProvider>
-          <Suspense>{children}</Suspense>
           <Suspense>
-            <TabBar />
+            <OnboardingGate>
+              {children}
+              <TabBar />
+            </OnboardingGate>
           </Suspense>
         </DataProvider>
       </body>

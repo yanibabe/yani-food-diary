@@ -6,7 +6,7 @@
 
 ---
 
-## LIVE (2026-11-12)
+## LIVE (updated 2026-11-12, Round 3)
 
 - **App:** https://yani-food-diary.vercel.app  (Vercel, exm-labs account, free)
 - **Code:** https://github.com/yanibabe/yani-food-diary  (private; pushes auto-deploy)
@@ -16,38 +16,40 @@
 - Note: anyone with the link can use the AI (spends key credit). Diary data stays on the
   phone. A simple passcode could be a later round.
 
-## ▶ NEXT: Round 3 — first-run onboarding + Profile page (agreed 2026-11-13, NOT built yet)
+## ▶ NEXT: ideas for a later round (nothing agreed yet)
 
-Yani's request (from using it on her iPhone). The app is for HER OWN use, not other people —
-keep it simple, don't over-engineer for "other users".
+- Try Round 3 on her real iPhone: her saved data should send her through setup once,
+  with old values filled in.
+- Still not tested: real phone-camera food photos; home-screen install; storage after
+  closing Safari.
+- Ideas from the brief: weekly charts · backup/export of local data · allergy warnings ·
+  a simple passcode so strangers with the link can't spend AI credit.
 
-1. **Locked first-run onboarding.** If no completed profile is saved (no `name` yet), every
-   screen redirects to an onboarding flow; she can't use the app until it's done. One step
-   per screen, big buttons:
-   1. Name (ชื่อ)
-   2. Age, height, weight, sex (เพศที่ใช้ในสมการ)
-   3. Daily activity + exercise frequency (same choices as now)
-   4. Reason for using the app: ลดน้ำหนัก / เพิ่มกล้ามเนื้อ / เพิ่มน้ำหนัก / รักษาน้ำหนัก
-      - lose / gain → ask target weight + time (reuse `weightPlan()`, safe-pace cap, warnings)
-      - build muscle → small surplus (~+10% of maintenance) and protein target ~1.6 g/kg
-        (cite ISSN position stand on protein, Jäger et al. 2017: 1.4–2.0 g/kg/day)
-      - maintain → maintenance
-   5. Result: ONE big "suggested target" number. Do NOT show the separate "maintenance"
-      number anymore. Tap the number to edit it by hand. Button "เริ่มใช้งาน" saves.
-   - **No pregnancy / breastfeeding question in onboarding.**
-   - Under 18 still gets no automatic suggestion (enter own target).
-   - Her existing phone data: profile without `name`/`reason` → she goes through onboarding
-     once, with old values pre-filled.
-2. **Profile page (โปรไฟล์)** replaces the "เป้าหมาย" tab: shows name, body info, activity,
-   reason/plan, and the daily kcal target (tap to edit by hand any time). "แก้ข้อมูล" edits
-   the same fields; a new suggestion still waits for her confirmation before replacing the
-   target. Keep the method + references section (collapsed).
-   - **Agreed middle path:** a small "ตั้งครรภ์หรือให้นมลูก" checkbox lives ONLY here,
-     unticked by default (when ticked: no automatic suggestion). Low priority — she won't use it.
-3. Today page: greet by name (e.g. "สวัสดี ยานี่").
-4. Macro targets: keep 20/50/30 except "build muscle" uses the protein target above.
-5. Tests for the new reason math; check onboarding gate + old-profile migration in the
-   browser at iPhone size; deploy (push to GitHub auto-deploys) and confirm live.
+## Round 3 (2026-11-12) — first-run setup + Profile page ✅
+
+- **Locked setup (`/welcome`)**: `app/components/OnboardingGate.tsx` sends every screen
+  here until a profile with a `name` and a `reason` is saved (`isOnboarded()` in
+  `app/lib/profile.ts`). Five screens: name → body (age/height/weight/sex) → daily life +
+  exercise → reason (ลดน้ำหนัก / เพิ่มกล้ามเนื้อ / เพิ่มน้ำหนัก / รักษาน้ำหนัก; lose/gain ask
+  target weight + time with the Round 2 safe-pace warnings) → ONE big suggested number
+  (tap to type your own) → "เริ่มใช้งาน". No pregnancy question here.
+- **Old saved profiles** (no name/reason): go through setup once; `fillProfile()` pre-fills
+  the old values and guesses the reason from the old target weight.
+- **Reason math** (`app/lib/energy.ts`): maintain = maintenance; build muscle = +10% and
+  protein 1.6 g/kg (ISSN, Jäger 2017: 1.4–2.0); lose/gain = Round 2 plan, and must point
+  the right way. `macroTargets(kcal, proteinG)`: muscle → protein fixed, fat 30%, carbs rest;
+  otherwise 20/50/30.
+- **Profile page (`/profile`)** replaces the เป้าหมาย tab (`/goals` now just redirects).
+  Big target number (tap to edit, then บันทึก), info list, "แก้ข้อมูล" edits everything;
+  a new suggestion waits for "บันทึก และใช้ X kcal" or "บันทึก แต่ใช้เป้าเดิม".
+  Small "ตั้งครรภ์หรือให้นมลูก" checkbox only here (ticked → no automatic suggestion).
+  Method + references in a folded section. The maintenance number is no longer shown.
+- **Today** greets "สวัสดี <name> 🌿" and uses the muscle protein target on the cards.
+- Tested: `npm test` 21 pass (5 new). In the browser at iPhone size with an old profile:
+  setup lock → pre-filled → build muscle 1,880 kcal + 127 g protein → typed 1,800 →
+  Today shows greeting + 1,800 + protein 127 g; Profile → แก้ข้อมูล → ลดน้ำหนัก → 1,320
+  waited for confirm, then saved. Production build passes.
+- Not checked in the browser: the pregnancy checkbox (covered by the math test).
 
 ## Round 2 (2026-11-13) — weight goal as "target weight + time"
 

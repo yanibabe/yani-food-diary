@@ -23,6 +23,14 @@
 //    gain at most 0.5 kg/week. If the chosen time is too short, the app uses
 //    the safe pace and says how long it would really take.
 //
+// 3b) Reason for using the app:
+//    lose / gain → the target weight + time plan above.
+//    maintain    → maintenance, no change.
+//    build muscle → a small surplus (+10% of maintenance) and a protein
+//    target of 1.6 g per kg body weight per day. The ISSN position stand on
+//    protein and exercise (Jäger R, et al. J Int Soc Sports Nutr.
+//    2017;14:20) recommends 1.4–2.0 g/kg/day for people who exercise.
+//
 // 4) Safety floor for the suggestion: not below 1,200 kcal (female) or
 //    1,500 kcal (male) without medical supervision — from NIH/NHLBI
 //    "Clinical Guidelines on the Identification, Evaluation, and Treatment
@@ -31,7 +39,29 @@
 // Not for: under 18, pregnant, or breastfeeding. Those people can still set
 // their own target by hand.
 
-import type { DailyActivity, DurationUnit, ExerciseFreq, Profile } from "./types.ts";
+import type { DailyActivity, DurationUnit, ExerciseFreq, Profile, Reason } from "./types.ts";
+
+export const REASON_LABEL: Record<Reason, string> = {
+  lose: "ลดน้ำหนัก",
+  muscle: "เพิ่มกล้ามเนื้อ",
+  gain: "เพิ่มน้ำหนัก",
+  maintain: "รักษาน้ำหนัก",
+};
+
+/** Build muscle: +10% of maintenance, protein 1.6 g/kg/day (ISSN 2017: 1.4–2.0). */
+export const MUSCLE_SURPLUS = 0.1;
+export const MUSCLE_PROTEIN_G_PER_KG = 1.6;
+
+/** lose/gain use the target weight + time; maintain/muscle stay at today's weight. */
+export function usesWeightGoal(reason: Reason | undefined): boolean {
+  return reason !== "maintain" && reason !== "muscle";
+}
+
+/** Protein target in grams/day, only for "build muscle". */
+export function proteinTargetG(p: Profile | null): number | null {
+  if (!p || p.reason !== "muscle" || !(p.weightKg > 0)) return null;
+  return Math.round(p.weightKg * MUSCLE_PROTEIN_G_PER_KG);
+}
 
 export const DAILY_LABEL: Record<DailyActivity, string> = {
   sitting: "นั่งทำงาน/นั่งเป็นส่วนใหญ่",
@@ -147,6 +177,8 @@ export type EnergyResult =
       floor: number;
       floorApplied: boolean;
       plan: WeightPlan;
+      /** Protein target (g/day) for "build muscle", otherwise null. */
+      proteinG: number | null;
       steps: string[];
     }
   | { ok: false; reason: "not-adult" | "pregnant" | "breastfeeding" | "invalid"; message: string };
@@ -155,7 +187,12 @@ export function validateProfile(p: Profile): string | null {
   if (!(p.age >= 18 && p.age <= 100)) return "อายุควรอยู่ระหว่าง 18–100 ปี";
   if (!(p.heightCm >= 120 && p.heightCm <= 230)) return "ส่วนสูงควรอยู่ระหว่าง 120–230 ซม.";
   if (!(p.weightKg >= 30 && p.weightKg <= 300)) return "น้ำหนักควรอยู่ระหว่าง 30–300 กก.";
+  if (!usesWeightGoal(p.reason)) return null;
   if (!(p.targetWeightKg >= 30 && p.targetWeightKg <= 300)) return "น้ำหนักที่อยากเป็นควรอยู่ระหว่าง 30–300 กก.";
+  if (p.reason === "lose" && p.targetWeightKg > p.weightKg - SAME_WEIGHT_KG)
+    return "อยากลดน้ำหนัก: น้ำหนักที่อยากเป็นต้องน้อยกว่าน้ำหนักตอนนี้";
+  if (p.reason === "gain" && p.targetWeightKg < p.weightKg + SAME_WEIGHT_KG)
+    return "อยากเพิ่มน้ำหนัก: น้ำหนักที่อยากเป็นต้องมากกว่าน้ำหนักตอนนี้";
   if (Math.abs(p.targetWeightKg - p.weightKg) >= SAME_WEIGHT_KG) {
     if (!(p.duration > 0)) return "ใส่ระยะเวลาที่อยากให้ถึงเป้า";
     if (durationDays(p.duration, p.durationUnit) > 1100) return "ระยะเวลาไม่ควรเกินประมาณ 3 ปี";
@@ -176,17 +213,11 @@ export function estimateEnergy(p: Profile): EnergyResult {
       reason: "not-adult",
       message: "การประเมินอัตโนมัตินี้ใช้กับผู้ใหญ่ 18 ปีขึ้นไปเท่านั้น ใช้ไดอารีและสูตรได้ตามปกติ และตั้งเป้าเองได้ (ควรปรึกษาแพทย์หรือนักโภชนาการ)",
     };
-  if (p.pregnant)
+  if (p.pregnant || p.breastfeeding)
     return {
       ok: false,
-      reason: "pregnant",
-      message: "ช่วงตั้งครรภ์ต้องการพลังงานต่างจากสมการนี้ แอปจึงไม่ประเมินให้ ใช้ไดอารีและสูตรได้ตามปกติ และตั้งเป้าเองตามคำแนะนำของแพทย์",
-    };
-  if (p.breastfeeding)
-    return {
-      ok: false,
-      reason: "breastfeeding",
-      message: "ช่วงให้นมต้องการพลังงานต่างจากสมการนี้ แอปจึงไม่ประเมินให้ ใช้ไดอารีและสูตรได้ตามปกติ และตั้งเป้าเองตามคำแนะนำของแพทย์",
+      reason: p.pregnant ? "pregnant" : "breastfeeding",
+      message: "ช่วงตั้งครรภ์หรือให้นมลูกต้องการพลังงานต่างจากสมการนี้ แอปจึงไม่ประเมินให้ ใช้ไดอารีและสูตรได้ตามปกติ และตั้งเป้าเองตามคำแนะนำของแพทย์",
     };
   const bad = validateProfile(p);
   if (bad) return { ok: false, reason: "invalid", message: bad };
@@ -194,9 +225,12 @@ export function estimateEnergy(p: Profile): EnergyResult {
   const bmr = bmrMifflin(p.sex, p.weightKg, p.heightCm, p.age);
   const level = activityLevel(p.daily, p.exercise);
   const maintenance = bmr * level.factor;
-  const plan = weightPlan(p);
+  // maintain / build muscle: no weight change planned.
+  const plan = weightPlan(usesWeightGoal(p.reason) ? p : { ...p, targetWeightKg: p.weightKg });
+  const muscle = p.reason === "muscle";
+  const surplus = muscle ? maintenance * MUSCLE_SURPLUS : 0;
   const floor = p.sex === "male" ? 1500 : 1200;
-  const raw = maintenance + plan.dailyDelta;
+  const raw = maintenance + plan.dailyDelta + surplus;
   const floorApplied = raw < floor;
   const suggested = Math.round(Math.max(raw, floor) / 10) * 10;
   const sexTerm = p.sex === "male" ? "+ 5" : "− 161";
@@ -204,7 +238,10 @@ export function estimateEnergy(p: Profile): EnergyResult {
     `BMR = 10 × ${p.weightKg} + 6.25 × ${p.heightCm} − 5 × ${p.age} ${sexTerm} = ${Math.round(bmr)} kcal`,
     `ระดับกิจกรรม "${level.label}" × ${level.factor} → รักษาน้ำหนัก ≈ ${Math.round(maintenance)} kcal/วัน`,
   ];
-  if (plan.direction === "keep") {
+  if (muscle) {
+    steps.push(`เพิ่มกล้ามเนื้อ: +10% ≈ +${Math.round(surplus)} kcal/วัน → ${Math.round(raw)} kcal/วัน`);
+    steps.push(`โปรตีน ${MUSCLE_PROTEIN_G_PER_KG} g × ${p.weightKg} กก. ≈ ${proteinTargetG(p)} g/วัน`);
+  } else if (plan.direction === "keep") {
     steps.push(`เป้าหมายคือรักษาน้ำหนัก (+0) → ${Math.round(raw)} kcal/วัน`);
   } else {
     const verb = plan.direction === "lose" ? "ลด" : "เพิ่ม";
@@ -218,11 +255,22 @@ export function estimateEnergy(p: Profile): EnergyResult {
     );
   }
   if (floorApplied) steps.push(`ปรับขึ้นเป็นขั้นต่ำ ${floor} kcal/วัน เพื่อความปลอดภัย`);
-  return { ok: true, bmr, level, maintenance: Math.round(maintenance), suggested, floor, floorApplied, plan, steps };
+  return { ok: true, bmr, level, maintenance: Math.round(maintenance), suggested, floor, floorApplied, plan, proteinG: proteinTargetG(p), steps };
 }
 
-/** Simple default split so the macro cards have a target: 20% P / 50% C / 30% F. */
-export function macroTargets(kcal: number) {
+/**
+ * Macro targets for the cards. Default split 20% P / 50% C / 30% F.
+ * With a protein target (build muscle): protein = that many grams,
+ * fat stays 30% of kcal, carbs get the rest.
+ */
+export function macroTargets(kcal: number, proteinG: number | null = null) {
+  if (proteinG != null) {
+    return {
+      protein: proteinG,
+      carbs: Math.max(0, kcal - proteinG * 4 - kcal * 0.3) / 4,
+      fat: (kcal * 0.3) / 9,
+    };
+  }
   return {
     protein: (kcal * 0.2) / 4,
     carbs: (kcal * 0.5) / 4,
