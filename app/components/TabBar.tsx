@@ -6,6 +6,7 @@ import { useLang } from "../lib/lang";
 const TABS = [
   { href: "/", th: "วันนี้", en: "Today", icon: "🍽️" },
   { href: "/recipes", th: "สูตรของฉัน", en: "My recipes", icon: "📖" },
+  { href: "/body", th: "น้ำหนัก", en: "Weight", icon: "⚖️" },
   { href: "/profile", th: "โปรไฟล์", en: "Profile", icon: "🙂" },
 ];
 
@@ -26,7 +27,7 @@ export function TabBar() {
             <Link
               key={t.href}
               href={t.href}
-              className={`flex min-w-[88px] flex-col items-center gap-0.5 rounded-2xl px-3 py-1.5 text-[13px] font-medium ${
+              className={`flex min-w-[72px] flex-col items-center gap-0.5 rounded-2xl px-2 py-1.5 text-[13px] font-medium ${
                 active ? "bg-olive-soft text-olive-dark" : "text-muted"
               }`}
             >

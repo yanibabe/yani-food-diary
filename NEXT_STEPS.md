@@ -1,4 +1,4 @@
-# NEXT_STEPS — Yani Food Diary
+# NEXT_STEPS — SnapCal (folder/repo/URL still "yani-food-diary")
 
 **This file is the handoff.** Read it first in every chat about this app.
 
@@ -18,13 +18,34 @@
   the link uses Yani's OpenRouter key, so their AI photo/text checks spend HER credit.
   A simple passcode could be a later round.
 
-## ▶ NEXT ROUND (she asked for it, 2026-11-12): weight tracker
-- Log weight per day (any day, not forced daily); show a simple line by day + a weekly summary
-  (weekly average, change vs last week, progress toward the target weight in Profile).
-- Local-first like everything else (localStorage, `yfd:v1:` keys), Thai/English via tr().
-- Steps from iPhone: a web app CANNOT read Apple Health directly. Possible later idea:
-  an Apple Shortcut that reads today's steps and opens `<app>/steps?n=…` so the app saves it.
-  Or she types steps by hand. Not decided — ask her first.
+## Round 5 (2026-11-12) — weight + steps tracker, and the new name SnapCal ✅
+
+- **New name: SnapCal** (her pick). Changed: page title, iPhone home-screen title, manifest
+  name/short_name, description. NOT changed (on purpose): the web address, GitHub repo and
+  folder stay `yani-food-diary`, so her saved data on the phone keeps working.
+  To see the new name under the icon she must delete the old icon and "Add to Home Screen"
+  again (data is kept — it belongs to the web address, not the icon).
+- **New tab ⚖️ น้ำหนัก / Weight → `/body`** (`app/body/page.tsx`). Day switch ‹ › like Today.
+  - Weight card: type kg (20–300), save / remove.
+  - Steps card: type steps, OR "📸 อ่านจากภาพหน้าจอ" → AI reads ONE day's step count + date from
+    a Health-app screenshot (`/api/steps`, `readSteps()` in `app/lib/server/ai.ts`, image sent at
+    1600 px). A sheet shows the number + date to check/edit before saving. If the AI finds no
+    number, she types it. Pretend AI answers 8,432 for today.
+  - This week (Mon–Sun): average weight + days weighed, change vs last week's average
+    (olive/blue when moving toward the goal, amber when away), average steps a day + total,
+    progress bar from the FIRST logged weight (or profile weight) to the Profile target weight.
+  - Weight line chart: 14 d / 30 d / 3 mo; zooms on her weights; the goal is a dashed line
+    when close, else a small "goal 70 ↓" note. Tap a dot → go to that day.
+  - Steps bars for the last 7 days (tap → that day).
+- Data: `localStorage` key `yfd:v1:body` = `[{date, weightKg, steps, updatedAt}]`;
+  math in `app/lib/body.ts` (`upsertLog`, `weekStart`, `summary`, `lastDays`); `setBody()` in store.
+- Logging a weight does NOT change the Profile weight / kcal target (kept simple; could be a
+  later "update my profile weight?" button).
+- Tested: `npm test` 29 pass (4 new). Browser at iPhone size with the pretend AI: saved a
+  weight, screenshot → 8,432 steps → saved; weekly numbers checked by hand; Thai + English;
+  no console errors. Production build passes.
+- **Not tested:** the REAL AI reading a real iPhone Health screenshot (costs credit) — she
+  tries it on her phone. Steps from an Apple Shortcut was NOT built (screenshot chosen instead).
 
 ## Small fix (2026-11-12): "keep this page open" warning
 - Analyze waiting screen (`app/add/[mode]/page.tsx`) and AI-chat sending (`MealReview.tsx`) now say:

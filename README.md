@@ -1,4 +1,4 @@
-# Yani Food Diary
+# SnapCal (was "Yani Food Diary")
 
 A Thai food diary for iPhone: Today page, photo → AI estimate → review → save,
 "My recipes" with label values and per-serving math, and "My goals" with a

@@ -14,13 +14,13 @@ const thai = Noto_Sans_Thai({
 });
 
 export const metadata: Metadata = {
-  title: "Yani Food Diary",
-  description: "บันทึกอาหารประจำวัน ถ่ายรูปให้ AI ช่วยนับแคลอรี และเก็บสูตรของฉัน",
+  title: "SnapCal",
+  description: "ถ่ายรูปนับแคล บันทึกอาหาร น้ำหนัก และจำนวนก้าว",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Food Diary",
+    title: "SnapCal",
   },
   icons: { apple: "/apple-touch-icon.png", icon: "/icon-192.png" },
 };

@@ -1,7 +1,7 @@
 {
-  "name": "Yani Food Diary",
-  "short_name": "Food Diary",
-  "description": "บันทึกอาหารประจำวัน ถ่ายรูปให้ AI ช่วยนับแคลอรี และเก็บสูตรของฉัน",
+  "name": "SnapCal",
+  "short_name": "SnapCal",
+  "description": "ถ่ายรูปนับแคล บันทึกอาหาร น้ำหนัก และจำนวนก้าว",
   "display": "standalone",
   "orientation": "portrait",
   "start_url": "/",

@@ -4,11 +4,13 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { Entry, Goals, Recipe } from "./types.ts";
+import { upsertLog, type BodyLog } from "./body.ts";
 
 const KEY = {
   entries: "yfd:v1:entries",
   recipes: "yfd:v1:recipes",
   goals: "yfd:v1:goals",
+  body: "yfd:v1:body",
 };
 
 export const DEFAULT_GOALS: Goals = {
@@ -48,6 +50,9 @@ type Store = {
   upsertRecipe: (r: Recipe) => void;
   deleteRecipe: (id: string) => void;
   setGoals: (g: Goals) => void;
+  bodyLogs: BodyLog[];
+  /** Save weight and/or steps for one day (null clears that part). */
+  setBody: (date: string, patch: Partial<Pick<BodyLog, "weightKg" | "steps">>) => void;
 };
 
 const Ctx = createContext<Store | null>(null);
@@ -58,6 +63,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [goals, setGoalsState] = useState<Goals>(DEFAULT_GOALS);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [bodyLogs, setBodyLogs] = useState<BodyLog[]>([]);
 
   useEffect(() => {
     // Load once on the device (localStorage is not available on the server).
@@ -65,6 +71,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     setEntries(read(KEY.entries, []));
     setRecipes(read(KEY.recipes, []));
     setGoalsState({ ...DEFAULT_GOALS, ...read(KEY.goals, DEFAULT_GOALS) });
+    setBodyLogs(read(KEY.body, []));
     setReady(true);
   }, []);
 
@@ -101,9 +108,17 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     setSaveError(write(KEY.goals, g));
   }, []);
 
+  const setBody = useCallback((date: string, patch: Partial<Pick<BodyLog, "weightKg" | "steps">>) => {
+    setBodyLogs((prev) => {
+      const next = upsertLog(prev, date, patch);
+      setSaveError(write(KEY.body, next));
+      return next;
+    });
+  }, []);
+
   const value = useMemo(
-    () => ({ ready, saveError, entries, recipes, goals, upsertEntry, deleteEntry, upsertRecipe, deleteRecipe, setGoals }),
-    [ready, saveError, entries, recipes, goals, upsertEntry, deleteEntry, upsertRecipe, deleteRecipe, setGoals],
+    () => ({ ready, saveError, entries, recipes, goals, upsertEntry, deleteEntry, upsertRecipe, deleteRecipe, setGoals, bodyLogs, setBody }),
+    [ready, saveError, entries, recipes, goals, upsertEntry, deleteEntry, upsertRecipe, deleteRecipe, setGoals, bodyLogs, setBody],
   );
   // Draw screens only after the saved data is loaded on the device, so the
   // first paint always matches (avoids React "hydration mismatch").

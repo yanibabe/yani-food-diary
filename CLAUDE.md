@@ -1,6 +1,6 @@
 @AGENTS.md
 
-# Yani Food Diary — rules for this app
+# SnapCal (folder: yani-food-diary) — rules for this app
 
 A Thai-language food diary, iPhone-first. Read `NEXT_STEPS.md` first in every chat.
 
