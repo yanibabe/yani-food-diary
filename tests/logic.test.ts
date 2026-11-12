@@ -228,3 +228,38 @@ test("old profile (no name/reason) is not onboarded and gets a pre-filled reason
   assert.equal(isOnboarded({ ...goals, profile: { ...filled, name: "ยานี่" } }), true);
   assert.equal(isOnboarded({ ...goals, profile: null }), false);
 });
+
+// ---- Round 4: English / Thai ----
+import { thaiDateLabel } from "../app/lib/date.ts";
+import { pickAll, trFor } from "../app/lib/i18n.ts";
+import { REASON_LABEL } from "../app/lib/energy.ts";
+
+test("language: same numbers in Thai and English, words change", () => {
+  const p: Profile = { ...base, reason: "lose" };
+  const th = estimateEnergy(p, "th");
+  const en = estimateEnergy(p, "en");
+  assert.ok(th.ok && en.ok);
+  if (!th.ok || !en.ok) return;
+  assert.equal(en.suggested, th.suggested); // the math never depends on language
+  assert.match(en.steps[1], /Activity level "Very low"/);
+  assert.match(th.steps[1], /ระดับกิจกรรม "น้อยมาก"/);
+  assert.equal(estimateEnergy({ ...p }).ok && estimateEnergy({ ...p }).steps[1], th.steps[1]); // Thai is the default
+});
+
+test("language: warnings and recipe messages in English", () => {
+  const under = estimateEnergy({ ...base, age: 16 }, "en");
+  assert.ok(!under.ok && /adults 18 and over/.test(under.message));
+  const egg: Ingredient = { id: "e", name: "egg", amount: 2, unit: "egg", label: { basis: "per100", kcal: 143, protein: 12.6, carbs: 0.7, fat: 9.5 }, gramsPerUnit: null, photoId: null };
+  const r = ingredientMacros(egg, "en");
+  assert.ok(!r.ok && /weight of 1 egg/.test(r.message));
+  const est = ingredientMacros({ ...egg, label: null, name: "ไข่ไก่" }, "en");
+  assert.ok(est.ok && est.refName === "egg");
+});
+
+test("language: date label and label lists", () => {
+  assert.equal(thaiDateLabel("2026-11-12", "en"), "Thursday, 12 Nov 2026");
+  assert.match(thaiDateLabel("2026-11-12"), /พฤหัสบดี/);
+  assert.equal(pickAll(REASON_LABEL, "en").muscle, "Build muscle");
+  assert.equal(trFor("en")("วันนี้", "Today"), "Today");
+  assert.equal(trFor("th")("วันนี้", "Today"), "วันนี้");
+});

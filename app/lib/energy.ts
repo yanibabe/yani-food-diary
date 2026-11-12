@@ -39,13 +39,14 @@
 // Not for: under 18, pregnant, or breastfeeding. Those people can still set
 // their own target by hand.
 
+import { trFor, type L, type Lang } from "./i18n.ts";
 import type { DailyActivity, DurationUnit, ExerciseFreq, Profile, Reason } from "./types.ts";
 
-export const REASON_LABEL: Record<Reason, string> = {
-  lose: "ลดน้ำหนัก",
-  muscle: "เพิ่มกล้ามเนื้อ",
-  gain: "เพิ่มน้ำหนัก",
-  maintain: "รักษาน้ำหนัก",
+export const REASON_LABEL: Record<Reason, L> = {
+  lose: { th: "ลดน้ำหนัก", en: "Lose weight" },
+  muscle: { th: "เพิ่มกล้ามเนื้อ", en: "Build muscle" },
+  gain: { th: "เพิ่มน้ำหนัก", en: "Gain weight" },
+  maintain: { th: "รักษาน้ำหนัก", en: "Keep my weight" },
 };
 
 /** Build muscle: +10% of maintenance, protein 1.6 g/kg/day (ISSN 2017: 1.4–2.0). */
@@ -63,19 +64,19 @@ export function proteinTargetG(p: Profile | null): number | null {
   return Math.round(p.weightKg * MUSCLE_PROTEIN_G_PER_KG);
 }
 
-export const DAILY_LABEL: Record<DailyActivity, string> = {
-  sitting: "นั่งทำงาน/นั่งเป็นส่วนใหญ่",
-  light: "เดินบ้างระหว่างวัน",
-  standing: "ยืนหรือเดินเกือบทั้งวัน",
-  physical: "ใช้แรงกายมาก (ยกของ งานหนัก)",
+export const DAILY_LABEL: Record<DailyActivity, L> = {
+  sitting: { th: "นั่งทำงาน/นั่งเป็นส่วนใหญ่", en: "Sitting most of the day (desk work)" },
+  light: { th: "เดินบ้างระหว่างวัน", en: "Walking around a bit during the day" },
+  standing: { th: "ยืนหรือเดินเกือบทั้งวัน", en: "Standing or walking most of the day" },
+  physical: { th: "ใช้แรงกายมาก (ยกของ งานหนัก)", en: "Heavy physical work (lifting, labor)" },
 };
 
-export const EXERCISE_LABEL: Record<ExerciseFreq, string> = {
-  none: "ไม่ได้ออกกำลังกาย",
-  "1-2": "1–2 วัน/สัปดาห์",
-  "3-5": "3–5 วัน/สัปดาห์",
-  "6-7": "6–7 วัน/สัปดาห์",
-  twice: "วันละ 2 ครั้ง / ฝึกหนักมาก",
+export const EXERCISE_LABEL: Record<ExerciseFreq, L> = {
+  none: { th: "ไม่ได้ออกกำลังกาย", en: "No exercise" },
+  "1-2": { th: "1–2 วัน/สัปดาห์", en: "1–2 days a week" },
+  "3-5": { th: "3–5 วัน/สัปดาห์", en: "3–5 days a week" },
+  "6-7": { th: "6–7 วัน/สัปดาห์", en: "6–7 days a week" },
+  twice: { th: "วันละ 2 ครั้ง / ฝึกหนักมาก", en: "Twice a day / very hard training" },
 };
 const EXERCISE_SCORE: Record<ExerciseFreq, number> = {
   none: 0,
@@ -85,14 +86,14 @@ const EXERCISE_SCORE: Record<ExerciseFreq, number> = {
   twice: 4,
 };
 
-export type ActivityLevel = { factor: number; label: string; description: string };
+export type ActivityLevel = { factor: number; label: L; description: L };
 
 export const ACTIVITY_LEVELS: ActivityLevel[] = [
-  { factor: 1.2, label: "น้อยมาก", description: "นั่งเป็นส่วนใหญ่ แทบไม่ออกกำลังกาย" },
-  { factor: 1.375, label: "เบา", description: "ออกกำลังกายเบา ๆ 1–3 วัน/สัปดาห์" },
-  { factor: 1.55, label: "ปานกลาง", description: "ออกกำลังกาย 3–5 วัน/สัปดาห์" },
-  { factor: 1.725, label: "มาก", description: "ออกกำลังกายหนัก 6–7 วัน/สัปดาห์" },
-  { factor: 1.9, label: "มากที่สุด", description: "งานใช้แรง + ฝึกหนักทุกวัน" },
+  { factor: 1.2, label: { th: "น้อยมาก", en: "Very low" }, description: { th: "นั่งเป็นส่วนใหญ่ แทบไม่ออกกำลังกาย", en: "Mostly sitting, almost no exercise" } },
+  { factor: 1.375, label: { th: "เบา", en: "Light" }, description: { th: "ออกกำลังกายเบา ๆ 1–3 วัน/สัปดาห์", en: "Light exercise 1–3 days a week" } },
+  { factor: 1.55, label: { th: "ปานกลาง", en: "Moderate" }, description: { th: "ออกกำลังกาย 3–5 วัน/สัปดาห์", en: "Exercise 3–5 days a week" } },
+  { factor: 1.725, label: { th: "มาก", en: "High" }, description: { th: "ออกกำลังกายหนัก 6–7 วัน/สัปดาห์", en: "Hard exercise 6–7 days a week" } },
+  { factor: 1.9, label: { th: "มากที่สุด", en: "Very high" }, description: { th: "งานใช้แรง + ฝึกหนักทุกวัน", en: "Physical job + hard training every day" } },
 ];
 
 /**
@@ -110,7 +111,11 @@ export function activityLevel(daily: DailyActivity, exercise: ExerciseFreq): Act
   return ACTIVITY_LEVELS[Math.min(4, idx)];
 }
 
-export const UNIT_TH: Record<DurationUnit, string> = { day: "วัน", week: "สัปดาห์", month: "เดือน" };
+export const DURATION_UNIT: Record<DurationUnit, L> = {
+  day: { th: "วัน", en: "days" },
+  week: { th: "สัปดาห์", en: "weeks" },
+  month: { th: "เดือน", en: "months" },
+};
 
 /** ~7,700 kcal ≈ 1 kg of body weight (rule of thumb). */
 export const KCAL_PER_KG = 7700;
@@ -183,19 +188,21 @@ export type EnergyResult =
     }
   | { ok: false; reason: "not-adult" | "pregnant" | "breastfeeding" | "invalid"; message: string };
 
-export function validateProfile(p: Profile): string | null {
-  if (!(p.age >= 18 && p.age <= 100)) return "อายุควรอยู่ระหว่าง 18–100 ปี";
-  if (!(p.heightCm >= 120 && p.heightCm <= 230)) return "ส่วนสูงควรอยู่ระหว่าง 120–230 ซม.";
-  if (!(p.weightKg >= 30 && p.weightKg <= 300)) return "น้ำหนักควรอยู่ระหว่าง 30–300 กก.";
+export function validateProfile(p: Profile, lang: Lang = "th"): string | null {
+  const t = trFor(lang);
+  if (!(p.age >= 18 && p.age <= 100)) return t("อายุควรอยู่ระหว่าง 18–100 ปี", "Age should be 18–100 years");
+  if (!(p.heightCm >= 120 && p.heightCm <= 230)) return t("ส่วนสูงควรอยู่ระหว่าง 120–230 ซม.", "Height should be 120–230 cm");
+  if (!(p.weightKg >= 30 && p.weightKg <= 300)) return t("น้ำหนักควรอยู่ระหว่าง 30–300 กก.", "Weight should be 30–300 kg");
   if (!usesWeightGoal(p.reason)) return null;
-  if (!(p.targetWeightKg >= 30 && p.targetWeightKg <= 300)) return "น้ำหนักที่อยากเป็นควรอยู่ระหว่าง 30–300 กก.";
+  if (!(p.targetWeightKg >= 30 && p.targetWeightKg <= 300))
+    return t("น้ำหนักที่อยากเป็นควรอยู่ระหว่าง 30–300 กก.", "Goal weight should be 30–300 kg");
   if (p.reason === "lose" && p.targetWeightKg > p.weightKg - SAME_WEIGHT_KG)
-    return "อยากลดน้ำหนัก: น้ำหนักที่อยากเป็นต้องน้อยกว่าน้ำหนักตอนนี้";
+    return t("อยากลดน้ำหนัก: น้ำหนักที่อยากเป็นต้องน้อยกว่าน้ำหนักตอนนี้", "To lose weight, your goal weight must be less than your weight now");
   if (p.reason === "gain" && p.targetWeightKg < p.weightKg + SAME_WEIGHT_KG)
-    return "อยากเพิ่มน้ำหนัก: น้ำหนักที่อยากเป็นต้องมากกว่าน้ำหนักตอนนี้";
+    return t("อยากเพิ่มน้ำหนัก: น้ำหนักที่อยากเป็นต้องมากกว่าน้ำหนักตอนนี้", "To gain weight, your goal weight must be more than your weight now");
   if (Math.abs(p.targetWeightKg - p.weightKg) >= SAME_WEIGHT_KG) {
-    if (!(p.duration > 0)) return "ใส่ระยะเวลาที่อยากให้ถึงเป้า";
-    if (durationDays(p.duration, p.durationUnit) > 1100) return "ระยะเวลาไม่ควรเกินประมาณ 3 ปี";
+    if (!(p.duration > 0)) return t("ใส่ระยะเวลาที่อยากให้ถึงเป้า", "Enter how long you want to take");
+    if (durationDays(p.duration, p.durationUnit) > 1100) return t("ระยะเวลาไม่ควรเกินประมาณ 3 ปี", "The time should be no more than about 3 years");
   }
   return null;
 }
@@ -206,20 +213,27 @@ export function bmrMifflin(sex: "female" | "male", kg: number, cm: number, age: 
 
 const fmt1 = (n: number) => (Math.round(n * 100) / 100).toString();
 
-export function estimateEnergy(p: Profile): EnergyResult {
+export function estimateEnergy(p: Profile, lang: Lang = "th"): EnergyResult {
+  const t = trFor(lang);
   if (p.age > 0 && p.age < 18)
     return {
       ok: false,
       reason: "not-adult",
-      message: "การประเมินอัตโนมัตินี้ใช้กับผู้ใหญ่ 18 ปีขึ้นไปเท่านั้น ใช้ไดอารีและสูตรได้ตามปกติ และตั้งเป้าเองได้ (ควรปรึกษาแพทย์หรือนักโภชนาการ)",
+      message: t(
+        "การประเมินอัตโนมัตินี้ใช้กับผู้ใหญ่ 18 ปีขึ้นไปเท่านั้น ใช้ไดอารีและสูตรได้ตามปกติ และตั้งเป้าเองได้ (ควรปรึกษาแพทย์หรือนักโภชนาการ)",
+        "This automatic estimate is for adults 18 and over only. You can still use the diary and recipes, and set your own target (please ask a doctor or dietitian).",
+      ),
     };
   if (p.pregnant || p.breastfeeding)
     return {
       ok: false,
       reason: p.pregnant ? "pregnant" : "breastfeeding",
-      message: "ช่วงตั้งครรภ์หรือให้นมลูกต้องการพลังงานต่างจากสมการนี้ แอปจึงไม่ประเมินให้ ใช้ไดอารีและสูตรได้ตามปกติ และตั้งเป้าเองตามคำแนะนำของแพทย์",
+      message: t(
+        "ช่วงตั้งครรภ์หรือให้นมลูกต้องการพลังงานต่างจากสมการนี้ แอปจึงไม่ประเมินให้ ใช้ไดอารีและสูตรได้ตามปกติ และตั้งเป้าเองตามคำแนะนำของแพทย์",
+        "Pregnancy and breastfeeding need different energy than this formula, so the app does not estimate it. You can still use the diary and recipes, and set your own target with your doctor's advice.",
+      ),
     };
-  const bad = validateProfile(p);
+  const bad = validateProfile(p, lang);
   if (bad) return { ok: false, reason: "invalid", message: bad };
 
   const bmr = bmrMifflin(p.sex, p.weightKg, p.heightCm, p.age);
@@ -236,25 +250,30 @@ export function estimateEnergy(p: Profile): EnergyResult {
   const sexTerm = p.sex === "male" ? "+ 5" : "− 161";
   const steps = [
     `BMR = 10 × ${p.weightKg} + 6.25 × ${p.heightCm} − 5 × ${p.age} ${sexTerm} = ${Math.round(bmr)} kcal`,
-    `ระดับกิจกรรม "${level.label}" × ${level.factor} → รักษาน้ำหนัก ≈ ${Math.round(maintenance)} kcal/วัน`,
+    t(
+      `ระดับกิจกรรม "${level.label.th}" × ${level.factor} → รักษาน้ำหนัก ≈ ${Math.round(maintenance)} kcal/วัน`,
+      `Activity level "${level.label.en}" × ${level.factor} → keep weight ≈ ${Math.round(maintenance)} kcal/day`,
+    ),
   ];
+  const day = t("kcal/วัน", "kcal/day");
+  const kgWk = t("กก./สัปดาห์", "kg/week");
   if (muscle) {
-    steps.push(`เพิ่มกล้ามเนื้อ: +10% ≈ +${Math.round(surplus)} kcal/วัน → ${Math.round(raw)} kcal/วัน`);
-    steps.push(`โปรตีน ${MUSCLE_PROTEIN_G_PER_KG} g × ${p.weightKg} กก. ≈ ${proteinTargetG(p)} g/วัน`);
+    steps.push(t(`เพิ่มกล้ามเนื้อ: +10% ≈ +${Math.round(surplus)} kcal/วัน → ${Math.round(raw)} kcal/วัน`, `Build muscle: +10% ≈ +${Math.round(surplus)} kcal/day → ${Math.round(raw)} kcal/day`));
+    steps.push(t(`โปรตีน ${MUSCLE_PROTEIN_G_PER_KG} g × ${p.weightKg} กก. ≈ ${proteinTargetG(p)} g/วัน`, `Protein ${MUSCLE_PROTEIN_G_PER_KG} g × ${p.weightKg} kg ≈ ${proteinTargetG(p)} g/day`));
   } else if (plan.direction === "keep") {
-    steps.push(`เป้าหมายคือรักษาน้ำหนัก (+0) → ${Math.round(raw)} kcal/วัน`);
+    steps.push(t(`เป้าหมายคือรักษาน้ำหนัก (+0) → ${Math.round(raw)} kcal/วัน`, `Goal is to keep your weight (+0) → ${Math.round(raw)} kcal/day`));
   } else {
-    const verb = plan.direction === "lose" ? "ลด" : "เพิ่ม";
+    const verb = plan.direction === "lose" ? t("ลด", "Lose") : t("เพิ่ม", "Gain");
     steps.push(
-      `${verb} ${fmt1(plan.changeKg)} กก. ใน ${p.duration} ${UNIT_TH[p.durationUnit]} ≈ ${fmt1(plan.wantedKgPerWeek)} กก./สัปดาห์`,
+      `${verb} ${fmt1(plan.changeKg)} ${t("กก. ใน", "kg in")} ${p.duration} ${DURATION_UNIT[p.durationUnit][lang]} ≈ ${fmt1(plan.wantedKgPerWeek)} ${kgWk}`,
     );
     if (plan.tooFast)
-      steps.push(`เร็วเกินไป ใช้ความเร็วที่ปลอดภัย ${fmt1(plan.usedKgPerWeek)} กก./สัปดาห์ แทน`);
+      steps.push(t(`เร็วเกินไป ใช้ความเร็วที่ปลอดภัย ${fmt1(plan.usedKgPerWeek)} กก./สัปดาห์ แทน`, `Too fast — using the safe pace of ${fmt1(plan.usedKgPerWeek)} kg/week instead`));
     steps.push(
-      `${fmt1(plan.usedKgPerWeek)} กก./สัปดาห์ × 7,700 ÷ 7 ≈ ${plan.dailyDelta >= 0 ? "+" : "−"}${Math.round(Math.abs(plan.dailyDelta))} kcal/วัน → ${Math.round(raw)} kcal/วัน`,
+      `${fmt1(plan.usedKgPerWeek)} ${kgWk} × 7,700 ÷ 7 ≈ ${plan.dailyDelta >= 0 ? "+" : "−"}${Math.round(Math.abs(plan.dailyDelta))} ${day} → ${Math.round(raw)} ${day}`,
     );
   }
-  if (floorApplied) steps.push(`ปรับขึ้นเป็นขั้นต่ำ ${floor} kcal/วัน เพื่อความปลอดภัย`);
+  if (floorApplied) steps.push(t(`ปรับขึ้นเป็นขั้นต่ำ ${floor} kcal/วัน เพื่อความปลอดภัย`, `Raised to the safe minimum of ${floor} kcal/day`));
   return { ok: true, bmr, level, maintenance: Math.round(maintenance), suggested, floor, floorApplied, plan, proteinG: proteinTargetG(p), steps };
 }
 

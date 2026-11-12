@@ -45,7 +45,12 @@ export async function deletePhoto(id: string): Promise<void> {
 }
 
 /** Shrink a picked/camera photo to a JPEG data URL (keeps the app light). */
-export function compressImage(file: File, maxSide = 1280, quality = 0.8): Promise<string> {
+export function compressImage(
+  file: File,
+  maxSide = 1280,
+  quality = 0.8,
+  badImageMessage = "อ่านรูปไม่ได้ ลองเลือกรูปอื่น",
+): Promise<string> {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file);
     const img = new Image();
@@ -64,7 +69,7 @@ export function compressImage(file: File, maxSide = 1280, quality = 0.8): Promis
     };
     img.onerror = () => {
       URL.revokeObjectURL(url);
-      reject(new Error("อ่านรูปไม่ได้ ลองเลือกรูปอื่น"));
+      reject(new Error(badImageMessage));
     };
     img.src = url;
   });

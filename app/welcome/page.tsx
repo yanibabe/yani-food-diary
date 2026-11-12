@@ -15,16 +15,24 @@ import {
   validKcal,
 } from "../components/profileFields";
 import { estimateEnergy, proteinTargetG, usesWeightGoal, weightPlan } from "../lib/energy";
+import { LangToggle, useLang } from "../lib/lang";
 import { fmtKcal } from "../lib/nutrition";
 import { EMPTY_PROFILE, fillProfile } from "../lib/profile";
 import { useStore } from "../lib/store";
 import type { Profile } from "../lib/types";
 
-const TITLES = ["ยินดีต้อนรับ 🌿", "ร่างกายของคุณ", "ชีวิตประจำวัน", "ใช้แอปนี้เพื่ออะไร", "เป้าหมายต่อวันของคุณ"];
+const TITLES = [
+  { th: "ยินดีต้อนรับ 🌿", en: "Welcome 🌿" },
+  { th: "ร่างกายของคุณ", en: "Your body" },
+  { th: "ชีวิตประจำวัน", en: "Your daily life" },
+  { th: "ใช้แอปนี้เพื่ออะไร", en: "What is this app for?" },
+  { th: "เป้าหมายต่อวันของคุณ", en: "Your daily target" },
+];
 
 export default function WelcomePage() {
   const { goals, setGoals } = useStore();
   const router = useRouter();
+  const { tr, lang } = useLang();
   const [step, setStep] = useState(0);
   const [p, setP] = useState<Profile>(() => fillProfile(goals.profile) ?? EMPTY_PROFILE);
   const set = (patch: Partial<Profile>) => setP((x) => ({ ...x, ...patch }));
@@ -32,12 +40,20 @@ export default function WelcomePage() {
   const [own, setOwn] = useState<number | null>(null);
 
   const problem =
-    step === 0 ? (p.name?.trim() ? null : "ใส่ชื่อก่อนนะ") : step === 1 ? bodyProblem(p) : step === 3 ? reasonProblem(p) : null;
+    step === 0
+      ? p.name?.trim()
+        ? null
+        : tr("ใส่ชื่อก่อนนะ", "Enter your name first")
+      : step === 1
+        ? bodyProblem(p, lang)
+        : step === 3
+          ? reasonProblem(p, lang)
+          : null;
   const plan = useMemo(
     () => (step === 3 && usesWeightGoal(p.reason) && !reasonProblem(p) ? weightPlan(p) : null),
     [p, step],
   );
-  const result = useMemo(() => (step === 4 ? estimateEnergy(p) : null), [p, step]);
+  const result = useMemo(() => (step === 4 ? estimateEnergy(p, lang) : null), [p, step, lang]);
   const suggested = result?.ok ? result.suggested : null;
   const target = own ?? suggested ?? goals.targetKcal;
   const protein = proteinTargetG(p);
@@ -59,13 +75,13 @@ export default function WelcomePage() {
     <main className="page flex min-h-dvh flex-col !pb-[calc(env(safe-area-inset-bottom,0px)+20px)]">
       <div className="mb-5 flex items-center gap-3">
         {step > 0 ? (
-          <button className="h-11 w-11 shrink-0 rounded-full bg-paper text-[20px]" onClick={() => setStep(step - 1)} aria-label="ย้อนกลับ">
+          <button className="h-11 w-11 shrink-0 rounded-full bg-paper text-[20px]" onClick={() => setStep(step - 1)} aria-label={tr("ย้อนกลับ", "Back")}>
             ‹
           </button>
         ) : (
           <span className="h-11 w-11 shrink-0" />
         )}
-        <div className="flex flex-1 justify-center gap-2" aria-label={`ขั้นที่ ${step + 1} จาก 5`}>
+        <div className="flex flex-1 justify-center gap-2" aria-label={tr(`ขั้นที่ ${step + 1} จาก 5`, `Step ${step + 1} of 5`)}>
           {TITLES.map((_, i) => (
             <span key={i} className={`h-2 rounded-full transition-all ${i === step ? "w-7 bg-olive" : i < step ? "w-2 bg-olive/60" : "w-2 bg-line"}`} />
           ))}
@@ -73,15 +89,27 @@ export default function WelcomePage() {
         <span className="h-11 w-11 shrink-0" />
       </div>
 
-      <h1 className="mb-1 text-[28px] font-bold">{TITLES[step]}</h1>
-      {step === 0 && <p className="mb-5 text-[16px] text-muted">ตั้งค่าครั้งแรกนิดเดียว แล้วเริ่มบันทึกอาหารได้เลย</p>}
-      {step === 1 && <p className="mb-5 text-[16px] text-muted">ใช้คำนวณพลังงานที่ร่างกายใช้ต่อวัน</p>}
-      {step === 2 && <p className="mb-5 text-[16px] text-muted">ตอบแบบที่ใกล้ตัวคุณที่สุด</p>}
-      {step === 3 && <p className="mb-5 text-[16px] text-muted">เลือกหนึ่งข้อ</p>}
-      {step === 4 && <p className="mb-5 text-[16px] text-muted">แก้ได้ทุกเมื่อในหน้าโปรไฟล์</p>}
+      <h1 className="mb-1 text-[28px] font-bold">{TITLES[step][lang]}</h1>
+      {step === 0 && (
+        <p className="mb-5 text-[16px] text-muted">
+          {tr("ตั้งค่าครั้งแรกนิดเดียว แล้วเริ่มบันทึกอาหารได้เลย", "A quick first-time setup, then you can start logging food")}
+        </p>
+      )}
+      {step === 1 && <p className="mb-5 text-[16px] text-muted">{tr("ใช้คำนวณพลังงานที่ร่างกายใช้ต่อวัน", "Used to work out how much energy your body uses each day")}</p>}
+      {step === 2 && <p className="mb-5 text-[16px] text-muted">{tr("ตอบแบบที่ใกล้ตัวคุณที่สุด", "Pick what is closest to you")}</p>}
+      {step === 3 && <p className="mb-5 text-[16px] text-muted">{tr("เลือกหนึ่งข้อ", "Pick one")}</p>}
+      {step === 4 && <p className="mb-5 text-[16px] text-muted">{tr("แก้ได้ทุกเมื่อในหน้าโปรไฟล์", "You can change this any time on the Profile page")}</p>}
 
       <section className="card space-y-4 p-5">
-        {step === 0 && <NameField p={p} set={set} />}
+        {step === 0 && (
+          <>
+            <div>
+              <span className="label">ภาษา / Language</span>
+              <LangToggle />
+            </div>
+            <NameField p={p} set={set} />
+          </>
+        )}
         {step === 1 && <BodyFields p={p} set={set} />}
         {step === 2 && <ActivityFields p={p} set={set} />}
         {step === 3 && <ReasonFields p={p} set={set} plan={plan} />}
@@ -93,16 +121,16 @@ export default function WelcomePage() {
             <BigTarget
               value={target}
               onChange={setOwn}
-              caption={result?.ok && own == null ? "เป้าที่แนะนำ" : "เป้าของฉัน"}
+              caption={result?.ok && own == null ? tr("เป้าที่แนะนำ", "Suggested target") : tr("เป้าของฉัน", "My target")}
             />
             {own != null && suggested != null && own !== suggested && (
               <button className="mx-auto block text-[15px] text-olive-dark underline" onClick={() => setOwn(null)}>
-                กลับไปใช้ค่าที่แนะนำ ({fmtKcal(suggested)})
+                {tr("กลับไปใช้ค่าที่แนะนำ", "Go back to the suggestion")} ({fmtKcal(suggested)})
               </button>
             )}
             {protein != null && (
               <p className="rounded-2xl bg-protein px-4 py-3 text-center text-[15px] text-protein-ink">
-                เป้าโปรตีน ≈ <b className="num">{protein}</b> g/วัน
+                {tr("เป้าโปรตีน", "Protein goal")} ≈ <b className="num">{protein}</b> {tr("g/วัน", "g/day")}
               </p>
             )}
           </div>
@@ -116,11 +144,11 @@ export default function WelcomePage() {
       <div className="sticky bottom-0 bg-cream pt-3 pb-[env(safe-area-inset-bottom,0px)]">
         {step < 4 ? (
           <button className="btn-primary w-full !min-h-[58px] text-[19px]" disabled={!!problem} onClick={() => setStep(step + 1)}>
-            ถัดไป
+            {tr("ถัดไป", "Next")}
           </button>
         ) : (
           <button className="btn-primary w-full !min-h-[58px] text-[19px]" disabled={!validKcal(target)} onClick={finish}>
-            เริ่มใช้งาน
+            {tr("เริ่มใช้งาน", "Start")}
           </button>
         )}
       </div>

@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { Noto_Sans_Thai } from "next/font/google";
 import "./globals.css";
 import { DataProvider } from "./lib/store";
+import { LangProvider } from "./lib/lang";
 import { TabBar } from "./components/TabBar";
 import { OnboardingGate } from "./components/OnboardingGate";
 
@@ -35,14 +36,16 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="th" className={`${thai.variable} h-full antialiased`}>
       <body className="min-h-full">
-        <DataProvider>
-          <Suspense>
-            <OnboardingGate>
-              {children}
-              <TabBar />
-            </OnboardingGate>
-          </Suspense>
-        </DataProvider>
+        <LangProvider>
+          <DataProvider>
+            <Suspense>
+              <OnboardingGate>
+                {children}
+                <TabBar />
+              </OnboardingGate>
+            </Suspense>
+          </DataProvider>
+        </LangProvider>
       </body>
     </html>
   );

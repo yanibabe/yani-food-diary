@@ -1,6 +1,7 @@
 "use client";
 import { useMemo, useRef, useState } from "react";
 import { blankItem, changeAmount, cleanBox, cleanNumber, fmtAmount, fmtKcal, newId, pickMacros, sumMacros } from "../lib/nutrition";
+import { useLang } from "../lib/lang";
 import { SLOT_LABEL, SLOTS, type FoodItem, type MealSlot } from "../lib/types";
 import { Badge, KcalBig, MacroCards, NumberField, Sheet } from "./ui";
 
@@ -14,10 +15,11 @@ type ChatMsg = { role: "user" | "assistant"; text: string; error?: boolean };
 
 /** Photo with food labels drawn where the AI found each item. */
 export function LabeledPhoto({ src, items, onTap }: { src: string; items: FoodItem[]; onTap?: (id: string) => void }) {
+  const { tr } = useLang();
   return (
     <div className="relative overflow-hidden rounded-[26px] bg-line">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={src} alt="รูปอาหาร" className="block w-full" />
+      <img src={src} alt={tr("รูปอาหาร", "Food photo")} className="block w-full" />
       {items
         .filter((i) => i.box)
         .map((i) => {
@@ -58,15 +60,16 @@ export function ItemEditor({
   onDone: () => void;
 }) {
   const set = (patch: Partial<FoodItem>) => onChange({ ...item, ...patch });
+  const { tr } = useLang();
   return (
     <div className="space-y-4 pb-2">
       <div>
-        <label className="label" htmlFor="it-name">ชื่อ</label>
-        <input id="it-name" className="field" value={item.name} onChange={(e) => set({ name: e.target.value })} placeholder="เช่น ไก่ทอด" />
+        <label className="label" htmlFor="it-name">{tr("ชื่อ", "Name")}</label>
+        <input id="it-name" className="field" value={item.name} onChange={(e) => set({ name: e.target.value })} placeholder={tr("เช่น ไก่ทอด", "e.g. fried chicken")} />
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="label" htmlFor="it-amount">ปริมาณที่กิน</label>
+          <label className="label" htmlFor="it-amount">{tr("ปริมาณที่กิน", "Amount eaten")}</label>
           <NumberField
             id="it-amount"
             value={item.amount}
@@ -74,37 +77,39 @@ export function ItemEditor({
           />
         </div>
         <div>
-          <label className="label" htmlFor="it-unit">หน่วย</label>
-          <input id="it-unit" className="field" value={item.unit} onChange={(e) => set({ unit: e.target.value })} placeholder="จาน / ชิ้น / กรัม" />
+          <label className="label" htmlFor="it-unit">{tr("หน่วย", "Unit")}</label>
+          <input id="it-unit" className="field" value={item.unit} onChange={(e) => set({ unit: e.target.value })} placeholder={tr("จาน / ชิ้น / กรัม", "plate / piece / g")} />
         </div>
       </div>
-      <p className="-mt-2 text-[13px] text-muted">เปลี่ยนปริมาณแล้วแคลอรีและสารอาหารจะปรับตามสัดส่วนให้เอง</p>
+      <p className="-mt-2 text-[13px] text-muted">
+        {tr("เปลี่ยนปริมาณแล้วแคลอรีและสารอาหารจะปรับตามสัดส่วนให้เอง", "Change the amount and the calories and nutrients change to match")}
+      </p>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="label" htmlFor="it-kcal">แคลอรี (kcal)</label>
+          <label className="label" htmlFor="it-kcal">{tr("แคลอรี (kcal)", "Calories (kcal)")}</label>
           <NumberField id="it-kcal" value={item.kcal} onChange={(n) => set({ kcal: cleanNumber(n) })} />
         </div>
         <div>
-          <label className="label" htmlFor="it-p">โปรตีน (g)</label>
+          <label className="label" htmlFor="it-p">{tr("โปรตีน (g)", "Protein (g)")}</label>
           <NumberField id="it-p" value={item.protein} onChange={(n) => set({ protein: cleanNumber(n) })} />
         </div>
         <div>
-          <label className="label" htmlFor="it-c">คาร์บ (g)</label>
+          <label className="label" htmlFor="it-c">{tr("คาร์บ (g)", "Carbs (g)")}</label>
           <NumberField id="it-c" value={item.carbs} onChange={(n) => set({ carbs: cleanNumber(n) })} />
         </div>
         <div>
-          <label className="label" htmlFor="it-f">ไขมัน (g)</label>
+          <label className="label" htmlFor="it-f">{tr("ไขมัน (g)", "Fat (g)")}</label>
           <NumberField id="it-f" value={item.fat} onChange={(n) => set({ fat: cleanNumber(n) })} />
         </div>
       </div>
       <label className="flex min-h-[48px] items-center gap-3 rounded-2xl bg-cream px-4">
         <input type="checkbox" className="h-5 w-5 accent-[var(--olive)]" checked={item.estimated} onChange={(e) => set({ estimated: e.target.checked })} />
-        <span>เป็นค่าประมาณ</span>
+        <span>{tr("เป็นค่าประมาณ", "This is an estimate")}</span>
       </label>
       {item.note && <p className="rounded-2xl bg-warn px-4 py-3 text-[14px] text-warn-ink">{item.note}</p>}
       <div className="flex gap-3 pt-1">
-        <button className="btn-soft flex-1 !bg-[#f6e1dc] !text-danger" onClick={onDelete}>ลบรายการนี้</button>
-        <button className="btn-primary flex-1" onClick={onDone}>เสร็จ</button>
+        <button className="btn-soft flex-1 !bg-[#f6e1dc] !text-danger" onClick={onDelete}>{tr("ลบรายการนี้", "Delete this item")}</button>
+        <button className="btn-primary flex-1" onClick={onDone}>{tr("เสร็จ", "Done")}</button>
       </div>
     </div>
   );
@@ -117,7 +122,7 @@ export function MealReview({
   firstQuestion,
   chatEnabled,
   chatDisabledReason,
-  saveLabel = "บันทึกลงวันนี้",
+  saveLabel,
   onSave,
   onCancel,
   onDelete,
@@ -135,6 +140,8 @@ export function MealReview({
   onDelete?: () => void;
   startEditingId?: string | null;
 }) {
+  const { tr, lang } = useLang();
+  saveLabel ??= tr("บันทึกลงวันนี้", "Save to my diary");
   const [title, setTitle] = useState(initial.title);
   const [slot, setSlot] = useState<MealSlot>(initial.slot);
   const [items, setItems] = useState<FoodItem[]>(initial.items);
@@ -149,8 +156,8 @@ export function MealReview({
   const total = useMemo(() => sumMacros(items.map(pickMacros)), [items]);
   const editing = items.find((i) => i.id === editingId) ?? null;
   const amountSummary = items.length
-    ? items.map((i) => `${i.name || "ไม่มีชื่อ"} ${fmtAmount(i.amount)} ${i.unit}`).join(" · ")
-    : "ยังไม่มีรายการ";
+    ? items.map((i) => `${i.name || tr("ไม่มีชื่อ", "No name")} ${fmtAmount(i.amount)} ${i.unit}`).join(" · ")
+    : tr("ยังไม่มีรายการ", "Nothing yet");
 
   async function sendChat() {
     const text = msg.trim();
@@ -169,12 +176,16 @@ export function MealReview({
           })),
           history: chat.filter((c) => !c.error).map(({ role, text }) => ({ role, text })),
           message: text,
+          lang,
         }),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok || !data?.result) {
-        const why = data?.message ?? `เซิร์ฟเวอร์ตอบกลับ ${res.status}`;
-        setChat((c) => [...c, { role: "assistant", text: `ยังแก้ด้วย AI ไม่ได้: ${why} — แตะรายการเพื่อแก้เองได้`, error: true }]);
+        const why = data?.message ?? `${tr("เซิร์ฟเวอร์ตอบกลับ", "Server replied")} ${res.status}`;
+        setChat((c) => [
+          ...c,
+          { role: "assistant", text: tr(`ยังแก้ด้วย AI ไม่ได้: ${why} — แตะรายการเพื่อแก้เองได้`, `The AI couldn't change it: ${why} — tap an item to edit it yourself`), error: true },
+        ]);
         return;
       }
       const r = data.result as {
@@ -238,7 +249,7 @@ export function MealReview({
     } catch (e) {
       setChat((c) => [
         ...c,
-        { role: "assistant", text: `เชื่อมต่อไม่ได้: ${e instanceof Error ? e.message : String(e)}`, error: true },
+        { role: "assistant", text: `${tr("เชื่อมต่อไม่ได้", "Couldn't connect")}: ${e instanceof Error ? e.message : String(e)}`, error: true },
       ]);
     } finally {
       setSending(false);
@@ -247,7 +258,7 @@ export function MealReview({
   }
 
   function addManual() {
-    const it = blankItem();
+    const it = blankItem(tr("จาน", "plate"));
     setItems((p) => [...p, it]);
     setEditingId(it.id);
   }
@@ -258,7 +269,8 @@ export function MealReview({
     <div className="space-y-5">
       {mockBadge && (
         <div className="rounded-2xl bg-warn px-4 py-2.5 text-[14px] text-warn-ink">
-          โหมดทดสอบ: ผลนี้มาจาก <b>AI จำลอง</b> ไม่ใช่ AI จริง
+          {tr("โหมดทดสอบ: ผลนี้มาจาก", "Test mode: this result is from a")} <b>{tr("AI จำลอง", "pretend AI")}</b>{" "}
+          {tr("ไม่ใช่ AI จริง", "not the real AI")}
         </div>
       )}
 
@@ -269,8 +281,8 @@ export function MealReview({
           className="w-full bg-transparent text-center text-[24px] font-semibold outline-none"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="ชื่อมื้อ"
-          aria-label="ชื่อมื้อ"
+          placeholder={tr("ชื่อมื้อ", "Meal name")}
+          aria-label={tr("ชื่อมื้อ", "Meal name")}
         />
         <p className="text-center text-[14px] text-muted" data-testid="amount-summary">{amountSummary}</p>
         <KcalBig kcal={total.kcal} />
@@ -279,8 +291,8 @@ export function MealReview({
 
       <section className="card p-4">
         <div className="mb-2 flex items-center justify-between px-1">
-          <h3 className="text-[18px] font-semibold">รายการในจาน</h3>
-          <span className="text-[13px] text-muted">แตะเพื่อแก้</span>
+          <h3 className="text-[18px] font-semibold">{tr("รายการในจาน", "On the plate")}</h3>
+          <span className="text-[13px] text-muted">{tr("แตะเพื่อแก้", "Tap to edit")}</span>
         </div>
         <ul className="divide-y divide-line">
           {items.map((i) => (
@@ -294,9 +306,9 @@ export function MealReview({
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="font-medium">{i.name || "ไม่มีชื่อ"}</span>
-                    {i.kind === "extra" && <Badge tone="olive">เพิ่มเติม</Badge>}
-                    {i.estimated && <Badge>ประมาณ</Badge>}
+                    <span className="font-medium">{i.name || tr("ไม่มีชื่อ", "No name")}</span>
+                    {i.kind === "extra" && <Badge tone="olive">{tr("เพิ่มเติม", "Extra")}</Badge>}
+                    {i.estimated && <Badge>{tr("ประมาณ", "Estimate")}</Badge>}
                   </div>
                   <div className="text-[14px] text-muted">
                     {fmtAmount(i.amount)} {i.unit}
@@ -311,12 +323,14 @@ export function MealReview({
             </li>
           ))}
         </ul>
-        <button className="btn-soft mt-2 w-full" onClick={addManual}>+ เพิ่มรายการเอง</button>
+        <button className="btn-soft mt-2 w-full" onClick={addManual}>+ {tr("เพิ่มรายการเอง", "Add an item myself")}</button>
       </section>
 
       <section className="card p-4">
-        <h3 className="mb-1 px-1 text-[18px] font-semibold">อธิบายเพิ่ม</h3>
-        <p className="mb-3 px-1 text-[14px] text-muted">เช่น “ไก่กินครึ่งชิ้น แต่ผักกินหมด” หรือ “ผัดน้ำมัน 1 ช้อนโต๊ะ”</p>
+        <h3 className="mb-1 px-1 text-[18px] font-semibold">{tr("อธิบายเพิ่ม", "Tell the AI more")}</h3>
+        <p className="mb-3 px-1 text-[14px] text-muted">
+          {tr("เช่น “ไก่กินครึ่งชิ้น แต่ผักกินหมด” หรือ “ผัดน้ำมัน 1 ช้อนโต๊ะ”", "e.g. “I ate half the chicken but all the vegetables” or “fried with 1 tbsp oil”")}
+        </p>
         {chat.length > 0 && (
           <div className="mb-3 space-y-2" data-testid="chat-log">
             {chat.map((c, k) => (
@@ -340,20 +354,20 @@ export function MealReview({
               rows={1}
               value={msg}
               onChange={(e) => setMsg(e.target.value)}
-              placeholder="พิมพ์อธิบายเพิ่ม…"
-              aria-label="อธิบายเพิ่ม"
+              placeholder={tr("พิมพ์อธิบายเพิ่ม…", "Type more details…")}
+              aria-label={tr("อธิบายเพิ่ม", "Tell the AI more")}
             />
             <button className="btn-primary !min-h-[48px] shrink-0" onClick={sendChat} disabled={sending || !msg.trim()}>
-              {sending ? "…" : "ส่ง"}
+              {sending ? "…" : tr("ส่ง", "Send")}
             </button>
           </div>
         ) : (
-          <p className="rounded-2xl bg-cream px-4 py-3 text-[14px] text-muted">{chatDisabledReason ?? "AI ยังไม่พร้อม — แตะรายการเพื่อแก้เองได้"}</p>
+          <p className="rounded-2xl bg-cream px-4 py-3 text-[14px] text-muted">{chatDisabledReason ?? tr("AI ยังไม่พร้อม — แตะรายการเพื่อแก้เองได้", "The AI isn't ready — tap an item to edit it yourself")}</p>
         )}
       </section>
 
       <section className="card space-y-2 p-4">
-        <span className="label px-1">บันทึกเป็นมื้อ</span>
+        <span className="label px-1">{tr("บันทึกเป็นมื้อ", "Save as")}</span>
         <div className="grid grid-cols-3 gap-2">
           {SLOTS.map((s) => (
             <button
@@ -362,41 +376,41 @@ export function MealReview({
               className={`min-h-[48px] rounded-2xl font-medium ${slot === s ? "bg-olive text-white" : "bg-cream text-ink"}`}
               aria-pressed={slot === s}
             >
-              {SLOT_LABEL[s]}
+              {SLOT_LABEL[s][lang]}
             </button>
           ))}
         </div>
       </section>
 
       <div className="flex gap-3">
-        <button className="btn-soft flex-1" onClick={onCancel}>ยกเลิก</button>
+        <button className="btn-soft flex-1" onClick={onCancel}>{tr("ยกเลิก", "Cancel")}</button>
         <button
           className="btn-primary flex-[2]"
           disabled={!canSave}
-          onClick={() => onSave({ title: title.trim() || items[0]?.name || "อาหาร", slot, items })}
+          onClick={() => onSave({ title: title.trim() || items[0]?.name || tr("อาหาร", "Meal"), slot, items })}
         >
           {saveLabel}
         </button>
       </div>
-      {!canSave && items.length > 0 && <p className="text-center text-[14px] text-muted">ใส่ชื่อให้ทุกรายการก่อนบันทึก</p>}
+      {!canSave && items.length > 0 && <p className="text-center text-[14px] text-muted">{tr("ใส่ชื่อให้ทุกรายการก่อนบันทึก", "Give every item a name before saving")}</p>}
 
       {onDelete && (
         <>
           {confirmDelete ? (
             <div className="card space-y-3 p-4 text-center">
-              <p>ลบมื้อนี้ออกจากไดอารี?</p>
+              <p>{tr("ลบมื้อนี้ออกจากไดอารี?", "Delete this meal from your diary?")}</p>
               <div className="flex gap-3">
-                <button className="btn-soft flex-1" onClick={() => setConfirmDelete(false)}>ไม่ลบ</button>
-                <button className="btn-primary flex-1 !bg-danger" onClick={onDelete}>ลบเลย</button>
+                <button className="btn-soft flex-1" onClick={() => setConfirmDelete(false)}>{tr("ไม่ลบ", "Keep it")}</button>
+                <button className="btn-primary flex-1 !bg-danger" onClick={onDelete}>{tr("ลบเลย", "Delete")}</button>
               </div>
             </div>
           ) : (
-            <button className="w-full py-3 text-danger" onClick={() => setConfirmDelete(true)}>ลบมื้อนี้</button>
+            <button className="w-full py-3 text-danger" onClick={() => setConfirmDelete(true)}>{tr("ลบมื้อนี้", "Delete this meal")}</button>
           )}
         </>
       )}
 
-      <Sheet open={!!editing} onClose={() => setEditingId(null)} title="แก้รายการ">
+      <Sheet open={!!editing} onClose={() => setEditingId(null)} title={tr("แก้รายการ", "Edit item")}>
         {editing && (
           <ItemEditor
             item={editing}

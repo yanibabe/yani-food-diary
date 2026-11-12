@@ -3,12 +3,14 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { StoredPhoto } from "../components/ui";
+import { useLang } from "../lib/lang";
 import { fmtKcal } from "../lib/nutrition";
 import { totalsForRecipe } from "../lib/recipe";
 import { useStore } from "../lib/store";
 
 function RecipesInner() {
   const { ready, recipes } = useStore();
+  const { tr, lang } = useLang();
   const date = useSearchParams().get("date");
   const q = date ? `?date=${date}` : "";
   const list = [...recipes].sort((a, b) => b.updatedAt - a.updatedAt);
@@ -16,19 +18,21 @@ function RecipesInner() {
   return (
     <main className="page space-y-5">
       <header className="flex items-center justify-between">
-        <h1 className="text-[26px] font-bold">สูตรของฉัน</h1>
-        <Link href="/recipes/new/edit" className="btn-primary !min-h-[46px]">+ สูตรใหม่</Link>
+        <h1 className="text-[26px] font-bold">{tr("สูตรของฉัน", "My recipes")}</h1>
+        <Link href="/recipes/new/edit" className="btn-primary !min-h-[46px]">+ {tr("สูตรใหม่", "New recipe")}</Link>
       </header>
       {ready && list.length === 0 && (
         <div className="card p-6 text-center">
           <div className="text-[48px]" aria-hidden>🍳</div>
-          <p className="mt-2 text-[17px]">ยังไม่มีสูตร</p>
-          <p className="text-[15px] text-muted">บันทึกเมนูที่ทำกินเอง แล้วกด “บันทึกว่ากิน” ได้ทุกครั้ง</p>
+          <p className="mt-2 text-[17px]">{tr("ยังไม่มีสูตร", "No recipes yet")}</p>
+          <p className="text-[15px] text-muted">
+            {tr("บันทึกเมนูที่ทำกินเอง แล้วกด “บันทึกว่ากิน” ได้ทุกครั้ง", "Save dishes you cook yourself, then tap “I ate this” any time")}
+          </p>
         </div>
       )}
       <div className="grid grid-cols-2 gap-3">
         {list.map((r) => {
-          const t = totalsForRecipe(r);
+          const t = totalsForRecipe(r, lang);
           return (
             <Link key={r.id} href={`/recipes/${r.id}${q}`} className="card overflow-hidden active:scale-[0.99]" data-testid="recipe-card">
               <div className="aspect-[4/3] bg-olive-soft">
@@ -43,10 +47,10 @@ function RecipesInner() {
                 <div className="text-[14px] text-muted">
                   {t.complete ? (
                     <>
-                      <span className="num font-semibold text-ink">{fmtKcal(t.perServing.kcal)}</span> kcal/เสิร์ฟ
+                      <span className="num font-semibold text-ink">{fmtKcal(t.perServing.kcal)}</span> {tr("kcal/เสิร์ฟ", "kcal/serving")}
                     </>
                   ) : (
-                    "ข้อมูลยังไม่ครบ"
+                    tr("ข้อมูลยังไม่ครบ", "Missing some details")
                   )}
                 </div>
               </div>

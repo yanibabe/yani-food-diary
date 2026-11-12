@@ -6,24 +6,50 @@
 
 ---
 
-## LIVE (updated 2026-11-12, Round 3)
+## LIVE (updated 2026-11-12, Round 4)
 
 - **App:** https://yani-food-diary.vercel.app  (Vercel, exm-labs account, free)
 - **Code:** https://github.com/yanibabe/yani-food-diary  (private; pushes auto-deploy)
 - `OPENROUTER_API_KEY` is set in Vercel (Production + Preview), encrypted.
 - Checked live: home, manifest, icon load; `/api/status` says configured; one real AI
   call ("กล้วยหอม 1 ลูก" → 120 kcal) worked.
-- Note: anyone with the link can use the AI (spends key credit). Diary data stays on the
-  phone. A simple passcode could be a later round.
+- Sharing the link: each person's diary, recipes and profile live ONLY on their own
+  phone (localStorage + IndexedDB). Nobody sees anyone else's data. But everyone with
+  the link uses Yani's OpenRouter key, so their AI photo/text checks spend HER credit.
+  A simple passcode could be a later round.
 
 ## ▶ NEXT: ideas for a later round (nothing agreed yet)
 
+- Try Round 4 on her iPhone: Profile → English, then one real photo/text AI check
+  (should answer in English).
 - Try Round 3 on her real iPhone: her saved data should send her through setup once,
   with old values filled in.
 - Still not tested: real phone-camera food photos; home-screen install; storage after
   closing Safari.
 - Ideas from the brief: weekly charts · backup/export of local data · allergy warnings ·
   a simple passcode so strangers with the link can't spend AI credit.
+
+## Round 4 (2026-11-12) — Thai / English language switch ✅
+
+- **Switch:** "ภาษา / Language" with two buttons (ไทย | English) on the first setup screen
+  (`/welcome`, step 1) and on the Profile page. Thai is the default. The choice is saved on
+  the phone (`localStorage` key `yfd:v1:lang`) and sets `<html lang>`.
+- **How text works:** every sentence is a Thai/English pair where it is used:
+  `tr("วันนี้", "Today")`. Core in `app/lib/i18n.ts` (`trFor`, `pickAll`, type `L`), React
+  side in `app/lib/lang.tsx` (`LangProvider`, `useLang()`, `LangToggle`). Label lists
+  (meal slots, units, reasons, activity, durations) are now `{ th, en }` objects.
+- **Math files take a `lang` (default "th"):** `estimateEnergy`, `validateProfile`,
+  `ingredientMacros`, `recipeTotals`, `totalsForRecipe`, `thaiDateLabel`, `bodyProblem`,
+  `reasonProblem`. The numbers never depend on language (tested).
+- **AI answers in the app language:** the app sends `lang` to `/api/analyze` and
+  `/api/refine`; the prompt says "write in Thai" or "write in simple English". Server error
+  messages are in the chosen language too.
+- **Not translated (on purpose):** food/meal names already saved stay as they were written;
+  the pretend AI (`npm run dev:mock`) always answers in Thai.
+- Tested: `npm test` 24 pass (3 new). Browser at iPhone size: Profile → English → Profile,
+  Today, add-by-text, review screen and setup screen all English (only her name and the
+  "ไทย" button stay Thai); switched back to Thai fine; no console errors. Build passes.
+- **Not tested:** a real (paid) AI call in English — to save credit. Try one on the phone.
 
 ## Round 3 (2026-11-12) — first-run setup + Profile page ✅
 

@@ -1,4 +1,5 @@
 import { findRef } from "./foodRef.ts";
+import { trFor, type Lang } from "./i18n.ts";
 import { scaleMacros, sumMacros, ZERO } from "./nutrition.ts";
 import type { Ingredient, Macros, Recipe } from "./types.ts";
 
@@ -16,11 +17,12 @@ export type IngredientResult =
  * If units don't match (e.g. label per 100 g but amount in "ฟอง"), it asks
  * for the weight of one unit instead of guessing.
  */
-export function ingredientMacros(ing: Ingredient): IngredientResult {
+export function ingredientMacros(ing: Ingredient, lang: Lang = "th"): IngredientResult {
+  const t = trFor(lang);
   const amount = ing.amount > 0 ? ing.amount : 0;
   const isCountUnit = ing.unit === "egg" || ing.unit === "piece";
   const gpu = ing.gramsPerUnit && ing.gramsPerUnit > 0 ? ing.gramsPerUnit : null;
-  const unitWord = ing.unit === "egg" ? "ฟอง" : "ชิ้น";
+  const unitWord = ing.unit === "egg" ? t("ฟอง", "egg") : t("ชิ้น", "piece");
 
   if (ing.label) {
     const label: Macros = ing.label;
@@ -31,7 +33,10 @@ export function ingredientMacros(ing: Ingredient): IngredientResult {
           return {
             ok: false,
             reason: "need-weight-per-unit",
-            message: `ฉลากเป็นค่าต่อ 100 กรัม แต่ใส่เป็น${unitWord} — ช่วยใส่น้ำหนักต่อ 1 ${unitWord}`,
+            message: t(
+              `ฉลากเป็นค่าต่อ 100 กรัม แต่ใส่เป็น${unitWord} — ช่วยใส่น้ำหนักต่อ 1 ${unitWord}`,
+              `The label is per 100 g, but the amount is in ${unitWord}s — please add the weight of 1 ${unitWord}`,
+            ),
           };
         grams = amount * gpu;
       } else {
@@ -47,7 +52,10 @@ export function ingredientMacros(ing: Ingredient): IngredientResult {
       return {
         ok: false,
         reason: "need-weight-per-unit",
-        message: "ฉลากเป็นค่าต่อ 1 ชิ้น แต่ใส่เป็นกรัม/มล. — ช่วยใส่น้ำหนักต่อ 1 ชิ้น",
+        message: t(
+          "ฉลากเป็นค่าต่อ 1 ชิ้น แต่ใส่เป็นกรัม/มล. — ช่วยใส่น้ำหนักต่อ 1 ชิ้น",
+          "The label is per 1 piece, but the amount is in g/ml — please add the weight of 1 piece",
+        ),
       };
     return { ok: true, macros: scaleMacros(label, amount / gpu), source: "label", refName: null };
   }
@@ -57,7 +65,7 @@ export function ingredientMacros(ing: Ingredient): IngredientResult {
     return {
       ok: false,
       reason: "no-data",
-      message: "ยังไม่มีค่าสารอาหาร — กรอกค่าจากฉลากได้เลย",
+      message: t("ยังไม่มีค่าสารอาหาร — กรอกค่าจากฉลากได้เลย", "No nutrition values yet — add them from the label"),
     };
 
   let grams: number;
@@ -69,11 +77,11 @@ export function ingredientMacros(ing: Ingredient): IngredientResult {
       return {
         ok: false,
         reason: "need-weight-per-unit",
-        message: `ช่วยใส่น้ำหนักต่อ 1 ${unitWord} เพื่อคำนวณ`,
+        message: t(`ช่วยใส่น้ำหนักต่อ 1 ${unitWord} เพื่อคำนวณ`, `Please add the weight of 1 ${unitWord} to work it out`),
       };
     grams = amount * w;
   }
-  return { ok: true, macros: scaleMacros(ref.per100, grams / 100), source: "estimate", refName: ref.names[0] };
+  return { ok: true, macros: scaleMacros(ref.per100, grams / 100), source: "estimate", refName: lang === "en" ? ref.names[ref.names.length - 1] : ref.names[0] };
 }
 
 export type RecipeTotals = {
@@ -90,12 +98,13 @@ export function recipeTotals(
   ingredients: Ingredient[],
   servings: number,
   cookedWeight: number | null,
+  lang: Lang = "th",
 ): RecipeTotals {
   const problems: RecipeTotals["problems"] = [];
   const parts: Macros[] = [];
   let hasEstimate = false;
   for (const ing of ingredients) {
-    const r = ingredientMacros(ing);
+    const r = ingredientMacros(ing, lang);
     if (r.ok) {
       parts.push(r.macros);
       if (r.source === "estimate") hasEstimate = true;
@@ -115,8 +124,8 @@ export function recipeTotals(
   };
 }
 
-export function totalsForRecipe(r: Recipe): RecipeTotals {
-  return recipeTotals(r.ingredients, r.servings, r.cookedWeight);
+export function totalsForRecipe(r: Recipe, lang: Lang = "th"): RecipeTotals {
+  return recipeTotals(r.ingredients, r.servings, r.cookedWeight, lang);
 }
 
 /**

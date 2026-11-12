@@ -60,12 +60,13 @@ export function newId(prefix = "id"): string {
   return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
-export function blankItem(): FoodItem {
+/** unit: the default unit word, in the app language (e.g. "จาน" / "plate"). */
+export function blankItem(unit = "จาน"): FoodItem {
   return {
     id: newId("it"),
     name: "",
     amount: 1,
-    unit: "จาน",
+    unit,
     kcal: 0,
     protein: 0,
     carbs: 0,

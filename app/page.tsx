@@ -6,6 +6,7 @@ import { MacroCards, Sheet, StoredPhoto } from "./components/ui";
 import { shiftDateKey, thaiDateKey, thaiDateLabel } from "./lib/date";
 import { macroTargets, proteinTargetG } from "./lib/energy";
 import { fmtKcal, pickMacros, sumMacros } from "./lib/nutrition";
+import { useLang } from "./lib/lang";
 import { useStore } from "./lib/store";
 import { SLOT_LABEL, SLOTS, type Entry } from "./lib/types";
 
@@ -39,6 +40,7 @@ function TodayInner() {
   const today = thaiDateKey();
   const date = search.get("date") || today;
   const [addOpen, setAddOpen] = useState(false);
+  const { tr, lang } = useLang();
 
   const dayEntries = useMemo(() => entries.filter((e) => e.date === date).sort((a, b) => a.createdAt - b.createdAt), [entries, date]);
   const total = useMemo(() => sumMacros(dayEntries.flatMap((e) => e.items.map(pickMacros))), [dayEntries]);
@@ -50,21 +52,21 @@ function TodayInner() {
   return (
     <main className="page space-y-5">
       <header className="flex items-center justify-between">
-        <button className="h-11 w-11 rounded-full bg-paper text-[20px]" onClick={() => go(shiftDateKey(date, -1))} aria-label="วันก่อนหน้า">
+        <button className="h-11 w-11 rounded-full bg-paper text-[20px]" onClick={() => go(shiftDateKey(date, -1))} aria-label={tr("วันก่อนหน้า", "Previous day")}>
           ‹
         </button>
         <div className="text-center">
           {goals.profile?.name && date === today && (
-            <p className="text-[15px] text-olive-dark" data-testid="greeting">สวัสดี {goals.profile.name} 🌿</p>
+            <p className="text-[15px] text-olive-dark" data-testid="greeting">{tr("สวัสดี", "Hi")} {goals.profile.name} 🌿</p>
           )}
-          <h1 className="text-[24px] font-bold">{date === today ? "วันนี้" : "ย้อนดู"}</h1>
-          <p className="text-[14px] text-muted">{thaiDateLabel(date)}</p>
+          <h1 className="text-[24px] font-bold">{date === today ? tr("วันนี้", "Today") : tr("ย้อนดู", "Looking back")}</h1>
+          <p className="text-[14px] text-muted">{thaiDateLabel(date, lang)}</p>
         </div>
         <button
           className="h-11 w-11 rounded-full bg-paper text-[20px] disabled:opacity-30"
           onClick={() => go(shiftDateKey(date, 1))}
           disabled={date >= today}
-          aria-label="วันถัดไป"
+          aria-label={tr("วันถัดไป", "Next day")}
         >
           ›
         </button>
@@ -72,7 +74,7 @@ function TodayInner() {
 
       {saveError && (
         <div className="rounded-2xl bg-[#f6e1dc] px-4 py-3 text-[14px] text-danger" role="alert">
-          บันทึกลงเครื่องไม่สำเร็จ: {saveError}
+          {tr("บันทึกลงเครื่องไม่สำเร็จ", "Couldn't save on this phone")}: {saveError}
         </div>
       )}
 
@@ -84,12 +86,14 @@ function TodayInner() {
               {ready ? fmtKcal(total.kcal) : "–"}
             </span>
             <span className="mt-1 text-[15px] text-muted">
-              จาก <span className="num font-semibold text-ink" data-testid="target-kcal">{fmtKcal(target)}</span> kcal
+              {tr("จาก", "of")} <span className="num font-semibold text-ink" data-testid="target-kcal">{fmtKcal(target)}</span> kcal
             </span>
           </div>
         </div>
         <p className={`mt-2 text-[17px] font-medium ${left < 0 ? "text-warn-ink" : "text-olive-dark"}`}>
-          {left >= 0 ? `เหลืออีก ${fmtKcal(left)} kcal` : `เกินเป้า ${fmtKcal(-left)} kcal`}
+          {left >= 0
+            ? tr(`เหลืออีก ${fmtKcal(left)} kcal`, `${fmtKcal(left)} kcal left`)
+            : tr(`เกินเป้า ${fmtKcal(-left)} kcal`, `${fmtKcal(-left)} kcal over target`)}
         </p>
         <div className="mt-4 w-full">
           <MacroCards m={total} targets={macroTargets(target, proteinTargetG(goals.profile))} />
@@ -97,7 +101,7 @@ function TodayInner() {
       </section>
 
       <button className="btn-primary w-full !min-h-[58px] text-[19px]" onClick={() => setAddOpen(true)}>
-        + เพิ่มอาหาร
+        + {tr("เพิ่มอาหาร", "Add food")}
       </button>
 
       {SLOTS.map((slot) => {
@@ -106,11 +110,11 @@ function TodayInner() {
         return (
           <section key={slot} className="card p-4" data-testid={`slot-${slot}`}>
             <div className="mb-1 flex items-baseline justify-between px-1">
-              <h2 className="text-[19px] font-semibold">{SLOT_LABEL[slot]}</h2>
+              <h2 className="text-[19px] font-semibold">{SLOT_LABEL[slot][lang]}</h2>
               <span className="num text-[15px] text-muted">{fmtKcal(kcal)} kcal</span>
             </div>
             {list.length === 0 ? (
-              <p className="px-1 py-2 text-[15px] text-muted">ยังไม่มีรายการ</p>
+              <p className="px-1 py-2 text-[15px] text-muted">{tr("ยังไม่มีรายการ", "Nothing yet")}</p>
             ) : (
               <ul className="divide-y divide-line">
                 {list.map((e) => (
@@ -122,13 +126,13 @@ function TodayInner() {
         );
       })}
 
-      <Sheet open={addOpen} onClose={() => setAddOpen(false)} title="เพิ่มอาหาร">
+      <Sheet open={addOpen} onClose={() => setAddOpen(false)} title={tr("เพิ่มอาหาร", "Add food")}>
         <div className="grid grid-cols-2 gap-3 pb-3">
           {[
-            { href: `/add/photo${q}`, icon: "📷", label: "ถ่ายรูป" },
-            { href: `/add/text${q}`, icon: "💬", label: "พิมพ์ให้ AI ช่วย" },
-            { href: `/recipes${q}`, icon: "📖", label: "เลือกสูตรของฉัน" },
-            { href: `/add/manual${q}`, icon: "✏️", label: "กรอกเอง" },
+            { href: `/add/photo${q}`, icon: "📷", label: tr("ถ่ายรูป", "Take a photo") },
+            { href: `/add/text${q}`, icon: "💬", label: tr("พิมพ์ให้ AI ช่วย", "Type it, AI helps") },
+            { href: `/recipes${q}`, icon: "📖", label: tr("เลือกสูตรของฉัน", "From my recipes") },
+            { href: `/add/manual${q}`, icon: "✏️", label: tr("กรอกเอง", "Enter it myself") },
           ].map((o) => (
             <Link
               key={o.href}

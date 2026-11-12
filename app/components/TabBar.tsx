@@ -1,21 +1,23 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useLang } from "../lib/lang";
 
 const TABS = [
-  { href: "/", label: "วันนี้", icon: "🍽️" },
-  { href: "/recipes", label: "สูตรของฉัน", icon: "📖" },
-  { href: "/profile", label: "โปรไฟล์", icon: "🙂" },
+  { href: "/", th: "วันนี้", en: "Today", icon: "🍽️" },
+  { href: "/recipes", th: "สูตรของฉัน", en: "My recipes", icon: "📖" },
+  { href: "/profile", th: "โปรไฟล์", en: "Profile", icon: "🙂" },
 ];
 
 /** Bottom tabs. Hidden on full-screen flows (adding food, editing). */
 export function TabBar() {
   const path = usePathname();
+  const { tr, lang } = useLang();
   if (path === "/welcome" || path.startsWith("/add") || path.startsWith("/entry") || /^\/recipes\/.+/.test(path)) return null;
   return (
     <nav
       className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-paper/95 backdrop-blur safe-bottom"
-      aria-label="เมนูหลัก"
+      aria-label={tr("เมนูหลัก", "Main menu")}
     >
       <div className="mx-auto flex max-w-[560px] justify-around pt-2">
         {TABS.map((t) => {
@@ -31,7 +33,7 @@ export function TabBar() {
               <span className="text-[22px] leading-none" aria-hidden>
                 {t.icon}
               </span>
-              {t.label}
+              {t[lang]}
             </Link>
           );
         })}

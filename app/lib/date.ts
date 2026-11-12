@@ -1,3 +1,4 @@
+import type { Lang } from "./i18n.ts";
 import type { MealSlot } from "./types.ts";
 
 const TZ = "Asia/Bangkok";
@@ -37,11 +38,11 @@ export function shiftDateKey(key: string, days: number): string {
   return t.toISOString().slice(0, 10);
 }
 
-/** e.g. "พฤหัสบดี 12 พ.ย. 2569" */
-export function thaiDateLabel(key: string): string {
+/** e.g. "พฤหัสบดี 12 พ.ย. 2569" or "Thursday, 12 Nov 2026" */
+export function thaiDateLabel(key: string, lang: Lang = "th"): string {
   const [y, m, d] = key.split("-").map(Number);
   const t = new Date(Date.UTC(y, m - 1, d, 12));
-  return new Intl.DateTimeFormat("th-TH", {
+  return new Intl.DateTimeFormat(lang === "en" ? "en-GB" : "th-TH", {
     timeZone: "UTC",
     weekday: "long",
     day: "numeric",

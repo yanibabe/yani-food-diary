@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { fmtG, fmtKcal } from "../lib/nutrition";
+import { useLang } from "../lib/lang";
 import { getPhoto } from "../lib/photos";
 import type { Macros } from "../lib/types";
 
@@ -16,6 +17,7 @@ export function Sheet({
   title?: string;
   children: React.ReactNode;
 }) {
+  const { tr } = useLang();
   useEffect(() => {
     if (!open) return;
     const prev = document.body.style.overflow;
@@ -27,13 +29,13 @@ export function Sheet({
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center" role="dialog" aria-modal="true" aria-label={title}>
-      <button className="absolute inset-0 bg-ink/30" aria-label="ปิด" onClick={onClose} />
+      <button className="absolute inset-0 bg-ink/30" aria-label={tr("ปิด", "Close")} onClick={onClose} />
       <div className="relative max-h-[88dvh] w-full max-w-[560px] overflow-y-auto rounded-t-[28px] bg-paper px-5 pt-3 safe-bottom shadow-2xl">
         <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-line" />
         {title && (
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-[20px] font-semibold">{title}</h2>
-            <button onClick={onClose} className="h-10 w-10 rounded-full bg-cream text-[20px] text-muted" aria-label="ปิด">
+            <button onClick={onClose} className="h-10 w-10 rounded-full bg-cream text-[20px] text-muted" aria-label={tr("ปิด", "Close")}>
               ×
             </button>
           </div>
@@ -45,10 +47,11 @@ export function Sheet({
 }
 
 export function MacroCards({ m, targets }: { m: Macros; targets?: { protein: number; carbs: number; fat: number } }) {
+  const { tr } = useLang();
   const cards = [
-    { key: "protein", label: "โปรตีน", value: m.protein, target: targets?.protein, bg: "bg-protein", ink: "text-protein-ink" },
-    { key: "carbs", label: "คาร์บ", value: m.carbs, target: targets?.carbs, bg: "bg-carbs", ink: "text-carbs-ink" },
-    { key: "fat", label: "ไขมัน", value: m.fat, target: targets?.fat, bg: "bg-fat", ink: "text-fat-ink" },
+    { key: "protein", label: tr("โปรตีน", "Protein"), value: m.protein, target: targets?.protein, bg: "bg-protein", ink: "text-protein-ink" },
+    { key: "carbs", label: tr("คาร์บ", "Carbs"), value: m.carbs, target: targets?.carbs, bg: "bg-carbs", ink: "text-carbs-ink" },
+    { key: "fat", label: tr("ไขมัน", "Fat"), value: m.fat, target: targets?.fat, bg: "bg-fat", ink: "text-fat-ink" },
   ] as const;
   return (
     <div className="grid grid-cols-3 gap-2.5">
@@ -67,7 +70,7 @@ export function MacroCards({ m, targets }: { m: Macros; targets?: { protein: num
                   style={{ width: `${Math.min(100, (c.value / Math.max(1, c.target)) * 100)}%`, opacity: 0.7 }}
                 />
               </div>
-              <div className={`mt-1 text-[12px] ${c.ink} opacity-80`}>จาก {Math.round(c.target)} g</div>
+              <div className={`mt-1 text-[12px] ${c.ink} opacity-80`}>{tr("จาก", "of")} {Math.round(c.target)} g</div>
             </>
           )}
         </div>
@@ -76,7 +79,9 @@ export function MacroCards({ m, targets }: { m: Macros; targets?: { protein: num
   );
 }
 
-export function KcalBig({ kcal, label = "แคลอรีรวม" }: { kcal: number; label?: string }) {
+export function KcalBig({ kcal, label }: { kcal: number; label?: string }) {
+  const { tr } = useLang();
+  label ??= tr("แคลอรีรวม", "Total calories");
   return (
     <div className="text-center">
       <div className="text-[14px] text-muted">{label}</div>

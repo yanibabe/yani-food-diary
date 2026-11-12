@@ -4,6 +4,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { MealReview, type MealDraft } from "../../components/MealReview";
 import { useAiStatus } from "../../components/ui";
 import { guessSlot, thaiDateKey } from "../../lib/date";
+import { useLang } from "../../lib/lang";
 import { blankItem, cleanBox, cleanNumber, newId } from "../../lib/nutrition";
 import { compressImage, savePhoto } from "../../lib/photos";
 import { useStore } from "../../lib/store";
@@ -19,13 +20,15 @@ function AddInner() {
   const router = useRouter();
   const { upsertEntry } = useStore();
   const ai = useAiStatus();
+  const { tr, lang } = useLang();
+  const defaultUnit = tr("จาน", "plate");
 
   const [photo, setPhoto] = useState<string | null>(null);
   const [note, setNote] = useState("");
   const [step, setStep] = useState<"input" | "loading" | "review">(mode === "manual" ? "review" : "input");
   const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState<MealDraft>(() => {
-    const first = blankItem();
+    const first = blankItem(defaultUnit);
     return { title: "", slot: guessSlot(), items: mode === "manual" ? [first] : [] };
   });
   const [question, setQuestion] = useState<string | null>(null);
@@ -40,7 +43,7 @@ function AddInner() {
     if (!f) return;
     setError(null);
     try {
-      setPhoto(await compressImage(f));
+      setPhoto(await compressImage(f, 1280, 0.8, tr("อ่านรูปไม่ได้ ลองเลือกรูปอื่น", "Couldn't read this picture. Try another one.")));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
@@ -53,11 +56,11 @@ function AddInner() {
       const res = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: mode === "photo" ? photo : null, text: note }),
+        body: JSON.stringify({ image: mode === "photo" ? photo : null, text: note, lang }),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok || !data?.result) {
-        setError(data?.message ?? `เซิร์ฟเวอร์ตอบกลับ ${res.status}`);
+        setError(data?.message ?? `${tr("เซิร์ฟเวอร์ตอบกลับ", "Server replied")} ${res.status}`);
         setStep("input");
         return;
       }
@@ -76,18 +79,18 @@ function AddInner() {
         note: a.note ?? null,
         box: mode === "photo" ? cleanBox(a.box) : null,
       }));
-      setDraft({ title: r.title, slot: draft.slot, items });
+      setDraft({ title: r.title || tr("อาหาร", "Meal"), slot: draft.slot, items });
       setQuestion(r.question);
       setMock(Boolean(data.mock));
       setStep("review");
     } catch (e) {
-      setError(`เชื่อมต่อไม่ได้: ${e instanceof Error ? e.message : String(e)}`);
+      setError(`${tr("เชื่อมต่อไม่ได้", "Couldn't connect")}: ${e instanceof Error ? e.message : String(e)}`);
       setStep("input");
     }
   }
 
   function goManual() {
-    const first = blankItem();
+    const first = blankItem(defaultUnit);
     setDraft((d) => ({ ...d, items: [first] }));
     setStartEdit(first.id);
     setStep("review");
@@ -119,15 +122,16 @@ function AddInner() {
     router.push(`/?date=${date}`);
   }
 
-  const heading = mode === "photo" ? "ถ่ายรูปอาหาร" : mode === "text" ? "พิมพ์ให้ AI ช่วย" : "กรอกเอง";
+  const heading =
+    mode === "photo" ? tr("ถ่ายรูปอาหาร", "Food photo") : mode === "text" ? tr("พิมพ์ให้ AI ช่วย", "Type it, AI helps") : tr("กรอกเอง", "Enter it myself");
 
   return (
     <main className="page">
       <header className="mb-4 flex items-center gap-3">
-        <button className="h-11 w-11 rounded-full bg-paper text-[20px]" onClick={() => router.back()} aria-label="กลับ">
+        <button className="h-11 w-11 rounded-full bg-paper text-[20px]" onClick={() => router.back()} aria-label={tr("กลับ", "Back")}>
           ‹
         </button>
-        <h1 className="text-[22px] font-semibold">{step === "review" ? "ตรวจผล" : heading}</h1>
+        <h1 className="text-[22px] font-semibold">{step === "review" ? tr("ตรวจผล", "Check the result") : heading}</h1>
       </header>
 
       {step === "input" && (
@@ -136,7 +140,7 @@ function AddInner() {
             <div className="card overflow-hidden">
               {photo ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={photo} alt="รูปที่เลือก" className="block max-h-[60dvh] w-full object-cover" />
+                <img src={photo} alt={tr("รูปที่เลือก", "Chosen photo")} className="block max-h-[60dvh] w-full object-cover" />
               ) : (
                 <div className="flex aspect-[4/3] items-center justify-center bg-cream text-[64px]" aria-hidden>
                   📷
@@ -144,10 +148,10 @@ function AddInner() {
               )}
               <div className="grid grid-cols-2 gap-3 p-4">
                 <button className="btn-primary" onClick={() => cameraRef.current?.click()}>
-                  {photo ? "ถ่ายใหม่" : "เปิดกล้อง"}
+                  {photo ? tr("ถ่ายใหม่", "Retake") : tr("เปิดกล้อง", "Open camera")}
                 </button>
                 <button className="btn-soft" onClick={() => galleryRef.current?.click()}>
-                  เลือกรูป
+                  {tr("เลือกรูป", "Choose photo")}
                 </button>
               </div>
               <input ref={cameraRef} type="file" accept="image/*" capture="environment" hidden onChange={(e) => onFile(e.target.files?.[0])} data-testid="camera-input" />
@@ -157,7 +161,7 @@ function AddInner() {
 
           <div className="card p-4">
             <label className="label" htmlFor="note">
-              {mode === "photo" ? "อธิบายเพิ่มก่อนวิเคราะห์ (ไม่บังคับ)" : "กินอะไรไปบ้าง"}
+              {mode === "photo" ? tr("อธิบายเพิ่มก่อนวิเคราะห์ (ไม่บังคับ)", "Add a note before checking (optional)") : tr("กินอะไรไปบ้าง", "What did you eat?")}
             </label>
             <textarea
               id="note"
@@ -166,20 +170,23 @@ function AddInner() {
               onChange={(e) => setNote(e.target.value)}
               placeholder={
                 mode === "photo"
-                  ? "เช่น ไก่กินครึ่งชิ้น ผัดน้ำมัน 1 ช้อนโต๊ะ"
-                  : "เช่น ข้าวกะเพราหมูสับไข่ดาว 1 จาน ข้าวครึ่งเดียว"
+                  ? tr("เช่น ไก่กินครึ่งชิ้น ผัดน้ำมัน 1 ช้อนโต๊ะ", "e.g. ate half the chicken, fried with 1 tbsp oil")
+                  : tr("เช่น ข้าวกะเพราหมูสับไข่ดาว 1 จาน ข้าวครึ่งเดียว", "e.g. 1 plate basil pork with fried egg, only half the rice")
               }
             />
           </div>
 
           {ai && !aiReady && (
             <div className="rounded-2xl bg-warn px-4 py-3 text-[15px] text-warn-ink">
-              ยังไม่ได้ตั้งค่า AI (OpenRouter) บนเซิร์ฟเวอร์ จึงวิเคราะห์ด้วย AI ไม่ได้ตอนนี้ — กรอกเองได้เลย
+              {tr(
+                "ยังไม่ได้ตั้งค่า AI (OpenRouter) บนเซิร์ฟเวอร์ จึงวิเคราะห์ด้วย AI ไม่ได้ตอนนี้ — กรอกเองได้เลย",
+                "The AI (OpenRouter) is not set up on the server, so it can't check food right now — you can enter it yourself",
+              )}
             </div>
           )}
           {error && (
             <div className="rounded-2xl bg-[#f6e1dc] px-4 py-3 text-[15px] text-danger" role="alert" data-testid="ai-error">
-              วิเคราะห์ไม่สำเร็จ: {error}
+              {tr("วิเคราะห์ไม่สำเร็จ", "Couldn't check it")}: {error}
             </div>
           )}
 
@@ -188,15 +195,15 @@ function AddInner() {
             onClick={analyze}
             disabled={mode === "photo" ? !photo : !note.trim()}
           >
-            วิเคราะห์
+            {tr("วิเคราะห์", "Check with AI")}
           </button>
           <button className="btn-soft w-full" onClick={goManual}>
-            กรอกเองแทน
+            {tr("กรอกเองแทน", "Enter it myself instead")}
           </button>
           <p className="text-center text-[13px] text-muted">
             {mode === "photo"
-              ? "รูปจะถูกส่งไปวิเคราะห์เมื่อกด “วิเคราะห์” เท่านั้น"
-              : "ข้อความจะถูกส่งไปวิเคราะห์เมื่อกด “วิเคราะห์” เท่านั้น"}
+              ? tr("รูปจะถูกส่งไปวิเคราะห์เมื่อกด “วิเคราะห์” เท่านั้น", "The photo is only sent when you tap “Check with AI”")
+              : tr("ข้อความจะถูกส่งไปวิเคราะห์เมื่อกด “วิเคราะห์” เท่านั้น", "Your text is only sent when you tap “Check with AI”")}
           </p>
         </div>
       )}
@@ -204,8 +211,8 @@ function AddInner() {
       {step === "loading" && (
         <div className="flex flex-col items-center gap-4 py-24 text-center">
           <div className="h-12 w-12 animate-spin rounded-full border-4 border-olive-soft border-t-olive" />
-          <p className="text-[18px]">กำลังวิเคราะห์อาหาร…</p>
-          <p className="text-[14px] text-muted">อาจใช้เวลาสักครู่</p>
+          <p className="text-[18px]">{tr("กำลังวิเคราะห์อาหาร…", "Checking your food…")}</p>
+          <p className="text-[14px] text-muted">{tr("อาจใช้เวลาสักครู่", "This may take a moment")}</p>
         </div>
       )}
 
@@ -216,7 +223,7 @@ function AddInner() {
           mockBadge={mock}
           firstQuestion={question}
           chatEnabled={aiReady}
-          chatDisabledReason="ยังไม่ได้ตั้งค่า AI (OpenRouter) — แตะรายการเพื่อแก้เองได้"
+          chatDisabledReason={tr("ยังไม่ได้ตั้งค่า AI (OpenRouter) — แตะรายการเพื่อแก้เองได้", "The AI (OpenRouter) is not set up — tap an item to edit it yourself")}
           onSave={save}
           onCancel={() => router.push(`/?date=${date}`)}
           startEditingId={startEdit}

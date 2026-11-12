@@ -1,5 +1,7 @@
 // Shared data shapes for the whole app. Everything here is saved on the device.
 
+import type { L } from "./i18n.ts";
+
 export type Macros = {
   kcal: number;
   protein: number; // grams
@@ -9,10 +11,10 @@ export type Macros = {
 
 export type MealSlot = "brunch" | "dinner" | "snack";
 
-export const SLOT_LABEL: Record<MealSlot, string> = {
-  brunch: "มื้อสาย",
-  dinner: "มื้อเย็น",
-  snack: "ของว่าง",
+export const SLOT_LABEL: Record<MealSlot, L> = {
+  brunch: { th: "มื้อสาย", en: "Brunch" },
+  dinner: { th: "มื้อเย็น", en: "Dinner" },
+  snack: { th: "ของว่าง", en: "Snack" },
 };
 
 export const SLOTS: MealSlot[] = ["brunch", "dinner", "snack"];
@@ -35,11 +37,11 @@ export type FoodItem = Macros & {
 
 export type IngredientUnit = "g" | "ml" | "egg" | "piece";
 
-export const UNIT_LABEL: Record<IngredientUnit, string> = {
-  g: "กรัม",
-  ml: "มล.",
-  egg: "ฟอง",
-  piece: "ชิ้น",
+export const UNIT_LABEL: Record<IngredientUnit, L> = {
+  g: { th: "กรัม", en: "g" },
+  ml: { th: "มล.", en: "ml" },
+  egg: { th: "ฟอง", en: "egg" },
+  piece: { th: "ชิ้น", en: "piece" },
 };
 
 export type LabelInfo = Macros & {

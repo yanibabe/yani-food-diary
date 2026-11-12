@@ -3,6 +3,7 @@
 // never reaches the phone.
 
 import { z } from "zod";
+import { trFor, type Lang } from "../i18n.ts";
 
 const ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
 export const MODEL = "google/gemini-3.8-flash";
@@ -18,23 +19,23 @@ const BoxSchema = z.object({
 });
 
 const ItemSchema = z.object({
-  name: z.string().describe("Food name in Thai"),
+  name: z.string().describe("Food name"),
   amount: num.describe("How much was EATEN, as a number"),
-  unit: z.string().catch("").describe("Thai unit word, e.g. จาน ชิ้น ถ้วย ช้อนโต๊ะ กรัม"),
+  unit: z.string().catch("").describe("Unit word, e.g. จาน ชิ้น ถ้วย ช้อนโต๊ะ กรัม (Thai) or plate piece cup tbsp g (English)"),
   kcal: num,
   protein: num.describe("grams"),
   carbs: num.describe("grams"),
   fat: num.describe("grams"),
   estimated: z.boolean().catch(false).describe("true if amount or recipe is uncertain"),
   kind: z.enum(["food", "extra"]).catch("food").describe("extra = oil, sauce, dressing, sugar or add-on"),
-  note: z.string().nullish().describe("Short Thai note, e.g. why it is an estimate; or null"),
+  note: z.string().nullish().describe("Short note, e.g. why it is an estimate; or null"),
   box: BoxSchema.nullish().describe("Where this food is in the photo (fractions 0..1); null if not locatable or no photo"),
 });
 
 export const AnalysisSchema = z.object({
-  title: z.string().catch("อาหาร").describe("Short Thai name for the whole meal"),
+  title: z.string().catch("").describe("Short name for the whole meal"),
   items: z.array(ItemSchema),
-  question: z.string().nullish().describe("ONE short Thai question if something important is unclear, else null"),
+  question: z.string().nullish().describe("ONE short question if something important is unclear, else null"),
 });
 export type Analysis = z.infer<typeof AnalysisSchema>;
 
@@ -45,7 +46,7 @@ const EditSchema = z.object({
 });
 
 export const RefineSchema = z.object({
-  reply: z.string().catch("").describe("One or two short Thai sentences saying what changed"),
+  reply: z.string().catch("").describe("One or two short sentences saying what changed"),
   question: z.string().nullish(),
   edits: z.array(EditSchema).catch([]).describe("ONLY items the user's message is about"),
   adds: z.array(ItemSchema).catch([]).describe("New items the user mentioned (e.g. oil, sauce)"),
@@ -57,10 +58,17 @@ function shapeOf(schema: z.ZodType): string {
   return JSON.stringify(z.toJSONSchema(schema, { io: "input", unrepresentable: "any" }));
 }
 
-const ANALYZE_SYSTEM = `You are a careful nutrition assistant inside a Thai food diary app.
+/** The app can be in Thai or English; the AI writes in the same language. */
+function languageRule(lang: Lang): string {
+  return lang === "en"
+    ? "Write every name, unit, note, reply and question in simple English (Thai dish names may be given in English, e.g. \"Pad kra pao (stir-fried basil pork)\")."
+    : "Write every name, unit, note, reply and question in Thai.";
+}
+
+const ANALYZE_SYSTEM = (lang: Lang) => `You are a careful nutrition assistant inside a Thai food diary app.
 Estimate what the user ate from a photo and/or their description.
 Rules:
-- Write every name, unit, note and question in Thai.
+- ${languageRule(lang)}
 - List each separate food on the plate as its own item. Numbers are for the amount actually EATEN, using the user's note (e.g. "ate half the chicken" → half portion).
 - If the user mentions oil, sauce, dressing, sugar or other add-ons, list each as its own item with kind "extra".
 - Cooking oil you cannot see: only add it if the cooking method clearly uses oil (fried, stir-fried); mark it estimated and say so in note.
@@ -71,7 +79,7 @@ Rules:
 Return ONLY a JSON object matching this JSON Schema:
 ${shapeOf(AnalysisSchema)}`;
 
-const REFINE_SYSTEM = `You are a careful nutrition assistant inside a Thai food diary app.
+const REFINE_SYSTEM = (lang: Lang) => `You are a careful nutrition assistant inside a Thai food diary app.
 The user already has a list of food items for one plate. They are now explaining more about what they actually ate.
 Rules:
 - Change ONLY the items their message is about. Do not touch other items.
@@ -79,7 +87,7 @@ Rules:
 - "Ate it all" / "finished it" means no change for that item.
 - If they mention oil, sauce or add-ons that are not in the list, add them in adds (kind "extra"); if the amount is unclear, give a typical amount, set estimated=true, and say so in note.
 - If a change is ambiguous, make no edit for it and ask one short question.
-- Write reply, names, units, notes and question in Thai.
+- ${languageRule(lang)}
 Return ONLY a JSON object matching this JSON Schema:
 ${shapeOf(RefineSchema)}`;
 
@@ -104,23 +112,25 @@ export function aiStatus() {
 type Part = { type: "text"; text: string } | { type: "image_url"; image_url: { url: string } };
 
 /** Pull the JSON object out of the reply, even if it is wrapped in a code fence. */
-function extractJson(content: string): unknown {
+function extractJson(content: string, lang: Lang): unknown {
+  const unreadable = trFor(lang)("อ่านผลจาก AI ไม่ได้ ลองอีกครั้ง", "Couldn't read the AI's answer. Please try again.");
   try {
     return JSON.parse(content);
   } catch {
     const m = content.match(/\{[\s\S]*\}/);
-    if (!m) throw new AiError("bad-output", "อ่านผลจาก AI ไม่ได้ ลองอีกครั้ง", 502);
+    if (!m) throw new AiError("bad-output", unreadable, 502);
     try {
       return JSON.parse(m[0]);
     } catch {
-      throw new AiError("bad-output", "อ่านผลจาก AI ไม่ได้ ลองอีกครั้ง", 502);
+      throw new AiError("bad-output", unreadable, 502);
     }
   }
 }
 
-async function callAi<T>(system: string, content: Part[], schema: z.ZodType<T>): Promise<T> {
+async function callAi<T>(system: string, content: Part[], schema: z.ZodType<T>, lang: Lang): Promise<T> {
+  const t = trFor(lang);
   const key = process.env.OPENROUTER_API_KEY;
-  if (!key) throw new AiError("not-configured", "ยังไม่ได้ตั้งค่า OpenRouter API key บนเซิร์ฟเวอร์", 503);
+  if (!key) throw new AiError("not-configured", t("ยังไม่ได้ตั้งค่า OpenRouter API key บนเซิร์ฟเวอร์", "The OpenRouter API key is not set up on the server"), 503);
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
@@ -143,8 +153,8 @@ async function callAi<T>(system: string, content: Part[], schema: z.ZodType<T>):
   } catch (e) {
     const aborted = e instanceof Error && e.name === "AbortError";
     throw aborted
-      ? new AiError("timeout", "AI ตอบช้าเกินไป ลองอีกครั้ง", 504)
-      : new AiError("network", "เชื่อมต่อ OpenRouter ไม่ได้ (เครือข่าย)", 503);
+      ? new AiError("timeout", t("AI ตอบช้าเกินไป ลองอีกครั้ง", "The AI took too long. Please try again."), 504)
+      : new AiError("network", t("เชื่อมต่อ OpenRouter ไม่ได้ (เครือข่าย)", "Couldn't reach OpenRouter (network)"), 503);
   } finally {
     clearTimeout(timer);
   }
@@ -158,27 +168,31 @@ async function callAi<T>(system: string, content: Part[], schema: z.ZodType<T>):
       /* keep raw text */
     }
     msg = String(msg).slice(0, 200);
-    if (res.status === 401) throw new AiError("auth", `API key ไม่ถูกต้อง (401): ${msg}`, 502);
-    if (res.status === 402) throw new AiError("credits", `เครดิต OpenRouter ไม่พอ (402): ${msg}`, 502);
-    if (res.status === 429) throw new AiError("rate-limit", `เรียก AI ถี่เกินไป ลองใหม่อีกครั้ง (429)`, 503);
-    throw new AiError("api", `OpenRouter ตอบกลับข้อผิดพลาด ${res.status}: ${msg}`, 502);
+    if (res.status === 401) throw new AiError("auth", `${t("API key ไม่ถูกต้อง", "The API key is wrong")} (401): ${msg}`, 502);
+    if (res.status === 402) throw new AiError("credits", `${t("เครดิต OpenRouter ไม่พอ", "Not enough OpenRouter credit")} (402): ${msg}`, 502);
+    if (res.status === 429) throw new AiError("rate-limit", t("เรียก AI ถี่เกินไป ลองใหม่อีกครั้ง (429)", "Too many AI requests. Please try again (429)"), 503);
+    throw new AiError("api", `${t("OpenRouter ตอบกลับข้อผิดพลาด", "OpenRouter returned an error")} ${res.status}: ${msg}`, 502);
   }
 
   const data = await res.json().catch(() => null);
   const text: string = data?.choices?.[0]?.message?.content ?? "";
   if (!text) {
     const err = data?.error?.message;
-    throw new AiError("bad-output", err ? `AI ไม่ได้ตอบกลับ: ${err}` : "AI ไม่ได้ตอบกลับ ลองอีกครั้ง", 502);
+    throw new AiError(
+      "bad-output",
+      err ? `${t("AI ไม่ได้ตอบกลับ", "The AI didn't answer")}: ${err}` : t("AI ไม่ได้ตอบกลับ ลองอีกครั้ง", "The AI didn't answer. Please try again."),
+      502,
+    );
   }
-  const parsed = schema.safeParse(extractJson(text));
+  const parsed = schema.safeParse(extractJson(text, lang));
   if (!parsed.success) {
     console.error("[ai] schema mismatch", parsed.error.issues.slice(0, 3));
-    throw new AiError("bad-output", "ผลจาก AI ไม่ครบรูปแบบ ลองอีกครั้ง", 502);
+    throw new AiError("bad-output", t("ผลจาก AI ไม่ครบรูปแบบ ลองอีกครั้ง", "The AI's answer was incomplete. Please try again."), 502);
   }
   return parsed.data;
 }
 
-export async function analyzeMeal(input: { image: string | null; text: string }): Promise<Analysis> {
+export async function analyzeMeal(input: { image: string | null; text: string; lang: Lang }): Promise<Analysis> {
   if (process.env.AI_MOCK === "1") return mockAnalyze(input);
   const content: Part[] = [
     {
@@ -190,10 +204,10 @@ export async function analyzeMeal(input: { image: string | null; text: string })
   ];
   if (input.image) {
     if (!/^data:image\/(jpeg|png|webp);base64,/.test(input.image))
-      throw new AiError("bad-output", "รูปแบบรูปไม่รองรับ", 400);
+      throw new AiError("bad-output", trFor(input.lang)("รูปแบบรูปไม่รองรับ", "This picture format is not supported"), 400);
     content.push({ type: "image_url", image_url: { url: input.image } });
   }
-  return callAi(ANALYZE_SYSTEM, content, AnalysisSchema);
+  return callAi(ANALYZE_SYSTEM(input.lang), content, AnalysisSchema, input.lang);
 }
 
 export type RefineInput = {
@@ -201,6 +215,7 @@ export type RefineInput = {
   items: { id: string; name: string; amount: number; unit: string; kcal: number; protein: number; carbs: number; fat: number; kind: string; estimated: boolean }[];
   history: { role: "user" | "assistant"; text: string }[];
   message: string;
+  lang: Lang;
 };
 
 export async function refineMeal(input: RefineInput): Promise<Refine> {
@@ -215,7 +230,7 @@ export async function refineMeal(input: RefineInput): Promise<Refine> {
   ]
     .filter(Boolean)
     .join("\n\n");
-  return callAi(REFINE_SYSTEM, [{ type: "text", text }], RefineSchema);
+  return callAi(REFINE_SYSTEM(input.lang), [{ type: "text", text }], RefineSchema, input.lang);
 }
 
 // ---------------------------------------------------------------------------
@@ -223,7 +238,7 @@ export async function refineMeal(input: RefineInput): Promise<Refine> {
 // tested without an API key. The app shows a clear "AI จำลอง" badge.
 // ---------------------------------------------------------------------------
 
-function mockAnalyze(input: { image: string | null; text: string }): Analysis {
+function mockAnalyze(input: { image: string | null; text: string; lang: Lang }): Analysis {
   const items: Analysis["items"] = [
     { name: "ข้าวสวย", amount: 1, unit: "ทัพพี", kcal: 160, protein: 3, carbs: 35, fat: 0.4, estimated: false, kind: "food", note: null, box: input.image ? { x: 0.08, y: 0.45, w: 0.4, h: 0.4 } : null },
     { name: "ไก่ทอด", amount: 1, unit: "ชิ้น", kcal: 290, protein: 24, carbs: 9, fat: 17, estimated: false, kind: "food", note: null, box: input.image ? { x: 0.5, y: 0.15, w: 0.38, h: 0.38 } : null },

@@ -1,4 +1,5 @@
 import { AiError, refineMeal, type RefineInput } from "@/app/lib/server/ai";
+import { trFor } from "@/app/lib/i18n";
 
 export const maxDuration = 60;
 
@@ -7,10 +8,11 @@ export async function POST(req: Request) {
   try {
     body = await req.json();
   } catch {
-    return Response.json({ error: "bad-request", message: "ข้อมูลที่ส่งมาไม่ถูกต้อง" }, { status: 400 });
+    return Response.json({ error: "bad-request", message: "ข้อมูลที่ส่งมาไม่ถูกต้อง / Bad request" }, { status: 400 });
   }
+  const lang = body?.lang === "en" ? "en" : "th";
   if (!body?.message?.trim() || !Array.isArray(body.items)) {
-    return Response.json({ error: "bad-request", message: "พิมพ์ข้อความก่อนส่ง" }, { status: 400 });
+    return Response.json({ error: "bad-request", message: trFor(lang)("พิมพ์ข้อความก่อนส่ง", "Type a message first") }, { status: 400 });
   }
   try {
     const result = await refineMeal({
@@ -18,6 +20,7 @@ export async function POST(req: Request) {
       items: body.items.slice(0, 40),
       history: (body.history ?? []).slice(-10),
       message: body.message.slice(0, 1000),
+      lang,
     });
     return Response.json({ result, mock: process.env.AI_MOCK === "1" });
   } catch (e) {
