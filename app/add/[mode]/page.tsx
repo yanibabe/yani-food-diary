@@ -174,7 +174,7 @@ function AddInner() {
 
           {ai && !aiReady && (
             <div className="rounded-2xl bg-warn px-4 py-3 text-[15px] text-warn-ink">
-              ยังไม่ได้ตั้งค่า Claude API บนเซิร์ฟเวอร์ จึงวิเคราะห์ด้วย AI ไม่ได้ตอนนี้ — กรอกเองได้เลย
+              ยังไม่ได้ตั้งค่า AI (OpenRouter) บนเซิร์ฟเวอร์ จึงวิเคราะห์ด้วย AI ไม่ได้ตอนนี้ — กรอกเองได้เลย
             </div>
           )}
           {error && (
@@ -216,7 +216,7 @@ function AddInner() {
           mockBadge={mock}
           firstQuestion={question}
           chatEnabled={aiReady}
-          chatDisabledReason="ยังไม่ได้ตั้งค่า Claude API — แตะรายการเพื่อแก้เองได้"
+          chatDisabledReason="ยังไม่ได้ตั้งค่า AI (OpenRouter) — แตะรายการเพื่อแก้เองได้"
           onSave={save}
           onCancel={() => router.push(`/?date=${date}`)}
           startEditingId={startEdit}

@@ -52,7 +52,7 @@ export default function EntryPage() {
         photo={photo}
         initial={{ title: entry.title, slot: entry.slot, items: entry.items }}
         chatEnabled={!!ai && (ai.configured || ai.mock)}
-        chatDisabledReason="ยังไม่ได้ตั้งค่า Claude API — แตะรายการเพื่อแก้เองได้"
+        chatDisabledReason="ยังไม่ได้ตั้งค่า AI (OpenRouter) — แตะรายการเพื่อแก้เองได้"
         saveLabel="บันทึกการแก้ไข"
         onSave={(d) => {
           upsertEntry({ ...entry, title: d.title, slot: d.slot, items: d.items, updatedAt: Date.now() });

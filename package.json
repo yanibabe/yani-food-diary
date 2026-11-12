@@ -11,7 +11,6 @@
     "dev:mock": "AI_MOCK=1 next dev -p 3217"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^1.8.0",
     "next": "16.4.6",
     "react": "19.3.0",
     "react-dom": "19.3.0",

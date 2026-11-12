@@ -30,8 +30,9 @@ Built and tested on the Mac (not deployed, not on GitHub yet):
   exercise frequency), maintenance shown separately from the chosen target, steps and
   references shown, new results wait for confirmation, manual kcal/day any time,
   skip option, no automatic estimate for under 18 / pregnant / breastfeeding.
-- **AI:** Claude API through server routes (`/api/analyze`, `/api/refine`, `/api/status`),
-  model `claude-opus-5-5`, key `ANTHROPIC_API_KEY` in `.env.local` (not set yet).
+- **AI:** OpenRouter through server routes (`/api/analyze`, `/api/refine`, `/api/status`),
+  model `google/gemini-3.5-flash`, key `OPENROUTER_API_KEY` in `.env.local` (not set yet —
+  ask Machina). Switched from the Claude API on 2026-11-12 at Yani's choice.
 
 ## Tested for real (2026-11-12)
 
@@ -48,15 +49,10 @@ Built and tested on the Mac (not deployed, not on GitHub yet):
 
 ## NOT tested yet
 
-- Real Claude answers (needs `ANTHROPIC_API_KEY`; costs money per use).
+- Real AI answers (needs `OPENROUTER_API_KEY` from Machina). Photo labels (boxes) depend on
+  how well Gemini places them — check on real photos.
 - On a real iPhone: camera, home-screen install, storage after closing Safari.
 - Deploy (Vercel) and GitHub repo — not done this round.
-
-## Open decision for Yani
-
-- The playground rule says app AI uses OpenRouter + Gemini (key from Machina).
-  This app uses the Claude API because Yani asked for it. Keep Claude (paid key needed)
-  or switch to the OpenRouter rule?
 
 ## Next round ideas (from the brief, deliberately left out)
 

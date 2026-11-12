@@ -15,11 +15,11 @@ A Thai-language food diary, iPhone-first. Read `NEXT_STEPS.md` first in every ch
 - Everything is saved on the device: diary, recipes, goals in localStorage
   (`app/lib/store.tsx`), photos in IndexedDB (`app/lib/photos.ts`). No backend.
 
-## AI (Claude API — Yani's explicit choice for this app)
+## AI (playground rule: OpenRouter + google/gemini-3.5-flash)
 - All AI calls go through the server (`app/lib/server/ai.ts`, routes in `app/api/`).
-- Key: `ANTHROPIC_API_KEY` in `.env.local` only. NEVER commit it, NEVER paste it in chat.
-- Model: `claude-opus-5-5` by default (override with `CLAUDE_MODEL`).
-- The Claude API is a PAID service. Anything that costs money needs Yani's OK first.
+- Key: `OPENROUTER_API_KEY` in `.env.local` only (Machina gives it). NEVER commit it,
+  NEVER paste it in chat. If it's missing, ask Machina — never sign up for anything paid.
+- Free tier only. Anything that costs money needs Yani's OK first.
 - No key → the app says so honestly and lets her enter food by hand.
 - `npm run dev:mock` = test mode with a fake AI answer (shows an "AI จำลอง" badge).
 

@@ -1,56 +1,61 @@
-// SERVER ONLY. Talks to the Claude API. The API key is read from the
-// server's environment (ANTHROPIC_API_KEY) and never reaches the phone.
+// SERVER ONLY. Talks to the AI through OpenRouter (playground rule).
+// The key is read from the server's environment (OPENROUTER_API_KEY) and
+// never reaches the phone.
 
-import Anthropic from "@anthropic-ai/sdk";
-import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { z } from "zod";
 
-export const MODEL = process.env.CLAUDE_MODEL || "claude-opus-5-5";
+const ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
+export const MODEL = "google/gemini-3.5-flash";
+const TIMEOUT_MS = 50_000;
+
+const num = z.coerce.number().catch(0);
 
 const BoxSchema = z.object({
-  x: z.number().describe("left edge, 0..1 of image width"),
-  y: z.number().describe("top edge, 0..1 of image height"),
-  w: z.number().describe("width, 0..1"),
-  h: z.number().describe("height, 0..1"),
+  x: num.describe("left edge, 0..1 of image width"),
+  y: num.describe("top edge, 0..1 of image height"),
+  w: num.describe("width, 0..1"),
+  h: num.describe("height, 0..1"),
 });
 
 const ItemSchema = z.object({
   name: z.string().describe("Food name in Thai"),
-  amount: z.number().describe("How much was EATEN, as a number"),
-  unit: z.string().describe("Thai unit word, e.g. จาน ชิ้น ถ้วย ช้อนโต๊ะ กรัม"),
-  kcal: z.number(),
-  protein: z.number().describe("grams"),
-  carbs: z.number().describe("grams"),
-  fat: z.number().describe("grams"),
-  estimated: z.boolean().describe("true if amount or recipe is uncertain"),
-  kind: z.enum(["food", "extra"]).describe("extra = oil, sauce, dressing, sugar or add-on"),
-  note: z.string().nullable().describe("Short Thai note, e.g. why it is an estimate"),
-  box: BoxSchema.nullable().describe("Where this food is in the photo; null if not locatable or no photo"),
+  amount: num.describe("How much was EATEN, as a number"),
+  unit: z.string().catch("").describe("Thai unit word, e.g. จาน ชิ้น ถ้วย ช้อนโต๊ะ กรัม"),
+  kcal: num,
+  protein: num.describe("grams"),
+  carbs: num.describe("grams"),
+  fat: num.describe("grams"),
+  estimated: z.boolean().catch(false).describe("true if amount or recipe is uncertain"),
+  kind: z.enum(["food", "extra"]).catch("food").describe("extra = oil, sauce, dressing, sugar or add-on"),
+  note: z.string().nullish().describe("Short Thai note, e.g. why it is an estimate; or null"),
+  box: BoxSchema.nullish().describe("Where this food is in the photo (fractions 0..1); null if not locatable or no photo"),
 });
 
 export const AnalysisSchema = z.object({
-  title: z.string().describe("Short Thai name for the whole meal"),
+  title: z.string().catch("อาหาร").describe("Short Thai name for the whole meal"),
   items: z.array(ItemSchema),
-  question: z
-    .string()
-    .nullable()
-    .describe("ONE short Thai question if something important is unclear, else null"),
+  question: z.string().nullish().describe("ONE short Thai question if something important is unclear, else null"),
 });
 export type Analysis = z.infer<typeof AnalysisSchema>;
 
 const EditSchema = z.object({
   id: z.string().describe("id of an existing item"),
   action: z.enum(["update", "remove"]),
-  item: ItemSchema.nullable().describe("Full new values for update; null for remove"),
+  item: ItemSchema.nullish().describe("Full new values for update; null for remove"),
 });
 
 export const RefineSchema = z.object({
-  reply: z.string().describe("One or two short Thai sentences saying what changed"),
-  question: z.string().nullable(),
-  edits: z.array(EditSchema).describe("ONLY items the user's message is about"),
-  adds: z.array(ItemSchema).describe("New items the user mentioned (e.g. oil, sauce)"),
+  reply: z.string().catch("").describe("One or two short Thai sentences saying what changed"),
+  question: z.string().nullish(),
+  edits: z.array(EditSchema).catch([]).describe("ONLY items the user's message is about"),
+  adds: z.array(ItemSchema).catch([]).describe("New items the user mentioned (e.g. oil, sauce)"),
 });
 export type Refine = z.infer<typeof RefineSchema>;
+
+/** The JSON shape, written into the prompt so the model knows exactly what to return. */
+function shapeOf(schema: z.ZodType): string {
+  return JSON.stringify(z.toJSONSchema(schema, { io: "input", unrepresentable: "any" }));
+}
 
 const ANALYZE_SYSTEM = `You are a careful nutrition assistant inside a Thai food diary app.
 Estimate what the user ate from a photo and/or their description.
@@ -62,7 +67,9 @@ Rules:
 - Set estimated=true whenever portion size or recipe is a guess.
 - box: when there is a photo and you can locate the food, give its bounding box as fractions (0..1) of the image. Otherwise null.
 - question: ask at most ONE short question only if the answer would change calories a lot. Otherwise null.
-- Use typical Thai portion sizes and Thai food composition values. Be realistic, not optimistic.`;
+- Use typical Thai portion sizes and Thai food composition values. Be realistic, not optimistic.
+Return ONLY a JSON object matching this JSON Schema:
+${shapeOf(AnalysisSchema)}`;
 
 const REFINE_SYSTEM = `You are a careful nutrition assistant inside a Thai food diary app.
 The user already has a list of food items for one plate. They are now explaining more about what they actually ate.
@@ -72,11 +79,13 @@ Rules:
 - "Ate it all" / "finished it" means no change for that item.
 - If they mention oil, sauce or add-ons that are not in the list, add them in adds (kind "extra"); if the amount is unclear, give a typical amount, set estimated=true, and say so in note.
 - If a change is ambiguous, make no edit for it and ask one short question.
-- Write reply, names, units, notes and question in Thai.`;
+- Write reply, names, units, notes and question in Thai.
+Return ONLY a JSON object matching this JSON Schema:
+${shapeOf(RefineSchema)}`;
 
 export class AiError extends Error {
   constructor(
-    public code: "not-configured" | "auth" | "rate-limit" | "refusal" | "network" | "bad-output" | "api",
+    public code: "not-configured" | "auth" | "rate-limit" | "credits" | "timeout" | "network" | "bad-output" | "api",
     message: string,
     public status = 502,
   ) {
@@ -86,84 +95,105 @@ export class AiError extends Error {
 
 export function aiStatus() {
   return {
-    configured: Boolean(process.env.ANTHROPIC_API_KEY),
+    configured: Boolean(process.env.OPENROUTER_API_KEY),
     mock: process.env.AI_MOCK === "1",
     model: MODEL,
   };
 }
 
-function client(): Anthropic {
-  if (!process.env.ANTHROPIC_API_KEY) {
-    throw new AiError("not-configured", "ยังไม่ได้ตั้งค่า Claude API key บนเซิร์ฟเวอร์", 503);
-  }
-  return new Anthropic();
-}
+type Part = { type: "text"; text: string } | { type: "image_url"; image_url: { url: string } };
 
-function toAiError(e: unknown): AiError {
-  if (e instanceof AiError) return e;
-  if (e instanceof Anthropic.AuthenticationError)
-    return new AiError("auth", "API key ไม่ถูกต้องหรือหมดอายุ (401)", 502);
-  if (e instanceof Anthropic.PermissionDeniedError)
-    return new AiError("auth", "API key นี้ไม่มีสิทธิ์ใช้โมเดลนี้ (403)", 502);
-  if (e instanceof Anthropic.RateLimitError)
-    return new AiError("rate-limit", "เรียก AI ถี่เกินไปหรือเครดิตหมด ลองใหม่อีกครั้ง (429)", 503);
-  if (e instanceof Anthropic.APIConnectionError)
-    return new AiError("network", "เชื่อมต่อ Claude API ไม่ได้ (เครือข่าย)", 503);
-  if (e instanceof Anthropic.APIError)
-    return new AiError("api", `Claude API ตอบกลับข้อผิดพลาด ${e.status ?? ""}: ${e.message}`, 502);
-  return new AiError("api", e instanceof Error ? e.message : "เกิดข้อผิดพลาด", 500);
-}
-
-async function callClaude<T>(
-  system: string,
-  content: Anthropic.Beta.BetaContentBlockParam[],
-  schema: z.ZodType<T>,
-  effort: "low" | "medium",
-): Promise<T> {
+/** Pull the JSON object out of the reply, even if it is wrapped in a code fence. */
+function extractJson(content: string): unknown {
   try {
-    const res = await client().beta.messages.parse({
-      model: MODEL,
-      max_tokens: 16000,
-      betas: ["server-side-fallback-2026-07-01"],
-      // If Claude declines for a safety reason, the API retries on a fallback model.
-      fallbacks: "default",
-      system,
-      output_config: { effort, format: betaZodOutputFormat(schema) },
-      messages: [{ role: "user", content }],
-    });
-    if (res.stop_reason === "refusal") {
-      throw new AiError("refusal", "AI ปฏิเสธคำขอนี้ ลองเปลี่ยนรูปหรือข้อความ", 422);
+    return JSON.parse(content);
+  } catch {
+    const m = content.match(/\{[\s\S]*\}/);
+    if (!m) throw new AiError("bad-output", "อ่านผลจาก AI ไม่ได้ ลองอีกครั้ง", 502);
+    try {
+      return JSON.parse(m[0]);
+    } catch {
+      throw new AiError("bad-output", "อ่านผลจาก AI ไม่ได้ ลองอีกครั้ง", 502);
     }
-    if (res.stop_reason === "max_tokens") {
-      throw new AiError("bad-output", "คำตอบของ AI ยาวเกินและถูกตัด ลองอีกครั้ง", 502);
-    }
-    if (!res.parsed_output) throw new AiError("bad-output", "อ่านผลจาก AI ไม่ได้ ลองอีกครั้ง", 502);
-    return res.parsed_output as T;
-  } catch (e) {
-    throw toAiError(e);
   }
 }
 
-function parseDataUrl(dataUrl: string): { media: "image/jpeg" | "image/png" | "image/webp"; data: string } {
-  const m = /^data:(image\/(?:jpeg|png|webp));base64,(.+)$/.exec(dataUrl);
-  if (!m) throw new AiError("bad-output", "รูปแบบรูปไม่รองรับ", 400);
-  return { media: m[1] as "image/jpeg", data: m[2] };
+async function callAi<T>(system: string, content: Part[], schema: z.ZodType<T>): Promise<T> {
+  const key = process.env.OPENROUTER_API_KEY;
+  if (!key) throw new AiError("not-configured", "ยังไม่ได้ตั้งค่า OpenRouter API key บนเซิร์ฟเวอร์", 503);
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  let res: Response;
+  try {
+    res = await fetch(ENDPOINT, {
+      method: "POST",
+      signal: controller.signal,
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: MODEL,
+        temperature: 0.2,
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content },
+        ],
+      }),
+    });
+  } catch (e) {
+    const aborted = e instanceof Error && e.name === "AbortError";
+    throw aborted
+      ? new AiError("timeout", "AI ตอบช้าเกินไป ลองอีกครั้ง", 504)
+      : new AiError("network", "เชื่อมต่อ OpenRouter ไม่ได้ (เครือข่าย)", 503);
+  } finally {
+    clearTimeout(timer);
+  }
+
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "");
+    let msg = detail;
+    try {
+      msg = JSON.parse(detail)?.error?.message ?? detail;
+    } catch {
+      /* keep raw text */
+    }
+    msg = String(msg).slice(0, 200);
+    if (res.status === 401) throw new AiError("auth", `API key ไม่ถูกต้อง (401): ${msg}`, 502);
+    if (res.status === 402) throw new AiError("credits", `เครดิต OpenRouter ไม่พอ (402): ${msg}`, 502);
+    if (res.status === 429) throw new AiError("rate-limit", `เรียก AI ถี่เกินไป ลองใหม่อีกครั้ง (429)`, 503);
+    throw new AiError("api", `OpenRouter ตอบกลับข้อผิดพลาด ${res.status}: ${msg}`, 502);
+  }
+
+  const data = await res.json().catch(() => null);
+  const text: string = data?.choices?.[0]?.message?.content ?? "";
+  if (!text) {
+    const err = data?.error?.message;
+    throw new AiError("bad-output", err ? `AI ไม่ได้ตอบกลับ: ${err}` : "AI ไม่ได้ตอบกลับ ลองอีกครั้ง", 502);
+  }
+  const parsed = schema.safeParse(extractJson(text));
+  if (!parsed.success) {
+    console.error("[ai] schema mismatch", parsed.error.issues.slice(0, 3));
+    throw new AiError("bad-output", "ผลจาก AI ไม่ครบรูปแบบ ลองอีกครั้ง", 502);
+  }
+  return parsed.data;
 }
 
 export async function analyzeMeal(input: { image: string | null; text: string }): Promise<Analysis> {
   if (process.env.AI_MOCK === "1") return mockAnalyze(input);
-  const content: Anthropic.Beta.BetaContentBlockParam[] = [];
+  const content: Part[] = [
+    {
+      type: "text",
+      text: input.image
+        ? `Photo of my meal. My extra notes: ${input.text || "(none)"}`
+        : `No photo. What I ate: ${input.text}`,
+    },
+  ];
   if (input.image) {
-    const img = parseDataUrl(input.image);
-    content.push({ type: "image", source: { type: "base64", media_type: img.media, data: img.data } });
+    if (!/^data:image\/(jpeg|png|webp);base64,/.test(input.image))
+      throw new AiError("bad-output", "รูปแบบรูปไม่รองรับ", 400);
+    content.push({ type: "image_url", image_url: { url: input.image } });
   }
-  content.push({
-    type: "text",
-    text: input.image
-      ? `Photo of my meal. My extra notes: ${input.text || "(none)"}`
-      : `No photo. What I ate: ${input.text}`,
-  });
-  return callClaude(ANALYZE_SYSTEM, content, AnalysisSchema, "medium");
+  return callAi(ANALYZE_SYSTEM, content, AnalysisSchema);
 }
 
 export type RefineInput = {
@@ -185,7 +215,7 @@ export async function refineMeal(input: RefineInput): Promise<Refine> {
   ]
     .filter(Boolean)
     .join("\n\n");
-  return callClaude(REFINE_SYSTEM, [{ type: "text", text }], RefineSchema, "low");
+  return callAi(REFINE_SYSTEM, [{ type: "text", text }], RefineSchema);
 }
 
 // ---------------------------------------------------------------------------

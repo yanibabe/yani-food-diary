@@ -253,7 +253,7 @@ export function MealReview({
     <div className="space-y-5">
       {mockBadge && (
         <div className="rounded-2xl bg-warn px-4 py-2.5 text-[14px] text-warn-ink">
-          โหมดทดสอบ: ผลนี้มาจาก <b>AI จำลอง</b> ไม่ใช่ Claude จริง
+          โหมดทดสอบ: ผลนี้มาจาก <b>AI จำลอง</b> ไม่ใช่ AI จริง
         </div>
       )}
 

@@ -25,24 +25,22 @@ Run the math tests:
 npm test
 ```
 
-## Set up the Claude API (needed for photo and chat analysis)
+## Set up the AI (needed for photo and chat analysis)
 
-The Claude API is a paid service, billed per use.
+AI goes through OpenRouter with the model `google/gemini-3.5-flash`, using the
+key Machina gives you. Don't sign up for anything paid.
 
-1. Get an API key from the Anthropic Console (console.anthropic.com → API keys).
-2. Create a file named `.env.local` in this folder with one line:
+1. Create a file named `.env.local` in this folder with one line:
 
    ```
-   ANTHROPIC_API_KEY=your-key-here
+   OPENROUTER_API_KEY=the-key-from-machina
    ```
 
-   This file is never saved to git.
-3. Restart `npm run dev`.
-4. Optional: choose another model with a second line, e.g. `CLAUDE_MODEL=claude-sonnet-5-5`.
-   The default is `claude-opus-5-5`.
+   This file is never saved to git. Never paste the key in chat.
+2. Restart `npm run dev`.
 
-When deployed (e.g. Vercel), add `ANTHROPIC_API_KEY` in the host's environment
-variables. The key stays on the server; the phone never sees it.
+When deployed (Vercel), add `OPENROUTER_API_KEY` with `vercel env add OPENROUTER_API_KEY`.
+The key stays on the server; the phone never sees it.
 
-Without a key, the app clearly says "ยังไม่ได้ตั้งค่า Claude API" and you can still
+Without a key, the app clearly says "ยังไม่ได้ตั้งค่า AI (OpenRouter)" and you can still
 add food by hand, use recipes, and set goals.
