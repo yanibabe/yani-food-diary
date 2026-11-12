@@ -1,0 +1,16 @@
+{
+  "name": "Yani Food Diary",
+  "short_name": "Food Diary",
+  "description": "บันทึกอาหารประจำวัน ถ่ายรูปให้ AI ช่วยนับแคลอรี และเก็บสูตรของฉัน",
+  "display": "standalone",
+  "orientation": "portrait",
+  "start_url": "/",
+  "theme_color": "#fbf6ec",
+  "background_color": "#fbf6ec",
+  "lang": "th",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

@@ -1,36 +1,48 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Yani Food Diary
 
-## Getting Started
+A Thai food diary for iPhone: Today page, photo → AI estimate → review → save,
+"My recipes" with label values and per-serving math, and "My goals" with a
+daily energy estimate. All data stays on the device.
 
-First, run the development server:
+## Run it on your Mac
 
 ```bash
+cd ~/apps/yani-food-diary
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000 (on iPhone: same Wi-Fi, open `http://<your-mac-ip>:3000`).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Test mode with a fake AI (no key needed, shows an "AI จำลอง" badge):
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run dev:mock
+```
 
-## Learn More
+Run the math tests:
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm test
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Set up the Claude API (needed for photo and chat analysis)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The Claude API is a paid service, billed per use.
 
-## Deploy on Vercel
+1. Get an API key from the Anthropic Console (console.anthropic.com → API keys).
+2. Create a file named `.env.local` in this folder with one line:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+   ```
+   ANTHROPIC_API_KEY=your-key-here
+   ```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+   This file is never saved to git.
+3. Restart `npm run dev`.
+4. Optional: choose another model with a second line, e.g. `CLAUDE_MODEL=claude-sonnet-5-5`.
+   The default is `claude-opus-5-5`.
+
+When deployed (e.g. Vercel), add `ANTHROPIC_API_KEY` in the host's environment
+variables. The key stays on the server; the phone never sees it.
+
+Without a key, the app clearly says "ยังไม่ได้ตั้งค่า Claude API" and you can still
+add food by hand, use recipes, and set goals.
