@@ -38,6 +38,12 @@
   - Counts hidden oil / coconut milk / sugar (in the dish OR as one "extra", never both).
   - When unsure between two sizes, picks the larger typical shop portion.
   - Checks kcal ≈ P×4 + C×4 + F×9.
+- Her rule (same day): when exact numbers aren't known, over-estimate by 15–20%, and be generous with oil.
+  - `AI_MARGIN = 0.15` + `withMargin()` in `app/lib/nutrition.ts`; applied on the server to every analyze item and to refine "adds" (refine edits scale from numbers that already include it — the prompt says so).
+  - Recipes, labels and hand-typed meals get NO margin.
+  - Review screen shows "AI numbers include a +15% safety margin" (`marginNote` prop) for photo/text meals.
+  - Prompt: assume a bit MORE oil for fried/stir-fried dishes.
+  - Checked with the pretend AI: 485 → 558 kcal. Test added (25 pass).
 - NOT tested with a real (paid) AI call yet. Next: she re-takes / re-adds the same 700-kcal photo and compares.
 - Neither number is "the truth": photo guesses are usually ±20–30%.
 

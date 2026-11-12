@@ -28,6 +28,18 @@ export function pickMacros(m: Macros): Macros {
   return { kcal: m.kcal, protein: m.protein, carbs: m.carbs, fat: m.fat };
 }
 
+/**
+ * Safety margin for AI guesses (photo / typed meals). Exact numbers are not
+ * known, so the app rounds UP by 15% (her rule: over-estimate by 15–20%).
+ * Recipes and nutrition labels are exact and never get this margin.
+ */
+export const AI_MARGIN = 0.15;
+
+/** Add the AI safety margin to kcal and macros. */
+export function withMargin<T extends Macros>(m: T, margin = AI_MARGIN): T {
+  return { ...m, ...scaleMacros(m, 1 + margin) };
+}
+
 /** Change an item's amount and scale its numbers in proportion. */
 export function changeAmount(item: FoodItem, newAmount: number): FoodItem {
   if (!(newAmount >= 0)) return item;

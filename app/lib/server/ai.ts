@@ -4,6 +4,7 @@
 
 import { z } from "zod";
 import { trFor, type Lang } from "../i18n.ts";
+import { AI_MARGIN, withMargin } from "../nutrition.ts";
 
 const ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
 export const MODEL = "google/gemini-3.8-flash";
@@ -76,7 +77,7 @@ Rules:
   1) Judge its size against the plate, bowl, spoon or hand in the photo. Standard Thai plates are about 23–26 cm wide; a plate of rice is often 150–250 g of cooked rice.
   2) Write the eaten weight in grams.
   3) Work out kcal from grams using values for the dish AS COOKED in Thai shops and homes (cooked rice ≈ 130 kcal/100 g), not for plain raw ingredients.
-- Thai dishes are often cooked with a lot of oil, coconut milk, sugar and fatty meat. Count this hidden energy: stir-fried, deep-fried and fried-egg dishes soak up oil (often 1–2 tbsp = 120–240 kcal per plate); curries with coconut milk, sweet sauces and pork belly add a lot too. Include it in the dish's kcal, or list cooking oil as its own "extra" item (estimated=true, say so in note) — never both.
+- Thai dishes are often cooked with a lot of oil, coconut milk, sugar and fatty meat. Be generous with cooking oil — when a dish is fried or stir-fried, assume a bit MORE oil than looks likely. Count this hidden energy: stir-fried, deep-fried and fried-egg dishes soak up oil (often 1–2 tbsp = 120–240 kcal per plate); curries with coconut milk, sweet sauces and pork belly add a lot too. Include it in the dish's kcal, or list cooking oil as its own "extra" item (estimated=true, say so in note) — never both.
 - Photo estimates usually come out TOO LOW, because portions look smaller in photos and hidden oil is missed. When you are unsure between two sizes, pick the larger, typical restaurant portion.
 - Check your numbers: kcal should be close to protein×4 + carbs×4 + fat×9.
 - Set estimated=true whenever portion size or recipe is a guess.
@@ -92,6 +93,7 @@ Rules:
 - Change ONLY the items their message is about. Do not touch other items.
 - For an update, return the full new values for that item: amount eaten and nutrients scaled to what was actually eaten. Keep its box unchanged.
 - "Ate it all" / "finished it" means no change for that item.
+- The numbers in the current items already include the app's +${Math.round(AI_MARGIN * 100)}% safety margin. When you update an item, scale from its current numbers so the margin stays. If you must re-estimate an item from scratch, add ${Math.round(AI_MARGIN * 100)}% to your best guess. Do NOT add the margin to new items in adds — the app adds it.
 - If they mention oil, sauce or add-ons that are not in the list, add them in adds (kind "extra"); if the amount is unclear, give a typical amount, set estimated=true, and say so in note.
 - If a change is ambiguous, make no edit for it and ask one short question.
 - ${languageRule(lang)}
@@ -200,7 +202,7 @@ async function callAi<T>(system: string, content: Part[], schema: z.ZodType<T>, 
 }
 
 export async function analyzeMeal(input: { image: string | null; text: string; lang: Lang }): Promise<Analysis> {
-  if (process.env.AI_MOCK === "1") return mockAnalyze(input);
+  if (process.env.AI_MOCK === "1") return addMargin(mockAnalyze(input));
   const content: Part[] = [
     {
       type: "text",
@@ -214,7 +216,12 @@ export async function analyzeMeal(input: { image: string | null; text: string; l
       throw new AiError("bad-output", trFor(input.lang)("รูปแบบรูปไม่รองรับ", "This picture format is not supported"), 400);
     content.push({ type: "image_url", image_url: { url: input.image } });
   }
-  return callAi(ANALYZE_SYSTEM(input.lang), content, AnalysisSchema, input.lang);
+  return addMargin(await callAi(ANALYZE_SYSTEM(input.lang), content, AnalysisSchema, input.lang));
+}
+
+/** Every AI guess gets the safety margin (see AI_MARGIN in nutrition.ts). */
+function addMargin(a: Analysis): Analysis {
+  return { ...a, items: a.items.map((i) => withMargin(i)) };
 }
 
 export type RefineInput = {
@@ -226,7 +233,7 @@ export type RefineInput = {
 };
 
 export async function refineMeal(input: RefineInput): Promise<Refine> {
-  if (process.env.AI_MOCK === "1") return mockRefine(input);
+  if (process.env.AI_MOCK === "1") return marginOnAdds(mockRefine(input));
   const text = [
     `Meal: ${input.title}`,
     `Current items (JSON): ${JSON.stringify(input.items)}`,
@@ -237,7 +244,12 @@ export async function refineMeal(input: RefineInput): Promise<Refine> {
   ]
     .filter(Boolean)
     .join("\n\n");
-  return callAi(REFINE_SYSTEM(input.lang), [{ type: "text", text }], RefineSchema, input.lang);
+  return marginOnAdds(await callAi(REFINE_SYSTEM(input.lang), [{ type: "text", text }], RefineSchema, input.lang));
+}
+
+/** New items from a chat message get the margin; edits scale from numbers that already have it. */
+function marginOnAdds(r: Refine): Refine {
+  return { ...r, adds: r.adds.map((i) => withMargin(i)) };
 }
 
 // ---------------------------------------------------------------------------

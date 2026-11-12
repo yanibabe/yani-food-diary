@@ -1,6 +1,6 @@
 "use client";
 import { useMemo, useRef, useState } from "react";
-import { blankItem, changeAmount, cleanBox, cleanNumber, fmtAmount, fmtKcal, newId, pickMacros, sumMacros } from "../lib/nutrition";
+import { AI_MARGIN, blankItem, changeAmount, cleanBox, cleanNumber, fmtAmount, fmtKcal, newId, pickMacros, sumMacros } from "../lib/nutrition";
 import { useLang } from "../lib/lang";
 import { SLOT_LABEL, SLOTS, type FoodItem, type MealSlot } from "../lib/types";
 import { Badge, KcalBig, MacroCards, NumberField, Sheet } from "./ui";
@@ -119,6 +119,7 @@ export function MealReview({
   photo,
   initial,
   mockBadge,
+  marginNote,
   firstQuestion,
   chatEnabled,
   chatDisabledReason,
@@ -131,6 +132,8 @@ export function MealReview({
   photo: string | null;
   initial: MealDraft;
   mockBadge?: boolean;
+  /** Show "AI numbers include a +15% safety margin". */
+  marginNote?: boolean;
   firstQuestion?: string | null;
   chatEnabled: boolean;
   chatDisabledReason?: string;
@@ -287,6 +290,14 @@ export function MealReview({
         <p className="text-center text-[14px] text-muted" data-testid="amount-summary">{amountSummary}</p>
         <KcalBig kcal={total.kcal} />
         <MacroCards m={total} />
+        {marginNote && (
+          <p className="text-center text-[13px] text-muted" data-testid="margin-note">
+            {tr(
+              `ตัวเลขจาก AI บวกเผื่อไว้ ${Math.round(AI_MARGIN * 100)}% แล้ว เพราะไม่รู้ค่าจริงแน่นอน`,
+              `AI numbers include a +${Math.round(AI_MARGIN * 100)}% safety margin, because the exact values aren't known`,
+            )}
+          </p>
+        )}
       </div>
 
       <section className="card p-4">

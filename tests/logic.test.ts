@@ -263,3 +263,14 @@ test("language: date label and label lists", () => {
   assert.equal(trFor("en")("วันนี้", "Today"), "Today");
   assert.equal(trFor("th")("วันนี้", "Today"), "วันนี้");
 });
+
+test("AI safety margin adds 15% to kcal and macros, keeps other fields", async () => {
+  const { withMargin, AI_MARGIN } = await import("../app/lib/nutrition.ts");
+  assert.equal(AI_MARGIN, 0.15);
+  const out = withMargin({ name: "ผัดกะเพรา", amount: 1, kcal: 600, protein: 20, carbs: 70, fat: 26 });
+  assert.equal(out.name, "ผัดกะเพรา");
+  assert.equal(out.amount, 1);
+  assert.equal(Math.round(out.kcal), 690);
+  assert.equal(Math.round(out.protein * 10) / 10, 23);
+  assert.equal(Math.round(out.fat * 10) / 10, 29.9);
+});

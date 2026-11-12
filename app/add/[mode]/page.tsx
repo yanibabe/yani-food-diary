@@ -221,6 +221,7 @@ function AddInner() {
           photo={mode === "photo" ? photo : null}
           initial={draft}
           mockBadge={mock}
+          marginNote={mode !== "manual"}
           firstQuestion={question}
           chatEnabled={aiReady}
           chatDisabledReason={tr("ยังไม่ได้ตั้งค่า AI (OpenRouter) — แตะรายการเพื่อแก้เองได้", "The AI (OpenRouter) is not set up — tap an item to edit it yourself")}
