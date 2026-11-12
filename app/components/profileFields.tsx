@@ -2,7 +2,7 @@
 // Form pieces shared by first-run setup (/welcome) and the Profile page.
 
 import { NumberField } from "./ui";
-import { DAILY_LABEL, DURATION_UNIT, EXERCISE_LABEL, REASON_LABEL, usesWeightGoal, validateProfile, type WeightPlan } from "../lib/energy";
+import { BMI_LABEL, BMI_NOTE, bmiInfo, DAILY_LABEL, DURATION_UNIT, EXERCISE_LABEL, REASON_LABEL, usesWeightGoal, validateProfile, type BmiLevel, type WeightPlan } from "../lib/energy";
 import { shiftDateKey, thaiDateKey, thaiDateLabel } from "../lib/date";
 import { pickAll, trFor, type Lang } from "../lib/i18n";
 import { useLang } from "../lib/lang";
@@ -81,15 +81,37 @@ export function BodyFields({ p, set }: { p: Profile; set: SetP }) {
         </div>
       </div>
       <div>
-        <span className="label">{tr("เพศที่ใช้ในสมการ", "Sex used in the formula")}</span>
+        <span className="label">{tr("เพศของคุณ", "Your sex")}</span>
         <Choice<Sex> value={p.sex} options={{ female: tr("หญิง", "Female"), male: tr("ชาย", "Male") }} onChange={(v) => set({ sex: v })} cols={2} />
-        <p className="mt-1 text-[13px] text-muted">
-          {tr(
-            "สมการมีค่าคงที่ต่างกันสำหรับสองแบบนี้ เลือกแบบที่ใกล้ร่างกายคุณที่สุด",
-            "The formula uses a different number for each. Pick the one closest to your body.",
-          )}
-        </p>
       </div>
+      <BmiCard heightCm={p.heightCm} weightKg={p.weightKg} />
+    </div>
+  );
+}
+
+const BMI_TONE: Record<BmiLevel, string> = {
+  under: "bg-[#dde7f0] text-[#2f5577]",
+  normal: "bg-[#e6ecd6] text-[#4f6326]",
+  over: "bg-warn text-warn-ink",
+  obese1: "bg-[#f6ddd6] text-[#9a3b2a]",
+  obese2: "bg-[#f6ddd6] text-[#9a3b2a]",
+};
+
+/** BMI from height + weight, with the Asian / Thai cut-offs. Hidden until both numbers make sense. */
+export function BmiCard({ heightCm, weightKg }: { heightCm: number; weightKg: number }) {
+  const { tr, lang } = useLang();
+  const b = bmiInfo(heightCm, weightKg);
+  if (!b) return null;
+  return (
+    <div className="rounded-2xl bg-paper px-4 py-3" data-testid="bmi-card">
+      <div className="text-[15px]">
+        {tr("ดัชนีมวลกาย (BMI) ของคุณ", "Your Body Mass Index (BMI)")}: <b className="num">{b.bmi.toFixed(1)}</b>
+      </div>
+      <span className={`mt-2 inline-block rounded-full px-3 py-1 text-[14px] font-semibold ${BMI_TONE[b.level]}`}>{BMI_LABEL[b.level][lang]}</span>
+      <p className="mt-2 text-[14px] text-muted">{BMI_NOTE[b.level][lang]}</p>
+      <p className="mt-1 text-[12px] text-muted">
+        {tr("เกณฑ์สำหรับคนเอเชีย: ปกติ 18.5–22.9", "Asian cut-offs: healthy range 18.5–22.9")}
+      </p>
     </div>
   );
 }
@@ -108,7 +130,7 @@ export function reasonProblem(p: Profile, lang: Lang = "th"): string | null {
   const t = trFor(lang);
   if (!p.reason) return t("เลือกเหตุผลหนึ่งข้อ", "Pick one reason");
   if (!usesWeightGoal(p.reason)) return null;
-  if (!(p.targetWeightKg > 0)) return t("ใส่น้ำหนักที่อยากเป็น", "Enter your goal weight");
+  if (!(p.targetWeightKg > 0)) return t("ใส่น้ำหนักที่ต้องการ", "Enter your goal weight");
   return validateProfile({ ...p, age: Math.max(18, p.age) }, lang);
 }
 
@@ -155,7 +177,7 @@ export function ReasonFields({ p, set, plan }: { p: Profile; set: SetP; plan: We
       {usesWeightGoal(p.reason) && p.reason && (
         <div className="space-y-3">
           <div>
-            <label className="label" htmlFor="target-weight">{tr("น้ำหนักที่อยากเป็น (กก.)", "Goal weight (kg)")}</label>
+            <label className="label" htmlFor="target-weight">{tr("น้ำหนักที่ต้องการ (กก.)", "Goal weight (kg)")}</label>
             <NumberField id="target-weight" value={p.targetWeightKg || null} onChange={(n) => set({ targetWeightKg: n ?? 0 })} />
           </div>
           <div>
@@ -235,7 +257,7 @@ export function PlanSummary({ p, plan, onUseSafe }: { p: Profile; plan: WeightPl
       {plan.direction === "lose" && plan.targetBmi < 18.5 && (
         <p className="rounded-2xl bg-warn px-4 py-3 text-[15px] text-warn-ink" role="alert">
           {tr(
-            `น้ำหนักที่อยากเป็นนี้ทำให้ BMI ≈ ${kg(plan.targetBmi)} ซึ่งต่ำกว่าเกณฑ์ปกติ (18.5) ควรปรึกษาแพทย์ก่อนตั้งเป้านี้`,
+            `น้ำหนักที่ต้องการนี้ทำให้ BMI ≈ ${kg(plan.targetBmi)} ซึ่งต่ำกว่าเกณฑ์ปกติ (18.5) ควรปรึกษาแพทย์ก่อนตั้งเป้านี้`,
             `This goal weight gives a BMI of about ${kg(plan.targetBmi)}, which is below the normal range (18.5). Please talk to a doctor before setting this goal.`,
           )}
         </p>

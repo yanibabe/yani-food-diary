@@ -151,7 +151,7 @@ function InfoCard({ p, onEdit }: { p: Profile; onEdit: () => void }) {
           k={tr("ส่วนสูง · น้ำหนัก", "Height · Weight")}
           v={p.heightCm ? tr(`${p.heightCm} ซม. · ${kg(p.weightKg)} กก.`, `${p.heightCm} cm · ${kg(p.weightKg)} kg`) : "—"}
         />
-        <Row k={tr("เพศที่ใช้ในสมการ", "Sex in the formula")} v={p.sex === "male" ? tr("ชาย", "Male") : tr("หญิง", "Female")} />
+        <Row k={tr("เพศ", "Sex")} v={p.sex === "male" ? tr("ชาย", "Male") : tr("หญิง", "Female")} />
         <Row k={tr("ชีวิตประจำวัน", "Daily life")} v={DAILY_LABEL[p.daily][lang]} />
         <Row k={tr("ออกกำลังกาย", "Exercise")} v={EXERCISE_LABEL[p.exercise][lang]} />
         <Row k={tr("ระดับกิจกรรม", "Activity level")} v={`${level.label[lang]} (×${level.factor})`} />

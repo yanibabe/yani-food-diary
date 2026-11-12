@@ -27,6 +27,19 @@
   in the browser pane instead of looping curl.
 - WhatsApp remembers old previews; a fresh card may need the link sent again (or with `?v=2` at the end).
 
+## Small fixes (2026-11-12, from her iPhone screenshots) ✅
+- Setup/Profile: "เพศที่ใช้ในสมการ" → **"เพศของคุณ" / "Your sex"** (helper line removed); Profile row → "เพศ".
+- "น้ำหนักที่อยากเป็น" → **"น้ำหนักที่ต้องการ"** everywhere (label, error, BMI warning).
+- **BMI card** on the body step (setup + Profile edit): `BmiCard` in `profileFields.tsx`, math
+  `bmiInfo()` / `bmiLevel()` in `energy.ts`. Asian/Thai cut-offs: <18.5 น้ำหนักน้อย, 18.5–22.9 ปกติ,
+  23–24.9 น้ำหนักเกิน, 25–29.9 อ้วนระดับ 1, ≥30 อ้วนระดับ 2. Hidden until height + weight make sense.
+- Recipe ingredient cards: the egg icon / ingredient photo is **removed** (view + edit). Just name,
+  amount, kcal. Old ingredient photos stay stored but are no longer shown.
+- Her question "why 343 (AI photo) vs 306 (recipe) for the same omelette?": the AI number includes
+  HER +15% safety margin (≈298 × 1.15 ≈ 343); recipes get no margin. Nothing changed — explained.
+- Tested: `npm test` 31 pass (1 new BMI test). Browser at iPhone size: 150 cm / 79.3 kg → BMI 35.2,
+  อ้วนระดับ 2; goal label shows น้ำหนักที่ต้องการ; recipe page shows 306 with no pictures. Build passes.
+
 ## Round 6 (2026-11-12) — four meals: เช้า · กลางวัน · เย็น · ของว่าง ✅
 
 - Meal slots are now `breakfast | lunch | dinner | snack` (was `brunch | dinner | snack`).

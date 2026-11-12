@@ -289,3 +289,16 @@ test("meals: breakfast / lunch / dinner / snack by Thai time, old brunch is spli
   assert.equal(upgradeSlot("brunch", at(13).getTime()), "lunch");
   assert.equal(upgradeSlot("dinner", at(9).getTime()), "dinner");
 });
+
+import { bmiInfo, bmiLevel } from "../app/lib/energy.ts";
+test("BMI uses Asian cut-offs and waits for real numbers", () => {
+  const b = bmiInfo(150, 79.3)!;
+  assert.ok(Math.abs(b.bmi - 35.24) < 0.01);
+  assert.equal(b.level, "obese2");
+  assert.equal(bmiLevel(18.4), "under");
+  assert.equal(bmiLevel(22.9), "normal");
+  assert.equal(bmiLevel(23), "over");
+  assert.equal(bmiLevel(27), "obese1");
+  assert.equal(bmiInfo(0, 60), null);
+  assert.equal(bmiInfo(160, 5), null);
+});

@@ -195,11 +195,11 @@ export function validateProfile(p: Profile, lang: Lang = "th"): string | null {
   if (!(p.weightKg >= 30 && p.weightKg <= 300)) return t("น้ำหนักควรอยู่ระหว่าง 30–300 กก.", "Weight should be 30–300 kg");
   if (!usesWeightGoal(p.reason)) return null;
   if (!(p.targetWeightKg >= 30 && p.targetWeightKg <= 300))
-    return t("น้ำหนักที่อยากเป็นควรอยู่ระหว่าง 30–300 กก.", "Goal weight should be 30–300 kg");
+    return t("น้ำหนักที่ต้องการควรอยู่ระหว่าง 30–300 กก.", "Goal weight should be 30–300 kg");
   if (p.reason === "lose" && p.targetWeightKg > p.weightKg - SAME_WEIGHT_KG)
-    return t("อยากลดน้ำหนัก: น้ำหนักที่อยากเป็นต้องน้อยกว่าน้ำหนักตอนนี้", "To lose weight, your goal weight must be less than your weight now");
+    return t("อยากลดน้ำหนัก: น้ำหนักที่ต้องการต้องน้อยกว่าน้ำหนักตอนนี้", "To lose weight, your goal weight must be less than your weight now");
   if (p.reason === "gain" && p.targetWeightKg < p.weightKg + SAME_WEIGHT_KG)
-    return t("อยากเพิ่มน้ำหนัก: น้ำหนักที่อยากเป็นต้องมากกว่าน้ำหนักตอนนี้", "To gain weight, your goal weight must be more than your weight now");
+    return t("อยากเพิ่มน้ำหนัก: น้ำหนักที่ต้องการต้องมากกว่าน้ำหนักตอนนี้", "To gain weight, your goal weight must be more than your weight now");
   if (Math.abs(p.targetWeightKg - p.weightKg) >= SAME_WEIGHT_KG) {
     if (!(p.duration > 0)) return t("ใส่ระยะเวลาที่อยากให้ถึงเป้า", "Enter how long you want to take");
     if (durationDays(p.duration, p.durationUnit) > 1100) return t("ระยะเวลาไม่ควรเกินประมาณ 3 ปี", "The time should be no more than about 3 years");
@@ -295,4 +295,38 @@ export function macroTargets(kcal: number, proteinG: number | null = null) {
     carbs: (kcal * 0.5) / 4,
     fat: (kcal * 0.3) / 9,
   };
+}
+
+// ---- BMI (Asian / Thai cut-offs, WHO Western Pacific 2000) ----
+export type BmiLevel = "under" | "normal" | "over" | "obese1" | "obese2";
+
+export const BMI_LABEL: Record<BmiLevel, L> = {
+  under: { th: "น้ำหนักน้อย", en: "Underweight" },
+  normal: { th: "ปกติ", en: "Healthy" },
+  over: { th: "น้ำหนักเกิน", en: "Overweight" },
+  obese1: { th: "อ้วนระดับ 1", en: "Obese 1" },
+  obese2: { th: "อ้วนระดับ 2", en: "Obese 2" },
+};
+
+export const BMI_NOTE: Record<BmiLevel, L> = {
+  under: { th: "น้ำหนักต่ำกว่าเกณฑ์ ลองเพิ่มน้ำหนักอย่างค่อยเป็นค่อยไป", en: "Below the healthy range. Gaining a little, slowly, may help." },
+  normal: { th: "อยู่ในเกณฑ์ดี เก่งมาก!", en: "You're in the healthy range. Nice!" },
+  over: { th: "เกินเกณฑ์เล็กน้อย ลดลงนิดหน่อยก็ช่วยสุขภาพได้", en: "A little above the healthy range. Losing a bit can help your health." },
+  obese1: { th: "สูงกว่าเกณฑ์ การลดน้ำหนักจะช่วยสุขภาพได้มาก ค่อย ๆ ไปด้วยกันนะ", en: "Above the healthy range. Losing weight can really help your health — one step at a time." },
+  obese2: { th: "สูงกว่าเกณฑ์มาก การลดน้ำหนักจะช่วยสุขภาพได้มาก ค่อย ๆ ไปด้วยกันนะ", en: "Well above the healthy range. Losing weight can really help your health — one step at a time." },
+};
+
+export function bmiLevel(bmi: number): BmiLevel {
+  if (bmi < 18.5) return "under";
+  if (bmi < 23) return "normal";
+  if (bmi < 25) return "over";
+  if (bmi < 30) return "obese1";
+  return "obese2";
+}
+
+/** BMI + level, or null when height/weight are not filled in sensibly yet. */
+export function bmiInfo(heightCm: number, weightKg: number): { bmi: number; level: BmiLevel } | null {
+  if (!(heightCm >= 120 && heightCm <= 230 && weightKg >= 30 && weightKg <= 300)) return null;
+  const bmi = weightKg / (heightCm / 100) ** 2;
+  return { bmi, level: bmiLevel(bmi) };
 }

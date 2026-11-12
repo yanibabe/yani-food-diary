@@ -232,9 +232,6 @@ function RecipeInner() {
             const r = ingredientMacros(i, lang);
             return (
               <div key={i.id} className="card w-[150px] overflow-hidden" data-testid="ingredient-tile">
-                <div className="flex aspect-square items-center justify-center bg-cream text-[40px]">
-                  {i.photoId ? <StoredPhoto id={i.photoId} className="h-full w-full object-cover" /> : <span aria-hidden>🥚</span>}
-                </div>
                 <div className="p-3">
                   <div className="truncate font-semibold">{i.name}</div>
                   <div className="text-[14px] text-muted">{fmtAmount(i.amount)} {UNIT_LABEL[i.unit][lang]}</div>

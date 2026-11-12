@@ -33,7 +33,6 @@ function IngredientCard({
   const set = (p: Partial<Ingredient>) => onChange({ ...ing, ...p });
   const { tr, lang } = useLang();
   const res = ingredientMacros(ing, lang);
-  const photoRef = useRef<HTMLInputElement>(null);
   const isCount = ing.unit === "egg" || ing.unit === "piece";
   const needsGpu =
     (ing.label?.basis === "per100" && isCount) || (ing.label?.basis === "perUnit" && !isCount) || (!ing.label && isCount);
@@ -42,23 +41,6 @@ function IngredientCard({
   return (
     <div className="card space-y-3 p-4" data-testid="ingredient-card">
       <div className="flex items-start gap-3">
-        <button
-          onClick={() => photoRef.current?.click()}
-          className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-cream text-[24px]"
-          aria-label={tr("เพิ่มรูปวัตถุดิบ", "Add ingredient photo")}
-        >
-          {ing.photoId ? <StoredPhoto id={ing.photoId} className="h-full w-full object-cover" /> : <span aria-hidden>🥚</span>}
-        </button>
-        <input
-          ref={photoRef}
-          type="file"
-          accept="image/*"
-          hidden
-          onChange={async (e) => {
-            const id = await pickPhoto(e.target.files?.[0], 400, tr("อ่านรูปไม่ได้ ลองเลือกรูปอื่น", "Couldn't read this picture. Try another one.")).catch(() => null);
-            if (id) set({ photoId: id });
-          }}
-        />
         <div className="flex-1 space-y-2">
           <input className="field" value={ing.name} onChange={(e) => set({ name: e.target.value })} placeholder={tr("ชื่อวัตถุดิบ เช่น ไข่ไก่", "Ingredient, e.g. egg")} aria-label={tr("ชื่อวัตถุดิบ", "Ingredient name")} />
           <div className="grid grid-cols-[1fr_auto] gap-2">
