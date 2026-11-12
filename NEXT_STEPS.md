@@ -18,6 +18,15 @@
   the link uses Yani's OpenRouter key, so their AI photo/text checks spend HER credit.
   A simple passcode could be a later round.
 
+## Small add (2026-11-12) — link preview card for sharing
+- `app/opengraph-image.tsx` makes a 1200×630 picture (plate + "SnapCal / Snap your food. Know your
+  calories."); `openGraph` + `twitter` metadata in `app/layout.tsx` (title SnapCal, Thai description).
+- She shared the link with her mom. Mom's data stays on mom's phone, but mom's AI calls use Yani's credit.
+- Heads-up: after many quick `curl` checks, Vercel showed a "Security Checkpoint" (403) to this Mac's
+  internet for a while — WhatsApp link previews from this Mac failed meanwhile. Check the live site
+  in the browser pane instead of looping curl.
+- WhatsApp remembers old previews; a fresh card may need the link sent again (or with `?v=2` at the end).
+
 ## Round 6 (2026-11-12) — four meals: เช้า · กลางวัน · เย็น · ของว่าง ✅
 
 - Meal slots are now `breakfast | lunch | dinner | snack` (was `brunch | dinner | snack`).

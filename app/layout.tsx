@@ -23,6 +23,17 @@ export const metadata: Metadata = {
     title: "SnapCal",
   },
   icons: { apple: "/apple-touch-icon.png", icon: "/icon-192.png" },
+  // The card shown when the link is shared in WhatsApp / LINE / Messages.
+  metadataBase: new URL("https://yani-food-diary.vercel.app"),
+  openGraph: {
+    title: "SnapCal",
+    description: "ถ่ายรูปอาหาร ให้ AI ช่วยนับแคล · บันทึกน้ำหนักและจำนวนก้าว",
+    url: "/",
+    siteName: "SnapCal",
+    type: "website",
+    locale: "th_TH",
+  },
+  twitter: { card: "summary_large_image", title: "SnapCal", description: "ถ่ายรูปอาหาร ให้ AI ช่วยนับแคล · บันทึกน้ำหนักและจำนวนก้าว" },
 };
 
 export const viewport: Viewport = {
