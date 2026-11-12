@@ -30,9 +30,14 @@ export function LabeledPhoto({ src, items, onTap }: { src: string; items: FoodIt
               style={{ left: `${b.x * 100}%`, top: `${b.y * 100}%`, width: `${b.w * 100}%`, height: `${b.h * 100}%` }}
               aria-label={`${i.name} ${Math.round(i.kcal)} kcal`}
             >
-              <span className="absolute left-1.5 top-1.5 max-w-[calc(100%-12px)] truncate rounded-full bg-paper/95 px-2.5 py-1 text-left text-[13px] font-semibold text-ink shadow">
-                {i.name} · <span className="num">{fmtKcal(i.kcal)}</span>
-                {i.estimated ? " ~" : ""}
+              {/* The label may be wider than a small box; kcal is never cut off. */}
+              <span
+                className={`absolute top-1.5 flex max-w-[58vw] items-center gap-1 whitespace-nowrap rounded-full bg-paper/95 px-2.5 py-1 text-[13px] font-semibold text-ink shadow sm:max-w-[300px] ${
+                  b.x + b.w / 2 > 0.6 ? "right-1.5" : "left-1.5"
+                }`}
+              >
+                <span className="min-w-0 truncate">{i.name}</span>
+                <span className="num shrink-0">· {fmtKcal(i.kcal)}{i.estimated ? "~" : ""}</span>
               </span>
             </button>
           );

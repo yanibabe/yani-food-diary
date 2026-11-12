@@ -44,12 +44,19 @@ Built and tested on the Mac (not deployed, not on GitHub yet):
      (protein/carbs/fat also ¼). Recipe unchanged. ✅
   3. Manual target 1,650 → fresh page → target 1,650 and both meals still there. ✅
 - With no key: the app shows the real "not set up" message and offers manual entry. ✅
+- **With the REAL AI (gemini-3.8-flash, 2026-11-12)**, using a drawn plate photo:
+  - Photo → rice 150 + fried chicken 260 + green beans 35 = 445 kcal; boxes landed on
+    the right foods. ✅
+  - Chat "ไก่กินครึ่งชิ้น แต่ผักกินหมด" → only chicken changed (260→130), total 445→315,
+    saved to today. ✅
+  - Text only "ผัดกะเพรา… ใส่น้ำมันเยอะ" → oil listed as its own "extra", marked estimate
+    with a note. ✅ Takes ~10–15 seconds per call.
+  - Fixed: photo labels were cut off on small boxes; kcal now always shows.
 - Delete a meal → total updates. Production build (`next build`) passes.
 
 ## NOT tested yet
 
-- Real AI answers (key is set; first real test still to run). Photo labels (boxes) depend on
-  how well Gemini places them — check on real photos.
+- Real phone-camera food photos (only a drawn plate was tested so far).
 - On a real iPhone: camera, home-screen install, storage after closing Safari.
 - Deploy (Vercel) and GitHub repo — not done this round.
 
