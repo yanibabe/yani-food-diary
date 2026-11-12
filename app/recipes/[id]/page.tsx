@@ -107,7 +107,7 @@ function LogSheet({ recipe, open, onClose, date }: { recipe: Recipe; open: boole
           )}
         </div>
 
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 gap-2">
           {SLOTS.map((s) => (
             <button key={s} onClick={() => setSlot(s)} className={`min-h-[44px] rounded-2xl text-[15px] font-medium ${slot === s ? "bg-olive text-white" : "bg-cream"}`}>
               {SLOT_LABEL[s][lang]}

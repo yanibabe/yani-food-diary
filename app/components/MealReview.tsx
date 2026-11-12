@@ -384,7 +384,7 @@ export function MealReview({
 
       <section className="card space-y-2 p-4">
         <span className="label px-1">{tr("บันทึกเป็นมื้อ", "Save as")}</span>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 gap-2">
           {SLOTS.map((s) => (
             <button
               key={s}

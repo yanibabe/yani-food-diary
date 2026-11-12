@@ -18,6 +18,17 @@
   the link uses Yani's OpenRouter key, so their AI photo/text checks spend HER credit.
   A simple passcode could be a later round.
 
+## Round 6 (2026-11-12) — four meals: เช้า · กลางวัน · เย็น · ของว่าง ✅
+
+- Meal slots are now `breakfast | lunch | dinner | snack` (was `brunch | dinner | snack`).
+  Labels: มื้อเช้า / มื้อกลางวัน / มื้อเย็น / ของว่าง (Breakfast / Lunch / Dinner / Snack).
+- Auto-pick by Thai time (`guessSlot`): 05–11 breakfast, 11–15 lunch, 16–22 dinner, else snack.
+- Old saved "brunch" meals are split once on load (`upgradeSlot` in `app/lib/date.ts`, used in
+  `store.tsx`): saved before 11:00 → breakfast, otherwise → lunch. Then saved back.
+- Meal pickers (review screen + recipe "log it") are a 2×2 grid now.
+- Tested: `npm test` 30 pass (1 new). Browser at iPhone size: old 9:00 brunch → มื้อเช้า,
+  13:00 brunch → มื้อกลางวัน, Today shows the 4 groups, edit screen picker OK.
+
 ## Round 5 (2026-11-12) — weight + steps tracker, and the new name SnapCal ✅
 
 - **New name: SnapCal** (her pick). Changed: page title, iPhone home-screen title, manifest

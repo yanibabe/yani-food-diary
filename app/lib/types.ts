@@ -9,15 +9,16 @@ export type Macros = {
   fat: number; // grams
 };
 
-export type MealSlot = "brunch" | "dinner" | "snack";
+export type MealSlot = "breakfast" | "lunch" | "dinner" | "snack";
 
 export const SLOT_LABEL: Record<MealSlot, L> = {
-  brunch: { th: "มื้อสาย", en: "Brunch" },
+  breakfast: { th: "มื้อเช้า", en: "Breakfast" },
+  lunch: { th: "มื้อกลางวัน", en: "Lunch" },
   dinner: { th: "มื้อเย็น", en: "Dinner" },
   snack: { th: "ของว่าง", en: "Snack" },
 };
 
-export const SLOTS: MealSlot[] = ["brunch", "dinner", "snack"];
+export const SLOTS: MealSlot[] = ["breakfast", "lunch", "dinner", "snack"];
 
 /** A box on the photo, in 0..1 fractions of the image width/height. */
 export type Box = { x: number; y: number; w: number; h: number };

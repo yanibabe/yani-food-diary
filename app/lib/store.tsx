@@ -5,6 +5,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { Entry, Goals, Recipe } from "./types.ts";
 import { upsertLog, type BodyLog } from "./body.ts";
+import { upgradeSlot } from "./date.ts";
 
 const KEY = {
   entries: "yfd:v1:entries",
@@ -67,8 +68,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Load once on the device (localStorage is not available on the server).
+    const saved = read<Entry[]>(KEY.entries, []);
+    const upgraded = saved.map((e) => ({ ...e, slot: upgradeSlot(e.slot, e.createdAt) }));
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setEntries(read(KEY.entries, []));
+    setEntries(upgraded);
+    // Old "brunch" meals were split into breakfast / lunch: save that once.
+    if (upgraded.some((e, i) => e.slot !== saved[i].slot)) setSaveError(write(KEY.entries, upgraded));
     setRecipes(read(KEY.recipes, []));
     setGoalsState({ ...DEFAULT_GOALS, ...read(KEY.goals, DEFAULT_GOALS) });
     setBodyLogs(read(KEY.body, []));

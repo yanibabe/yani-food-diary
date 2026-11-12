@@ -274,3 +274,18 @@ test("AI safety margin adds 15% to kcal and macros, keeps other fields", async (
   assert.equal(Math.round(out.protein * 10) / 10, 23);
   assert.equal(Math.round(out.fat * 10) / 10, 29.9);
 });
+
+import { guessSlot, upgradeSlot } from "../app/lib/date.ts";
+
+test("meals: breakfast / lunch / dinner / snack by Thai time, old brunch is split", () => {
+  // Thailand is UTC+7
+  const at = (h: number) => new Date(Date.UTC(2026, 10, 12, h - 7, 0));
+  assert.equal(guessSlot(at(7)), "breakfast");
+  assert.equal(guessSlot(at(12)), "lunch");
+  assert.equal(guessSlot(at(19)), "dinner");
+  assert.equal(guessSlot(at(15)), "snack");
+  assert.equal(guessSlot(at(23)), "snack");
+  assert.equal(upgradeSlot("brunch", at(9).getTime()), "breakfast");
+  assert.equal(upgradeSlot("brunch", at(13).getTime()), "lunch");
+  assert.equal(upgradeSlot("dinner", at(9).getTime()), "dinner");
+});

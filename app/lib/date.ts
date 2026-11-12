@@ -26,7 +26,8 @@ export function thaiHour(d: Date = new Date()): number {
 /** Guess the meal from the time of day in Thailand. */
 export function guessSlot(d: Date = new Date()): MealSlot {
   const h = thaiHour(d);
-  if (h >= 5 && h < 15) return "brunch";
+  if (h >= 5 && h < 11) return "breakfast";
+  if (h >= 11 && h < 15) return "lunch";
   if (h >= 16 && h < 22) return "dinner";
   return "snack";
 }
@@ -49,4 +50,11 @@ export function thaiDateLabel(key: string, lang: Lang = "th"): string {
     month: "short",
     year: "numeric",
   }).format(t);
+}
+
+/** Meals saved before Round 6 used "brunch". Split them by the time they were saved. */
+export function upgradeSlot(slot: string, createdAt: number): MealSlot {
+  if (slot === "breakfast" || slot === "lunch" || slot === "dinner" || slot === "snack") return slot;
+  if (slot === "brunch") return thaiHour(new Date(createdAt)) < 11 ? "breakfast" : "lunch";
+  return guessSlot(new Date(createdAt));
 }
