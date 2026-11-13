@@ -24,6 +24,23 @@ export function warmUpBarcodeReader() {
   });
 }
 
+/** Barcode number in one live camera frame (already cropped to the guide box), or null. Fast settings. */
+export async function scanBarcodeFrame(frame: ImageData): Promise<string | null> {
+  const z = await loadReader();
+  const results = await z.readBarcodes(frame, {
+    formats: ["EAN13", "EAN8", "UPCA", "UPCE"],
+    tryHarder: false,
+    tryRotate: true,
+    tryInvert: false,
+    maxNumberOfSymbols: 1,
+  });
+  for (const r of results) {
+    const code = r.isValid ? cleanBarcode(r.text) : null;
+    if (code) return code;
+  }
+  return null;
+}
+
 /** The barcode number in this photo, or null if the stripes can't be read. */
 export async function scanBarcodePhoto(file: Blob): Promise<string | null> {
   const z = await loadReader();

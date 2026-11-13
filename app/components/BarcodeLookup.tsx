@@ -1,5 +1,5 @@
 "use client";
-// Photo or typed barcode → look it up in Open Food Facts (phone cache first) → choose grams eaten.
+// Live camera, photo or typed barcode → look it up in Open Food Facts (phone cache first) → choose grams eaten.
 
 import { useEffect, useRef, useState } from "react";
 import { aiFetch } from "../lib/aiFetch";
@@ -10,6 +10,7 @@ import { getOffProduct, putOffProduct } from "../lib/food/offStore";
 import { cleanBarcode, servingGrams, servingIsLiquid, type Food } from "../lib/food/provider";
 import { useLang } from "../lib/lang";
 import { fmtG, fmtKcal } from "../lib/nutrition";
+import { LiveBarcodeScanner } from "./LiveBarcodeScanner";
 import { OffAttribution } from "./OffAttribution";
 import { NumberField } from "./ui";
 
@@ -23,6 +24,7 @@ export function BarcodeLookup({ onPick, onManual }: { onPick: (food: Food, grams
   const [grams, setGrams] = useState<number | null>(100);
   const [reading, setReading] = useState(false);
   const [readByAi, setReadByAi] = useState(false);
+  const [live, setLive] = useState(false);
   const cameraRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => warmUpBarcodeReader(), []);
@@ -74,6 +76,21 @@ export function BarcodeLookup({ onPick, onManual }: { onPick: (food: Food, grams
     await lookup(found);
   }
 
+  /** The live camera read a code (twice the same, check digit OK) → look it up straight away. */
+  function fromLive(found: string) {
+    setLive(false);
+    setReadByAi(false);
+    setCode(found);
+    lookup(found);
+  }
+
+  function startLive() {
+    setError(null);
+    setNotFound(false);
+    setFood(null);
+    setLive(true);
+  }
+
   function show(f: Food) {
     setFood(f);
     setGrams(servingGrams(f.servingSize) ?? 100);
@@ -121,8 +138,11 @@ export function BarcodeLookup({ onPick, onManual }: { onPick: (food: Food, grams
   return (
     <div className="space-y-5">
       <div className="card space-y-3 p-4">
-        <button className="btn-primary w-full" onClick={() => cameraRef.current?.click()} disabled={busy || reading} data-testid="barcode-photo">
-          {reading ? tr("กำลังอ่านบาร์โค้ด…", "Reading the barcode…") : `📷 ${tr("ถ่ายรูปบาร์โค้ด", "Take a photo of the barcode")}`}
+        <button className="btn-primary w-full" onClick={startLive} disabled={busy || reading} data-testid="barcode-live">
+          {`📷 ${tr("สแกนด้วยกล้อง", "Scan with camera")}`}
+        </button>
+        <button className="btn-soft w-full" onClick={() => cameraRef.current?.click()} disabled={busy || reading} data-testid="barcode-photo">
+          {reading ? tr("กำลังอ่านบาร์โค้ด…", "Reading the barcode…") : `🖼️ ${tr("ถ่ายรูปบาร์โค้ดแทน", "Take a photo instead")}`}
         </button>
         <input
           ref={cameraRef}
@@ -211,6 +231,17 @@ export function BarcodeLookup({ onPick, onManual }: { onPick: (food: Food, grams
           </button>
           <OffAttribution />
         </div>
+      )}
+
+      {live && (
+        <LiveBarcodeScanner
+          onFound={fromLive}
+          onClose={() => setLive(false)}
+          onUsePhoto={() => {
+            setLive(false);
+            cameraRef.current?.click();
+          }}
+        />
       )}
 
       <button className="btn-soft w-full" onClick={onManual}>
