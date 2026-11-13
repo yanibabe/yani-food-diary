@@ -9,6 +9,7 @@ const data = {
   body: JSON.stringify([{ date: "2026-11-12", weightKg: 79, steps: null }]),
   water: JSON.stringify([{ date: "2026-11-12", glasses: 6, updatedAt: 1 }]),
   labelFixes: JSON.stringify([{ code: "8850000000001", servingG: 20, liquid: false, kcal: 70, protein: null, carbs: null, fat: null, updatedAt: 1 }]),
+  buddy: JSON.stringify({ shape: "mochi", color: "#FAC775", eyes: "happy", mouth: "smile", head: "bow", extras: ["blush"] }),
   lang: "en",
 };
 
@@ -22,7 +23,7 @@ test("a backup survives the trip to a file and back unchanged", () => {
 });
 
 test("empty parts stay empty", () => {
-  const b = makeBackup({ entries: null, recipes: null, goals: null, body: null, water: null, labelFixes: null, lang: null }, {}, 1);
+  const b = makeBackup({ entries: null, recipes: null, goals: null, body: null, water: null, labelFixes: null, buddy: null, lang: null }, {}, 1);
   const res = parseBackup(JSON.stringify(b));
   assert.ok(res.ok);
   assert.deepEqual(backupCounts(res.backup), { meals: 0, recipes: 0, days: 0, photos: 0 });
@@ -75,4 +76,17 @@ test("backup reminder: after 14 days, never for an empty phone, and 'later' hide
   const until = snoozeUntil(now);
   assert.equal(backupDue({ now: now + 2 * day, lastBackup: null, oldestEntryAt: now - 30 * day, snoozeUntil: until }), null);
   assert.ok(backupDue({ now: now + 3 * day, lastBackup: null, oldestEntryAt: now - 30 * day, snoozeUntil: until }));
+});
+
+test("old backups without a buddy still open", () => {
+  const b = makeBackup(data, {}, 1) as unknown as { data: Record<string, unknown> };
+  delete b.data.buddy;
+  const res = parseBackup(JSON.stringify(b));
+  assert.ok(res.ok);
+  assert.equal(res.backup.data.buddy, null);
+});
+
+test("a broken buddy in a backup is refused", () => {
+  const b = makeBackup({ ...data, buddy: "[]" }, {}, 1);
+  assert.equal(parseBackup(JSON.stringify(b)).ok, false);
 });

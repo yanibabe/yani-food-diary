@@ -6,6 +6,9 @@ import { MacroCards, Sheet, StoredPhoto } from "./components/ui";
 import { BackupReminder } from "./components/BackupReminder";
 import { WeekKcalChart } from "./components/WeekKcalChart";
 import { WaterCard } from "./components/WaterCard";
+import { BuddyMaker, BuddyPicture } from "./components/Buddy";
+import { useBuddy } from "./lib/buddy/store";
+import { DEFAULT_BUDDY } from "./lib/buddy/parts";
 import { guessSlot, shiftDateKey, shortDayLabel, thaiDateKey, thaiDateLabel } from "./lib/date";
 import { copyMeal, recentMeals, searchMeals } from "./lib/repeat";
 import { macroTargets, proteinTargetG } from "./lib/energy";
@@ -50,6 +53,8 @@ function TodayInner() {
   const [againView, setAgainView] = useState(false);
   const [againQuery, setAgainQuery] = useState("");
   const { tr, lang } = useLang();
+  const { buddy, loaded: buddyLoaded, save: saveBuddy } = useBuddy();
+  const [buddyOpen, setBuddyOpen] = useState(false);
 
   const dayEntries = useMemo(() => entries.filter((e) => e.date === date).sort((a, b) => a.createdAt - b.createdAt), [entries, date]);
   const total = useMemo(() => sumMacros(dayEntries.flatMap((e) => e.items.map(pickMacros))), [dayEntries]);
@@ -85,8 +90,20 @@ function TodayInner() {
           ‹
         </button>
         <div className="text-center">
-          {goals.profile?.name && date === today && (
-            <p className="text-[15px] text-muted" data-testid="greeting">{tr("สวัสดี", "Hi")} {goals.profile.name}</p>
+          {date === today && (
+            <div className="mb-1 flex items-center justify-center gap-2">
+              <button
+                className="h-[52px] w-[52px] shrink-0 rounded-full"
+                onClick={() => setBuddyOpen(true)}
+                aria-label={tr("แต่งตัวของฉัน", "My buddy")}
+                data-testid="buddy-button"
+              >
+                {buddyLoaded && <BuddyPicture buddy={buddy ?? DEFAULT_BUDDY} size={52} />}
+              </button>
+              {goals.profile?.name && (
+                <p className="text-[15px] text-muted" data-testid="greeting">{tr("สวัสดี", "Hi")} {goals.profile.name}</p>
+              )}
+            </div>
           )}
           <h1 className="text-[26px] font-bold">{date === today ? tr("วันนี้", "Today") : tr("ย้อนดู", "Looking back")}</h1>
           <p className="text-[14px] text-muted">{thaiDateLabel(date, lang)}</p>
@@ -185,6 +202,8 @@ function TodayInner() {
           </button>
         </div>
       )}
+
+      {buddyOpen && <BuddyMaker open start={buddy} onClose={() => setBuddyOpen(false)} onSave={saveBuddy} />}
 
       <Sheet open={addOpen} onClose={() => setAddOpen(false)} title={tr("เพิ่มอาหาร", "Add food")}>
         {againView ? (
