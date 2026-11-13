@@ -41,7 +41,7 @@ said 100 instead of the can's 325 mL. She then asked: can a photo fill the numbe
   without passcode → 401. NOT checked: a real iPhone camera photo, and a real (non-mock) AI digit read.
 
 ### ▶ NEXT
-1. She tries 📷 on her iPhone with a real pack (first real camera read; tell me if it needed the AI note).
+1. ✅ She tried 📷 on her iPhone with a real pack (2026-11-13): worked, "very fast".
 2. Resume the paused phone tests: photo → milk warning → backup.
 3. Ideas: use OFF allergen data for the milk warning; live camera scanning without taking a photo (own round).
 
