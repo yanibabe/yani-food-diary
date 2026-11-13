@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
-import { Mitr, Noto_Sans_Thai, Nunito } from "next/font/google";
+import { Noto_Sans_Thai, Nunito } from "next/font/google";
 import "./globals.css";
 import { DataProvider } from "./lib/store";
 import { LangProvider } from "./lib/lang";
@@ -14,16 +14,11 @@ const thai = Noto_Sans_Thai({
   weight: ["400", "500", "600", "700"],
 });
 
-// Soft, round fonts for titles and numbers: Nunito for digits/English, Mitr for Thai.
+// Soft, round font for numbers.
 const roundLatin = Nunito({
   variable: "--font-round-latin",
   subsets: ["latin"],
   weight: ["500", "600", "700", "800"],
-});
-const round = Mitr({
-  variable: "--font-round",
-  subsets: ["thai", "latin"],
-  weight: ["400", "500", "600"],
 });
 
 export const metadata: Metadata = {
@@ -53,12 +48,12 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#f7f3ef",
+  themeColor: "#f8f6f3",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="th" className={`${thai.variable} ${roundLatin.variable} ${round.variable} h-full antialiased`}>
+    <html lang="th" className={`${thai.variable} ${roundLatin.variable} h-full antialiased`}>
       <body className="min-h-full">
         <LangProvider>
           <DataProvider>

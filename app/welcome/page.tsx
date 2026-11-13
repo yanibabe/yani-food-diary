@@ -3,7 +3,6 @@
 // with a name and a reason is saved. One question per screen.
 
 import { useMemo, useState } from "react";
-import { Blob } from "../components/Blob";
 import { useRouter } from "next/navigation";
 import {
   ActivityFields,
@@ -91,13 +90,6 @@ export default function WelcomePage() {
         <span className="h-11 w-11 shrink-0" />
       </div>
 
-      {step === 0 && (
-        <div className="relative mb-2 h-[120px]" aria-hidden>
-          <Blob color="var(--paper)" size={110} shape={0} className="absolute left-1 top-0 drop-shadow-sm" />
-          <Blob color="var(--yellow)" size={92} shape={1} eyes={false} className="absolute left-[78px] top-[26px]" />
-          <Blob color="var(--pink)" size={46} shape={2} look={-2} className="absolute left-[176px] top-[64px]" />
-        </div>
-      )}
       <h1 className="mb-1 text-[28px] font-bold">{TITLES[step][lang]}</h1>
       {step === 0 && (
         <p className="mb-5 text-[16px] text-muted">
@@ -157,7 +149,7 @@ export default function WelcomePage() {
       <div className="min-h-5 flex-1" />
       <div className="sticky bottom-0 bg-cream pt-3 pb-[env(safe-area-inset-bottom,0px)]">
         {step < 4 ? (
-          <button className="btn-primary btn-arrow w-full !min-h-[58px] text-[19px]" disabled={!!problem} onClick={() => setStep(step + 1)}>
+          <button className="btn-primary w-full !min-h-[58px] text-[19px]" disabled={!!problem} onClick={() => setStep(step + 1)}>
             {tr("ถัดไป", "Next")}
           </button>
         ) : (

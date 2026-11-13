@@ -6,7 +6,6 @@ import { MacroCards, Sheet, StoredPhoto } from "./components/ui";
 import { BackupReminder } from "./components/BackupReminder";
 import { WeekKcalChart } from "./components/WeekKcalChart";
 import { WaterCard } from "./components/WaterCard";
-import { Blob } from "./components/Blob";
 import { guessSlot, shiftDateKey, shortDayLabel, thaiDateKey, thaiDateLabel } from "./lib/date";
 import { copyMeal, recentMeals, searchMeals } from "./lib/repeat";
 import { macroTargets, proteinTargetG } from "./lib/energy";
@@ -15,7 +14,7 @@ import { useLang } from "./lib/lang";
 import { useStore } from "./lib/store";
 import { SLOT_LABEL, SLOTS, type Entry } from "./lib/types";
 
-const SLOT_COLORS = ["var(--yellow)", "var(--mint)", "var(--sky)", "var(--pink)"];
+const SLOT_COLORS = ["var(--yellow-deep)", "#8cc9b2", "#7fb2ea", "#f09aab"];
 
 function Ring({ eaten, target }: { eaten: number; target: number }) {
   const r = 86;
@@ -89,7 +88,7 @@ function TodayInner() {
           {goals.profile?.name && date === today && (
             <p className="text-[15px] text-muted" data-testid="greeting">{tr("สวัสดี", "Hi")} {goals.profile.name}</p>
           )}
-          <h1 className="text-[26px]">{date === today ? tr("วันนี้", "Today") : tr("ย้อนดู", "Looking back")}</h1>
+          <h1 className="text-[26px] font-bold">{date === today ? tr("วันนี้", "Today") : tr("ย้อนดู", "Looking back")}</h1>
           <p className="text-[14px] text-muted">{thaiDateLabel(date, lang)}</p>
         </div>
         <button
@@ -110,8 +109,7 @@ function TodayInner() {
 
       {ready && date === today && <BackupReminder entries={entries} />}
 
-      <section className="card relative flex flex-col items-center overflow-hidden px-5 pb-5 pt-6">
-        <Blob color="var(--yellow)" size={74} shape={1} look={-3} className="absolute -right-4 -top-3" />
+      <section className="card flex flex-col items-center px-5 pb-5 pt-6">
         <div className="relative">
           <Ring eaten={ready ? total.kcal : 0} target={target} />
           <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -133,7 +131,7 @@ function TodayInner() {
         </div>
       </section>
 
-      <button className="btn-primary btn-arrow w-full !min-h-[58px] text-[19px]" onClick={openAdd}>
+      <button className="btn-primary w-full !min-h-[58px] text-[19px]" onClick={openAdd}>
         + {tr("เพิ่มอาหาร", "Add food")}
       </button>
 
@@ -147,8 +145,8 @@ function TodayInner() {
         return (
           <section key={slot} className="card p-4" data-testid={`slot-${slot}`}>
             <div className="mb-1 flex items-baseline justify-between px-1">
-              <h2 className="flex items-center gap-2 text-[19px]">
-                <Blob color={SLOT_COLORS[i % SLOT_COLORS.length]} size={30} shape={(i % 3) as 0 | 1 | 2} />
+              <h2 className="flex items-center gap-2 text-[19px] font-semibold">
+                <span className="h-2.5 w-2.5 rounded-full" style={{ background: SLOT_COLORS[i % SLOT_COLORS.length] }} aria-hidden />
                 {SLOT_LABEL[slot][lang]}
               </h2>
               <span className="num text-[15px] text-muted">{fmtKcal(kcal)} kcal</span>

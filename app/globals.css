@@ -1,11 +1,12 @@
 @import "tailwindcss";
 
-/* SnapCal — soft beige paper, black pill buttons, pastel blob friends
-   (yellow · pink · mint · sky). Old "olive" names now mean the black/yellow pair. */
+/* SnapCal — clean and minimal: white cards with thin lines on a soft off-white page,
+   black pill buttons, small pastel touches (yellow · pink · mint · sky).
+   Old "olive" names now mean the black/yellow pair. */
 :root {
-  --cream: #f7f3ef;
-  --paper: #fffdfa;
-  --line: #ece6df;
+  --cream: #f8f6f3;
+  --paper: #ffffff;
+  --line: #ebe6e0;
   --ink: #1a1a1a;
   --muted: #8b857e;
   --olive: #1a1a1a;
@@ -81,14 +82,9 @@ select {
   font-size: 17px;
 }
 
-/* Titles and numbers wear the soft, round font. */
-h1,
-h2,
-h3,
-.num,
-.font-round {
-  font-family: var(--font-round-latin), var(--font-round), var(--font-thai), ui-sans-serif, system-ui, sans-serif;
-  font-weight: 500;
+/* Numbers wear a soft, round font (Thai text stays Noto Sans Thai). */
+.num {
+  font-family: var(--font-round-latin), var(--font-thai), ui-sans-serif, system-ui, sans-serif;
 }
 .num {
   font-variant-numeric: tabular-nums;
@@ -113,27 +109,9 @@ h3,
   transform: scale(0.98);
   background: #000;
 }
-/* The little yellow circle with an arrow, for the main buttons. */
-.btn-arrow::after {
-  content: "→";
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 999px;
-  background: var(--yellow);
-  color: var(--ink);
-  font-size: 15px;
-  font-weight: 700;
-  margin-left: 4px;
-}
 .btn-primary:disabled {
   background: #d8d2cb;
   color: #fff;
-}
-.btn-primary:disabled::after {
-  opacity: 0.6;
 }
 .btn-soft {
   background: var(--paper);
@@ -154,8 +132,7 @@ h3,
 .card {
   background: var(--paper);
   border: 1px solid var(--line);
-  border-radius: 26px;
-  box-shadow: 0 1px 2px rgb(60 40 20 / 0.03);
+  border-radius: 20px;
 }
 .field {
   width: 100%;

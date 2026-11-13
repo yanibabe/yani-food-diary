@@ -6,7 +6,7 @@
 
 ---
 
-## LIVE (updated 2026-11-13, Round 19 — new look)
+## LIVE (updated 2026-11-13, Round 19b — clean minimal look)
 
 - **App:** https://yani-food-diary.vercel.app  (Vercel, exm-labs account, free)
 - **Code:** https://github.com/yanibabe/yani-food-diary  (private; pushes auto-deploy)
@@ -17,6 +17,27 @@
   phone (localStorage + IndexedDB). Nobody sees anyone else's data. But everyone with
   the link uses Yani's OpenRouter key, so their AI photo/text checks spend HER credit.
   Since Round 8 the AI needs a passcode (typed once per phone), so strangers can't spend it.
+
+## Round 19b (2026-11-13) — 🤍 Calmer, minimal look (her pick: mix of A + B) ✅ LIVE
+
+She found Round 19 too busy and too close to the reference. Wants SIMPLE + MINIMAL, colors were OK, and likes
+choosing between versions. I showed 3 phone mockups (A clean white · B soft pastel · C paper and lines);
+she picked a mix of A + B.
+- Removed: blob mascot (`Blob.tsx` deleted), yellow arrow circle on buttons, Mitr heading font, floating tab bar.
+- Now: page #f8f6f3, cards pure white with thin line (radius 20, no shadow); headings back in Noto Sans Thai;
+  numbers still Nunito (`.num`). Meal slots = small colored dot + title (A). Kept from B: yellow kcal ring,
+  pastel protein/carbs/fat cards, yellow pill for the open tab. Tab bar = plain white bar with top line.
+  Recipes empty state/cover placeholders back to emoji. Add-food tiles stay pastel.
+- Checked: 76 tests, tsc, eslint, build; built server at phone size (Today, welcome) — no console errors.
+  NOT yet seen on her iPhone.
+
+### ▶ NEXT
+1. She looks on her iPhone and says what to tweak.
+2. **Her new feature wish: a dress-up character as her profile picture** — pick body, hair (style + color),
+   face, skin color, mouth, outfit. Plan: drawn SVG parts in the app, no AI, free. Own round. Style should be
+   simple/minimal to match the app. Start with /idea-style questions (one at a time): where it shows, how many
+   choices per part.
+3. Still open: new home-screen icon; monthly look-back.
 
 ## Round 19 (2026-11-13) — 🎨 New look: beige paper, black pills, pastel blob friends ✅ LIVE
 
