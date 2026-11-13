@@ -10,11 +10,11 @@ export function mealKey(e: Pick<Entry, "title" | "items">): string {
   return `${e.title.trim().toLowerCase()}|${kcal}`;
 }
 
-/** Her most recent different meals, newest first. Empty meals are skipped. */
-export function recentMeals(entries: Entry[], limit = 6): Entry[] {
+/** Her different meals, the day she ate them most recently first. Empty meals are skipped. */
+export function recentMeals(entries: Entry[], limit = Infinity): Entry[] {
   const seen = new Set<string>();
   const out: Entry[] = [];
-  const newest = [...entries].sort((a, b) => b.createdAt - a.createdAt);
+  const newest = [...entries].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt);
   for (const e of newest) {
     if (e.items.length === 0) continue;
     const k = mealKey(e);
@@ -24,6 +24,16 @@ export function recentMeals(entries: Entry[], limit = 6): Entry[] {
     if (out.length >= limit) break;
   }
   return out;
+}
+
+/** Meals whose name (or a food inside) contains the search words. Empty search = all. */
+export function searchMeals(list: Entry[], query: string): Entry[] {
+  const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return list;
+  return list.filter((e) => {
+    const text = [e.title, ...e.items.map((i) => i.name)].join(" ").toLowerCase();
+    return words.every((w) => text.includes(w));
+  });
 }
 
 /** A fresh copy of a meal for another day / meal slot. The photo is shared, not copied. */

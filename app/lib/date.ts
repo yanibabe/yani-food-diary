@@ -52,6 +52,20 @@ export function thaiDateLabel(key: string, lang: Lang = "th"): string {
   }).format(t);
 }
 
+/** Short day label: "วันนี้" / "เมื่อวาน" / "12 พ.ย." (year only if not this year). */
+export function shortDayLabel(key: string, today: string, lang: Lang = "th"): string {
+  if (key === today) return lang === "en" ? "Today" : "วันนี้";
+  if (key === shiftDateKey(today, -1)) return lang === "en" ? "Yesterday" : "เมื่อวาน";
+  const [y, m, d] = key.split("-").map(Number);
+  const t = new Date(Date.UTC(y, m - 1, d, 12));
+  return new Intl.DateTimeFormat(lang === "en" ? "en-GB" : "th-TH", {
+    timeZone: "UTC",
+    day: "numeric",
+    month: "short",
+    ...(key.slice(0, 4) === today.slice(0, 4) ? {} : { year: "numeric" }),
+  }).format(t);
+}
+
 /** Meals saved before Round 6 used "brunch". Split them by the time they were saved. */
 export function upgradeSlot(slot: string, createdAt: number): MealSlot {
   if (slot === "breakfast" || slot === "lunch" || slot === "dinner" || slot === "snack") return slot;

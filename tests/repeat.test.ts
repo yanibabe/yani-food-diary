@@ -1,7 +1,7 @@
 // "Eat again": recent meals list, copying a meal, and shared photos.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { copyMeal, photoStillUsed, recentMeals } from "../app/lib/repeat.ts";
+import { copyMeal, photoStillUsed, recentMeals, searchMeals } from "../app/lib/repeat.ts";
 import type { Entry, FoodItem } from "../app/lib/types.ts";
 
 const item = (kcal: number, id = "i1"): FoodItem => ({
@@ -47,4 +47,24 @@ test("shared photo: kept while another meal still uses it", () => {
   const b = meal("b", "x", 1, 2, { photoId: "ph_1" });
   assert.equal(photoStillUsed([a, b], "ph_1", "a"), true);
   assert.equal(photoStillUsed([a], "ph_1", "a"), false);
+});
+
+test("recent meals: sorted by the day she ate it, not when it was typed in", () => {
+  const list = recentMeals([
+    meal("old", "ไข่ต้ม", 80, 50, { date: "2026-11-01" }), // typed in late, but eaten long ago
+    meal("new", "กล้วย", 100, 10, { date: "2026-11-12" }),
+  ]);
+  assert.deepEqual(list.map((e) => e.id), ["new", "old"]);
+});
+
+test("search meals: by name or a food inside, any case, all words", () => {
+  const list = [
+    meal("a", "Coca Cola Zero", 0, 1),
+    { ...meal("b", "ข้าวไข่เจียว", 500, 2), items: [{ ...item(500), name: "แหนม" }] },
+  ];
+  assert.deepEqual(searchMeals(list, "  cola ").map((e) => e.id), ["a"]);
+  assert.deepEqual(searchMeals(list, "แหนม").map((e) => e.id), ["b"]);
+  assert.deepEqual(searchMeals(list, "coca zero").map((e) => e.id), ["a"]);
+  assert.equal(searchMeals(list, "").length, 2);
+  assert.equal(searchMeals(list, "ส้มตำ").length, 0);
 });

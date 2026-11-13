@@ -6,7 +6,7 @@
 
 ---
 
-## LIVE (updated 2026-11-13, Round 15)
+## LIVE (updated 2026-11-13, Round 15b)
 
 - **App:** https://yani-food-diary.vercel.app  (Vercel, exm-labs account, free)
 - **Code:** https://github.com/yanibabe/yani-food-diary  (private; pushes auto-deploy)
@@ -17,6 +17,23 @@
   phone (localStorage + IndexedDB). Nobody sees anyone else's data. But everyone with
   the link uses Yani's OpenRouter key, so their AI photo/text checks spend HER credit.
   Since Round 8 the AI needs a passcode (typed once per phone), so strangers can't spend it.
+
+## Round 15b (2026-11-13) — "กินซ้ำ" moved into its own tile + search ✅
+
+Her iPhone screenshot: the 6-meal list at the top of the add sheet felt cluttered. She asked for a tab
+to tap into, a name search, and the list sorted by the day she last ate it.
+- Add sheet is back to just tiles; a 6th tile "🔁 กินซ้ำ" (shown once she has any meal) opens the list
+  inside the same sheet with "‹ กลับ" (Back). Search box filters by meal name OR a food inside it
+  (any case, all words must match). Each row now says "กินล่าสุด วันนี้ / เมื่อวาน / 11 พ.ย." + kcal.
+- ALL different meals are listed now (no 6 limit), sorted by eaten date (`e.date`), newest first.
+- Code: `recentMeals` (sort by date, no limit), new `searchMeals` in `app/lib/repeat.ts`;
+  new `shortDayLabel` in `app/lib/date.ts`; UI in `app/page.tsx` (`againView`, `againQuery`).
+- Checked: 65 tests, tsc, eslint, build pass; mock browser at phone size: tile → list in right order,
+  search "ข้าว" narrows to one, tap adds + Undo removes, no console errors. NOT yet on her iPhone.
+
+### ▶ NEXT
+1. She tries the new "กินซ้ำ" tile + search on her iPhone.
+2. Ideas still open: live camera barcode scanning · monthly look-back (kcal + weight) · water counter.
 
 ## Round 15 (2026-11-13) — 🔁 "กินซ้ำ" / Eat again, one tap ✅ LIVE
 

@@ -5,8 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { MacroCards, Sheet, StoredPhoto } from "./components/ui";
 import { BackupReminder } from "./components/BackupReminder";
 import { WeekKcalChart } from "./components/WeekKcalChart";
-import { guessSlot, shiftDateKey, thaiDateKey, thaiDateLabel } from "./lib/date";
-import { copyMeal, recentMeals } from "./lib/repeat";
+import { guessSlot, shiftDateKey, shortDayLabel, thaiDateKey, thaiDateLabel } from "./lib/date";
+import { copyMeal, recentMeals, searchMeals } from "./lib/repeat";
 import { macroTargets, proteinTargetG } from "./lib/energy";
 import { fmtKcal, pickMacros, sumMacros } from "./lib/nutrition";
 import { useLang } from "./lib/lang";
@@ -44,6 +44,8 @@ function TodayInner() {
   const date = search.get("date") || today;
   const [addOpen, setAddOpen] = useState(false);
   const [added, setAdded] = useState<Entry | null>(null);
+  const [againView, setAgainView] = useState(false);
+  const [againQuery, setAgainQuery] = useState("");
   const { tr, lang } = useLang();
 
   const dayEntries = useMemo(() => entries.filter((e) => e.date === date).sort((a, b) => a.createdAt - b.createdAt), [entries, date]);
@@ -53,6 +55,12 @@ function TodayInner() {
   const go = (d: string) => router.replace(d === today ? "/" : `/?date=${d}`);
   const q = date === today ? "" : `?date=${date}`;
   const recent = useMemo(() => recentMeals(entries), [entries]);
+  const found = useMemo(() => searchMeals(recent, againQuery), [recent, againQuery]);
+  const openAdd = () => {
+    setAgainView(false);
+    setAgainQuery("");
+    setAddOpen(true);
+  };
 
   // "Eat again": copy the meal to the day on screen. Today → meal slot from the time now; past day → its old slot.
   const eatAgain = (e: Entry) => {
@@ -120,7 +128,7 @@ function TodayInner() {
         </div>
       </section>
 
-      <button className="btn-primary w-full !min-h-[58px] text-[19px]" onClick={() => setAddOpen(true)}>
+      <button className="btn-primary w-full !min-h-[58px] text-[19px]" onClick={openAdd}>
         + {tr("เพิ่มอาหาร", "Add food")}
       </button>
 
@@ -171,40 +179,57 @@ function TodayInner() {
       )}
 
       <Sheet open={addOpen} onClose={() => setAddOpen(false)} title={tr("เพิ่มอาหาร", "Add food")}>
-        {recent.length > 0 && (
+        {againView ? (
           <div className="pb-4" data-testid="eat-again">
-            <h3 className="px-1 pb-1 text-[16px] font-semibold">🔁 {tr("กินซ้ำ", "Eat again")}</h3>
-            <p className="px-1 pb-2 text-[13px] text-muted">
+            <button className="mb-3 flex items-center gap-1 px-1 text-[16px] font-medium text-olive-dark" onClick={() => setAgainView(false)} data-testid="eat-again-back">
+              ‹ {tr("กลับ", "Back")}
+            </button>
+            <h3 className="px-1 pb-1 text-[18px] font-semibold">🔁 {tr("กินซ้ำ", "Eat again")}</h3>
+            <p className="px-1 pb-3 text-[13px] text-muted">
               {tr("แตะครั้งเดียว บันทึกเลย · ไม่ต้องใช้ AI", "One tap to log it · no AI needed")}
             </p>
-            <ul className="divide-y divide-line rounded-[22px] bg-cream px-3">
-              {recent.map((e) => (
-                <li key={e.id}>
-                  <button
-                    className="flex w-full items-center gap-3 py-2.5 text-left active:opacity-60"
-                    onClick={() => eatAgain(e)}
-                    data-testid="eat-again-item"
-                  >
-                    {e.photoId ? (
-                      <StoredPhoto id={e.photoId} className="h-11 w-11 shrink-0 rounded-xl object-cover" />
-                    ) : (
-                      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-paper text-[20px]" aria-hidden>
-                        {sourceIcon(e)}
+            <input
+              type="search"
+              className="mb-3 w-full rounded-full bg-cream px-5 py-3 text-[16px] outline-none placeholder:text-muted"
+              placeholder={tr("🔍 ค้นหาชื่ออาหาร", "🔍 Search food name")}
+              value={againQuery}
+              onChange={(ev) => setAgainQuery(ev.target.value)}
+              data-testid="eat-again-search"
+            />
+            {found.length === 0 ? (
+              <p className="px-1 py-6 text-center text-[15px] text-muted">{tr("ไม่เจอเมนูนี้", "No meal found")}</p>
+            ) : (
+              <ul className="divide-y divide-line rounded-[22px] bg-cream px-3">
+                {found.map((e) => (
+                  <li key={e.id}>
+                    <button
+                      className="flex w-full items-center gap-3 py-2.5 text-left active:opacity-60"
+                      onClick={() => eatAgain(e)}
+                      data-testid="eat-again-item"
+                    >
+                      {e.photoId ? (
+                        <StoredPhoto id={e.photoId} className="h-11 w-11 shrink-0 rounded-xl object-cover" />
+                      ) : (
+                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-paper text-[20px]" aria-hidden>
+                          {sourceIcon(e)}
+                        </span>
+                      )}
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-[16px] font-medium">{e.title}</span>
+                        <span className="block text-[13px] text-muted">
+                          {tr("กินล่าสุด", "Last eaten")} {shortDayLabel(e.date, today, lang)} · <span className="num">{fmtKcal(sumMacros(e.items.map(pickMacros)).kcal)}</span> kcal
+                        </span>
                       </span>
-                    )}
-                    <span className="min-w-0 flex-1 truncate text-[16px] font-medium">{e.title}</span>
-                    <span className="num shrink-0 text-[15px] text-muted">
-                      {fmtKcal(sumMacros(e.items.map(pickMacros)).kcal)} kcal
-                    </span>
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-olive text-[20px] leading-none text-paper" aria-hidden>
-                      +
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-olive text-[20px] leading-none text-paper" aria-hidden>
+                        +
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
-        )}
+        ) : (
         <div className="grid grid-cols-2 gap-3 pb-3">
           {[
             { href: `/add/photo${q}`, icon: "📷", label: tr("ถ่ายรูป", "Take a photo") },
@@ -222,7 +247,18 @@ function TodayInner() {
               {o.label}
             </Link>
           ))}
+          {recent.length > 0 && (
+            <button
+              className="flex min-h-[112px] flex-col items-center justify-center gap-2 rounded-[22px] bg-cream text-[17px] font-medium active:scale-[0.98]"
+              onClick={() => setAgainView(true)}
+              data-testid="eat-again-tile"
+            >
+              <span className="text-[34px]" aria-hidden>🔁</span>
+              {tr("กินซ้ำ", "Eat again")}
+            </button>
+          )}
         </div>
+        )}
       </Sheet>
     </main>
   );
