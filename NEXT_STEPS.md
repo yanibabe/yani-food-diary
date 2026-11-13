@@ -6,7 +6,7 @@
 
 ---
 
-## LIVE (updated 2026-11-13, Round 13)
+## LIVE (updated 2026-11-13, Round 14)
 
 - **App:** https://yani-food-diary.vercel.app  (Vercel, exm-labs account, free)
 - **Code:** https://github.com/yanibabe/yani-food-diary  (private; pushes auto-deploy)
@@ -17,6 +17,33 @@
   phone (localStorage + IndexedDB). Nobody sees anyone else's data. But everyone with
   the link uses Yani's OpenRouter key, so their AI photo/text checks spend HER credit.
   Since Round 8 the AI needs a passcode (typed once per phone), so strangers can't spend it.
+
+## Round 14 (2026-11-13) — barcode from a PHOTO + mL drink sizes ✅ LIVE
+
+Started from her first real phone test: Coke Zero 8851959132074 was found (0 kcal ✓) but the amount
+said 100 instead of the can's 325 mL. She then asked: can a photo fill the number in for her?
+- `app/lib/barcodeScan.ts` — free reader ON the phone: `zxing-wasm@3.1.6` (exact pin, MIT; she OK'd the
+  install). `public/zxing_reader.wasm` is served by the app (a `postinstall` script re-copies it from
+  node_modules so it always matches the package). Formats EAN13/EAN8/UPCA/UPCE, tryHarder + tryRotate.
+- `app/api/food/barcode-photo/route.ts` + `readBarcodeDigits` in `app/lib/server/ai.ts` — BACKUP only:
+  if the free reader can't read the stripes, the AI reads the printed digits. Passcode-protected. The
+  answer must pass the check digit (`barcodeCheckOk` in provider.ts) or it counts as "couldn't read".
+  Mock mode returns the Nutella code.
+- UI (`BarcodeLookup.tsx`): big "📷 ถ่ายรูปบาร์โค้ด" button on top → reads → fills the number → looks it up
+  by itself. Typing still works below. If the AI read it: small note "check the numbers match the pack".
+  If nothing could read it: friendly error (retake closer / type it).
+- mL fix: `servingGrams` now reads g / mL / cL / L (1 mL ≈ 1 g); `servingIsLiquid` → card says
+  "ต่อ 100 มล." and "ดื่มไปกี่ มล.", meal item unit "mL".
+- Tests: 59 pass (new: mL sizes, check digit incl. her Coke Zero code). tsc, eslint, next build clean.
+- Checked in the browser (mobile size, mock AI): drawn EAN-13 photo → free reader read it (no AI);
+  digits-only picture → AI backup path; Coke Zero typed → 325 prefilled, mL labels.
+- Live check after deploy: `/add/barcode` 200, `/zxing_reader.wasm` 200, `/api/food/barcode-photo`
+  without passcode → 401. NOT checked: a real iPhone camera photo, and a real (non-mock) AI digit read.
+
+### ▶ NEXT
+1. She tries 📷 on her iPhone with a real pack (first real camera read; tell me if it needed the AI note).
+2. Resume the paused phone tests: photo → milk warning → backup.
+3. Ideas: use OFF allergen data for the milk warning; live camera scanning without taking a photo (own round).
 
 ## Round 13 (2026-11-13) — barcode lookup via Open Food Facts ✅ LIVE
 
@@ -51,8 +78,8 @@ She pasted a technical spec: Open Food Facts (OFF) as barcode source behind a pr
 - Live check: `/add/barcode` → 200; `/api/food/barcode` without passcode → 401 (route live, guarded).
   NOT checked: a real production lookup (needs her passcode, which never goes in chat).
 
-### ▶ NEXT
-1. She tries Barcode on her phone with a real package (first real production OFF lookup).
+### ▶ NEXT (done → see Round 14)
+1. ✅ She tried Barcode on her phone: Coke Zero found, 0 kcal.
 2. Resume the paused phone tests: photo → milk warning → backup.
 3. Ideas: use OFF allergen data for the milk warning; camera barcode scanning (own round).
 
