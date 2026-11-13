@@ -6,7 +6,7 @@
 
 ---
 
-## LIVE (updated 2026-11-13, Round 18)
+## LIVE (updated 2026-11-13, Round 18b)
 
 - **App:** https://yani-food-diary.vercel.app  (Vercel, exm-labs account, free)
 - **Code:** https://github.com/yanibabe/yani-food-diary  (private; pushes auto-deploy)
@@ -17,6 +17,27 @@
   phone (localStorage + IndexedDB). Nobody sees anyone else's data. But everyone with
   the link uses Yani's OpenRouter key, so their AI photo/text checks spend HER credit.
   Since Round 8 the AI needs a passcode (typed once per phone), so strangers can't spend it.
+
+## Round 18b (2026-11-13) — 📷 Photo of the nutrition label fills it in ✅ LIVE
+
+She said the 5-box form was hard ("ยากอะ") and asked why the app can't just be right. Told her honestly: the
+app can't know the database is wrong — only the pack knows. She chose: photo the label, AI reads it
+(uses a little OpenRouter credit, once per pack; she said "เอา").
+- Product card (when not fixed): soft button "📷 ไม่ตรงกับซอง? ถ่ายรูปฉลาก" + tiny "หรือพิมพ์เอง" link (old form).
+- Photo → `/api/food/label-photo` (passcode-protected) → `readNutritionLabel` in `app/lib/server/ai.ts`
+  (Thai label words in the prompt; prefers one serving, else whole pack by net weight, else per 100 g; kJ→kcal;
+  no guessing). Needs pack size + kcal (`fixIsValid`) or it says "couldn't read, retake sharp/straight/no glare".
+  Mock mode returns 20 g / 70 kcal / P1 C12 F2.
+- Saved as her LabelFix for that barcode (same as Round 18). Green note now shows the numbers to check:
+  "✓ ใช้ตัวเลขตามฉลาก: 20 ก. = 70 kcal · เช็กว่าตรงกับบนซองนะ" with "ถ่ายใหม่" · "แก้เอง" · "ใช้ข้อมูลเดิม".
+- Checked: 76 tests, tsc, eslint, build pass; built mock server at phone size: label photo → 20 ก. = 70 kcal,
+  card 350/100 g, grams 20; "ใช้ข้อมูลเดิม" clicked → back to 300/30 g, fix removed. No console errors.
+  Live: `/api/food/label-photo` without passcode → 401 (route live, guarded).
+  NOT checked: a REAL AI read of a real label (mock only) and on her iPhone.
+
+### ▶ NEXT
+1. She scans Taro → "📷 ไม่ตรงกับซอง? ถ่ายรูปฉลาก" → photo of the back → checks it says 20 ก. = 70 kcal.
+2. Idea still open: monthly look-back (kcal + weight line; could add water).
 
 ## Round 18 (2026-11-13) — ✏️ "Fix it from the label" for barcode products ✅ LIVE
 
@@ -41,8 +62,7 @@ wrong / another pack size. Told her: the label on the pack always wins.
   Live site has the new code. NOT yet tried on her iPhone.
 
 ### ▶ NEXT
-1. She fixes Taro on her iPhone (rescan → "ไม่ตรงกับฉลาก? แก้ตามซอง" → 20 / 70) and checks it says 70.
-2. Idea still open: monthly look-back (kcal + weight line; could add water).
+(superseded by Round 18b — she found the typing form hard)
 
 ## Round 17 (2026-11-13) — 📷 Live camera barcode scanning ✅ LIVE
 
