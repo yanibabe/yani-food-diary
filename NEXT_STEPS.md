@@ -6,7 +6,7 @@
 
 ---
 
-## LIVE (updated 2026-11-13, Round 10)
+## LIVE (updated 2026-11-13, Round 11)
 
 - **App:** https://yani-food-diary.vercel.app  (Vercel, exm-labs account, free)
 - **Code:** https://github.com/yanibabe/yani-food-diary  (private; pushes auto-deploy)
@@ -17,6 +17,26 @@
   phone (localStorage + IndexedDB). Nobody sees anyone else's data. But everyone with
   the link uses Yani's OpenRouter key, so their AI photo/text checks spend HER credit.
   Since Round 8 the AI needs a passcode (typed once per phone), so strangers can't spend it.
+
+## Round 11 (2026-11-13) — recipe ingredients: kg / liters + AI looks up any ingredient ✅
+
+Her report (iPhone screenshot): "มันฝรั่ง 100 g" showed nothing, but "เนย 5 g" got a number. Cause: without a
+label the app only knew ~20 foods in a tiny built-in table (`app/lib/foodRef.ts`) — butter yes, potato no.
+- **New units:** กิโลกรัม (`kg`) and ลิตร (`l`) in `IngredientUnit`. The math turns them into g / ml first.
+- **AI looks up any ingredient:** new route `/api/ingredient` → `lookupIngredient()` in `app/lib/server/ai.ts`
+  returns per-100 g kcal/P/C/F (raw, as bought; reads the whole name, e.g. "salmon trout" ≠ "salmon"),
+  plus weight of 1 piece and density for liquids. NO +15% margin (plain food-table values).
+  Saved on the ingredient as `aiRef: {name, per100, unitG, gPerMl}` — only used while the name is the same.
+- **Order now:** label → AI values → built-in table (fallback while offline / before the AI answers).
+- **Recipe edit screen:** leaving the name field (blur) asks the AI automatically (through `aiFetch`, so
+  the passcode works). Shows "✨ AI กำลังหาค่าสารอาหาร…", then the numbers with a "✨ ค่าจาก AI" badge and
+  "ต่อ 100 กรัม: 77 kcal · ค่าดิบทั่วไป ไม่ใช่ค่าจากฉลาก". A "✨ ให้ AI หาค่าสารอาหาร" button shows when there
+  are no AI values yet (old recipes, or the AI failed / didn't know the name).
+- Each lookup = one small AI text call (cheap), only when a name is typed/changed.
+- Tested: `npm test` 45 pass (3 new, `tests/ingredient.test.ts`). Pretend AI at iPhone size: มันฝรั่ง 100 g →
+  77 kcal; 1.5 kg → 1,155; unknown name → message + button; renamed to ปลาแซลมอนเทราต์ 242 g → 341 kcal;
+  saved, reopened → values kept; Thai + English; no console errors. Build passes.
+- **Not tested:** the REAL AI lookup (costs credit). She tries: open her recipe → tap the potato name → tap elsewhere.
 
 ## Round 10 (2026-11-13) — weekly calorie chart on Today ✅
 

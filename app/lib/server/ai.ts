@@ -350,3 +350,55 @@ export async function readSteps(input: { image: string; today: string; lang: Lan
   const date = r.date && /^\d{4}-\d{2}-\d{2}$/.test(r.date) && r.date <= input.today ? r.date : null;
   return { steps, date, note: r.note ?? null };
 }
+
+// ---------------------------------------------------------------------------
+// One ingredient's nutrition per 100 g (for recipes, when there is no label).
+// No safety margin here: these are plain food-table values for a raw ingredient.
+// ---------------------------------------------------------------------------
+
+export const IngredientRefSchema = z.object({
+  known: z.boolean().catch(true).describe("false if this is not a food/ingredient you recognise"),
+  kcal: num.describe("kcal per 100 g"),
+  protein: num.describe("grams per 100 g"),
+  carbs: num.describe("grams per 100 g"),
+  fat: num.describe("grams per 100 g"),
+  unitG: z.coerce.number().nullable().catch(null).describe("Typical weight in grams of ONE piece / egg / fruit, if people count it in pieces; else null"),
+  gPerMl: z.coerce.number().nullable().catch(null).describe("Grams per ml if it is a liquid or sauce (e.g. oil 0.92, milk 1.03); else null"),
+});
+export type IngredientRef = z.infer<typeof IngredientRefSchema>;
+
+const INGREDIENT_SYSTEM = `You are a nutrition table inside a Thai food diary app.
+The user types ONE ingredient name (Thai or English) they use in home cooking.
+Give its nutrition per 100 g, from standard food composition tables (Thai INMU / USDA).
+Rules:
+- Use the ingredient as it is normally bought before cooking: RAW, unless the name says it is cooked, dried, fried, canned, etc.
+- Read the whole name: a brand, cut or kind changes the values (e.g. "salmon trout" ≠ "salmon", "chicken thigh with skin" ≠ "chicken breast").
+- Make sure kcal ≈ protein×4 + carbs×4 + fat×9 (roughly).
+- Numbers only, no ranges. If you do not recognise it as food, set known to false.
+Return ONLY a JSON object matching this JSON Schema:
+${shapeOf(IngredientRefSchema)}`;
+
+const clamp = (n: number, max: number) => (Number.isFinite(n) ? Math.min(Math.max(n, 0), max) : 0);
+const round1 = (n: number) => Math.round(n * 10) / 10;
+
+export async function lookupIngredient(input: { name: string; lang: Lang }): Promise<IngredientRef | null> {
+  const r = process.env.AI_MOCK === "1" ? mockIngredient(input.name) : await callAi(INGREDIENT_SYSTEM, [{ type: "text", text: input.name }], IngredientRefSchema, input.lang);
+  if (!r.known || !(r.kcal > 0)) return null;
+  return {
+    known: true,
+    kcal: Math.round(clamp(r.kcal, 900)),
+    protein: round1(clamp(r.protein, 100)),
+    carbs: round1(clamp(r.carbs, 100)),
+    fat: round1(clamp(r.fat, 100)),
+    unitG: r.unitG != null && r.unitG > 0 && r.unitG < 5000 ? Math.round(r.unitG) : null,
+    gPerMl: r.gPerMl != null && r.gPerMl > 0.3 && r.gPerMl < 3 ? Math.round(r.gPerMl * 100) / 100 : null,
+  };
+}
+
+// TEST MODE ONLY (AI_MOCK=1): fixed answers.
+function mockIngredient(name: string): IngredientRef {
+  if (/มันฝรั่ง|potato/i.test(name)) return { known: true, kcal: 77, protein: 2, carbs: 17, fat: 0.1, unitG: 170, gPerMl: null };
+  if (/แซลมอน|salmon/i.test(name)) return { known: true, kcal: 141, protein: 20.5, carbs: 0, fat: 6, unitG: null, gPerMl: null };
+  if (/xyz/i.test(name)) return { known: false, kcal: 0, protein: 0, carbs: 0, fat: 0, unitG: null, gPerMl: null };
+  return { known: true, kcal: 100, protein: 3, carbs: 15, fat: 2, unitG: null, gPerMl: null };
+}

@@ -40,11 +40,13 @@ export type FoodItem = Macros & {
   dairySource?: string | null;
 };
 
-export type IngredientUnit = "g" | "ml" | "egg" | "piece";
+export type IngredientUnit = "g" | "kg" | "ml" | "l" | "egg" | "piece";
 
 export const UNIT_LABEL: Record<IngredientUnit, L> = {
   g: { th: "กรัม", en: "g" },
+  kg: { th: "กิโลกรัม", en: "kg" },
   ml: { th: "มล.", en: "ml" },
+  l: { th: "ลิตร", en: "liter" },
   egg: { th: "ฟอง", en: "egg" },
   piece: { th: "ชิ้น", en: "piece" },
 };
@@ -63,6 +65,18 @@ export type Ingredient = {
   /** Weight of one egg / one piece in grams (or ml), when needed. */
   gramsPerUnit: number | null;
   photoId: string | null;
+  /** Nutrition per 100 g the AI looked up for this name (used when there is no label). */
+  aiRef?: AiRef | null;
+};
+
+export type AiRef = {
+  /** The ingredient name it was looked up for. If the name changes, it is not used. */
+  name: string;
+  per100: Macros;
+  /** grams in 1 egg / 1 piece, if that makes sense */
+  unitG: number | null;
+  /** grams in 1 ml (density), for liquids */
+  gPerMl: number | null;
 };
 
 export type Recipe = {

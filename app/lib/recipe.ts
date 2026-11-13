@@ -13,13 +13,17 @@ export type IngredientResult =
 
 /**
  * Work out one ingredient's calories and nutrients.
- * Order: label values first; built-in estimate only if there is no label.
+ * Order: label values first; then the AI's values for this name; then the
+ * small built-in table. kg and liters are turned into grams / ml.
  * If units don't match (e.g. label per 100 g but amount in "ฟอง"), it asks
  * for the weight of one unit instead of guessing.
  */
 export function ingredientMacros(ing: Ingredient, lang: Lang = "th"): IngredientResult {
   const t = trFor(lang);
-  const amount = ing.amount > 0 ? ing.amount : 0;
+  const raw = ing.amount > 0 ? ing.amount : 0;
+  // kg → g, liters → ml. From here on, "g"/"ml" amounts are in grams / ml.
+  const amount = ing.unit === "kg" || ing.unit === "l" ? raw * 1000 : raw;
+  const unit = ing.unit === "kg" ? "g" : ing.unit === "l" ? "ml" : ing.unit;
   const isCountUnit = ing.unit === "egg" || ing.unit === "piece";
   const gpu = ing.gramsPerUnit && ing.gramsPerUnit > 0 ? ing.gramsPerUnit : null;
   const unitWord = ing.unit === "egg" ? t("ฟอง", "egg") : t("ชิ้น", "piece");
@@ -60,17 +64,21 @@ export function ingredientMacros(ing: Ingredient, lang: Lang = "th"): Ingredient
     return { ok: true, macros: scaleMacros(label, amount / gpu), source: "label", refName: null };
   }
 
-  const ref = findRef(ing.name);
+  const ai = ing.aiRef && ing.aiRef.name === ing.name.trim() ? ing.aiRef : null;
+  const builtIn = ai ? null : findRef(ing.name);
+  const ref = ai
+    ? { per100: ai.per100, unitG: ai.unitG ?? undefined, gPerMl: ai.gPerMl ?? undefined }
+    : builtIn;
   if (!ref)
     return {
       ok: false,
       reason: "no-data",
-      message: t("ยังไม่มีค่าสารอาหาร — กรอกค่าจากฉลากได้เลย", "No nutrition values yet — add them from the label"),
+      message: t("ยังไม่มีค่าสารอาหาร — ให้ AI หาค่า หรือกรอกค่าจากฉลาก", "No nutrition values yet — let the AI look them up, or add them from the label"),
     };
 
   let grams: number;
-  if (ing.unit === "g") grams = amount;
-  else if (ing.unit === "ml") grams = amount * (ref.gPerMl ?? 1);
+  if (unit === "g") grams = amount;
+  else if (unit === "ml") grams = amount * (ref.gPerMl ?? 1);
   else {
     const w = gpu ?? ref.unitG ?? null;
     if (!w)
@@ -81,7 +89,7 @@ export function ingredientMacros(ing: Ingredient, lang: Lang = "th"): Ingredient
       };
     grams = amount * w;
   }
-  return { ok: true, macros: scaleMacros(ref.per100, grams / 100), source: "estimate", refName: lang === "en" ? ref.names[ref.names.length - 1] : ref.names[0] };
+  return { ok: true, macros: scaleMacros(ref.per100, grams / 100), source: "estimate", refName: ai ? "AI" : lang === "en" ? builtIn!.names[builtIn!.names.length - 1] : builtIn!.names[0] };
 }
 
 export type RecipeTotals = {

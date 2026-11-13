@@ -1,5 +1,6 @@
 "use client";
 import { useMemo, useRef, useState } from "react";
+import { aiFetch } from "../../../lib/aiFetch";
 import { useParams, useRouter } from "next/navigation";
 import { Badge, NumberField, StoredPhoto } from "../../../components/ui";
 import { fmtG, fmtKcal, newId } from "../../../lib/nutrition";
@@ -24,25 +25,57 @@ async function pickPhoto(file: File | undefined, maxSide: number, badImageMessag
 function IngredientCard({
   ing,
   onChange,
+  onPatch,
   onRemove,
 }: {
   ing: Ingredient;
   onChange: (i: Ingredient) => void;
+  /** Change a few fields later (after the AI answers), without losing newer typing. */
+  onPatch: (p: Partial<Ingredient>) => void;
   onRemove: () => void;
 }) {
   const set = (p: Partial<Ingredient>) => onChange({ ...ing, ...p });
   const { tr, lang } = useLang();
   const res = ingredientMacros(ing, lang);
+  const [looking, setLooking] = useState<string | null>(null); // the name being looked up
+  const [aiMsg, setAiMsg] = useState<string | null>(null);
+  const trimmed = ing.name.trim();
+  const hasAi = !!ing.aiRef && ing.aiRef.name === trimmed;
+
+  async function lookUp() {
+    const name = ing.name.trim();
+    if (!name || ing.label || looking === name) return;
+    setLooking(name);
+    setAiMsg(null);
+    try {
+      const r = await aiFetch("/api/ingredient", { name, lang }, lang);
+      const data = await r.json().catch(() => null);
+      if (!r.ok) {
+        setAiMsg(data?.message ?? tr("AI หาค่าไม่ได้ ลองอีกครั้ง", "The AI couldn't look it up. Try again."));
+      } else if (!data?.result) {
+        setAiMsg(tr("AI ไม่รู้จักวัตถุดิบนี้ — กรอกค่าจากฉลากได้", "The AI doesn't know this ingredient — add the label values"));
+      } else {
+        const x = data.result;
+        onPatch({ aiRef: { name, per100: { kcal: x.kcal, protein: x.protein, carbs: x.carbs, fat: x.fat }, unitG: x.unitG, gPerMl: x.gPerMl } });
+      }
+    } catch {
+      setAiMsg(tr("เชื่อมต่อไม่ได้ ลองอีกครั้ง", "No connection. Try again."));
+    } finally {
+      setLooking(null);
+    }
+  }
   const isCount = ing.unit === "egg" || ing.unit === "piece";
   const needsGpu =
-    (ing.label?.basis === "per100" && isCount) || (ing.label?.basis === "perUnit" && !isCount) || (!ing.label && isCount);
+    (ing.label?.basis === "per100" && isCount) ||
+    (ing.label?.basis === "perUnit" && !isCount) ||
+    (!ing.label && isCount);
   const unitWord = isCount ? UNIT_LABEL[ing.unit][lang] : tr("ชิ้น", "piece");
 
   return (
     <div className="card space-y-3 p-4" data-testid="ingredient-card">
       <div className="flex items-start gap-3">
         <div className="flex-1 space-y-2">
-          <input className="field" value={ing.name} onChange={(e) => set({ name: e.target.value })} placeholder={tr("ชื่อวัตถุดิบ เช่น ไข่ไก่", "Ingredient, e.g. egg")} aria-label={tr("ชื่อวัตถุดิบ", "Ingredient name")} />
+          <input className="field" value={ing.name} onChange={(e) => { set({ name: e.target.value }); setAiMsg(null); }} onBlur={() => { if (!hasAi) void lookUp(); }} placeholder={tr("ชื่อวัตถุดิบ เช่น ไข่ไก่", "Ingredient, e.g. egg")} aria-label={tr("ชื่อวัตถุดิบ", "Ingredient name")} />
           <div className="grid grid-cols-[1fr_auto] gap-2">
             <NumberField value={ing.amount || null} onChange={(n) => set({ amount: n ?? 0 })} placeholder={tr("ปริมาณ", "Amount")} aria-label={tr("ปริมาณ", "Amount")} />
             <select className="field !w-auto" value={ing.unit} onChange={(e) => set({ unit: e.target.value as IngredientUnit })} aria-label={tr("หน่วย", "Unit")}>
@@ -116,14 +149,35 @@ function IngredientCard({
 
       <div className="flex items-center justify-between gap-2">
         <div className="text-[14px]">
-          {res.ok ? (
+          {looking && !ing.label ? (
+            <span className="text-muted">✨ {tr("AI กำลังหาค่าสารอาหาร…", "The AI is looking up the nutrition…")}</span>
+          ) : res.ok ? (
             <span className="flex flex-wrap items-center gap-1.5">
               <span className="num font-semibold">{fmtKcal(res.macros.kcal)} kcal</span>
               <span className="text-muted">P {fmtG(res.macros.protein)} · C {fmtG(res.macros.carbs)} · F {fmtG(res.macros.fat)}</span>
-              {res.source === "label" ? <Badge tone="olive">{tr("จากฉลาก", "From label")}</Badge> : <Badge>{tr("ค่าประมาณ", "Estimate")} ({res.refName})</Badge>}
+              {res.source === "label" ? (
+                <Badge tone="olive">{tr("จากฉลาก", "From label")}</Badge>
+              ) : res.refName === "AI" ? (
+                <Badge>✨ {tr("ค่าจาก AI", "AI estimate")}</Badge>
+              ) : (
+                <Badge>{tr("ค่าประมาณ", "Estimate")} ({res.refName})</Badge>
+              )}
             </span>
           ) : (
-            <span className="text-warn-ink">{res.message}</span>
+            <span className="text-warn-ink">{aiMsg ?? res.message}</span>
+          )}
+          {hasAi && !ing.label && !looking && (
+            <span className="mt-1 block text-[12px] text-muted">
+              {tr(
+                `ต่อ 100 กรัม: ${fmtKcal(ing.aiRef!.per100.kcal)} kcal · ค่าดิบทั่วไป ไม่ใช่ค่าจากฉลาก`,
+                `Per 100 g: ${fmtKcal(ing.aiRef!.per100.kcal)} kcal · typical raw values, not from a label`,
+              )}
+            </span>
+          )}
+          {!ing.label && !hasAi && !looking && trimmed && (
+            <button className="mt-1 block min-h-[36px] text-[14px] font-medium text-olive-dark" onClick={() => void lookUp()}>
+              ✨ {tr("ให้ AI หาค่าสารอาหาร", "Let the AI look up the nutrition")}
+            </button>
           )}
         </div>
         <button className="shrink-0 px-2 py-2 text-[14px] text-danger" onClick={onRemove}>{tr("ลบ", "Delete")}</button>
@@ -228,13 +282,17 @@ function RecipeForm({ initial, onSave, onCancel }: { initial: Recipe | null; onS
       <section className="space-y-3">
         <h2 className="px-1 text-[19px] font-semibold">{tr("วัตถุดิบ", "Ingredients")}</h2>
         <p className="px-1 text-[14px] text-muted">
-          {tr("มีค่าจากฉลาก ใช้ค่าจากฉลากก่อน ถ้าไม่มี แอปใช้ค่าประมาณทั่วไป", "Label values are used first. Without a label, the app uses a common estimate.")}
+          {tr(
+            "มีค่าจากฉลาก ใช้ค่าจากฉลากก่อน ถ้าไม่มี AI จะหาค่าสารอาหารของวัตถุดิบนั้นตามน้ำหนักที่ใส่ให้เอง",
+            "Label values are used first. Without a label, the AI looks up that ingredient's nutrition for the amount you typed.",
+          )}
         </p>
         {ings.map((ing) => (
           <IngredientCard
             key={ing.id}
             ing={ing}
             onChange={(n) => setIngs((p) => p.map((x) => (x.id === n.id ? n : x)))}
+            onPatch={(patch) => setIngs((p) => p.map((x) => (x.id === ing.id ? { ...x, ...patch } : x)))}
             onRemove={() => setIngs((p) => p.filter((x) => x.id !== ing.id))}
           />
         ))}
