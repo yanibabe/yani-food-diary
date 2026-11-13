@@ -6,7 +6,7 @@
 
 ---
 
-## LIVE (updated 2026-11-13, Round 12 live · Round 13 built, not deployed)
+## LIVE (updated 2026-11-13, Round 13)
 
 - **App:** https://yani-food-diary.vercel.app  (Vercel, exm-labs account, free)
 - **Code:** https://github.com/yanibabe/yani-food-diary  (private; pushes auto-deploy)
@@ -18,7 +18,7 @@
   the link uses Yani's OpenRouter key, so their AI photo/text checks spend HER credit.
   Since Round 8 the AI needs a passcode (typed once per phone), so strangers can't spend it.
 
-## Round 13 (2026-11-13) — barcode lookup via Open Food Facts ✅ built · ⏸ NOT deployed
+## Round 13 (2026-11-13) — barcode lookup via Open Food Facts ✅ LIVE
 
 She pasted a technical spec: Open Food Facts (OFF) as barcode source behind a provider interface
 (USDA FoodData Central + FatSecret plug in later). Plan approved; contact email = her exm-labs email
@@ -45,10 +45,16 @@ She pasted a technical spec: Open Food Facts (OFF) as barcode source behind a pr
 - Known gaps: no camera scanning (iPhone Safari can't read barcodes alone; needs a library — its own round);
   the milk warning only checks the product NAME (e.g. "Nutella" isn't flagged); OFF allergen data not used yet.
 
-### ▶ To deploy (needs her OK)
-1. Add to Vercel (Production): `OFF_CONTACT_EMAIL` (her exm-labs email) and `OFF_BASE_URL=https://world.openfoodfacts.org`.
-2. Push → auto-deploy. Without step 1 the Barcode screen says "not set up on the server".
-Then: resume the paused phone tests (photo → milk warning → backup).
+### Deployed (she said "Yes, deploy it")
+- Vercel Production env added: `OFF_BASE_URL=https://world.openfoodfacts.org`, `OFF_CONTACT_EMAIL` (her
+  exm-labs email, read from .env.local). Not added for Preview (preview deploys say "not set up" — fine).
+- Live check: `/add/barcode` → 200; `/api/food/barcode` without passcode → 401 (route live, guarded).
+  NOT checked: a real production lookup (needs her passcode, which never goes in chat).
+
+### ▶ NEXT
+1. She tries Barcode on her phone with a real package (first real production OFF lookup).
+2. Resume the paused phone tests: photo → milk warning → backup.
+3. Ideas: use OFF allergen data for the milk warning; camera barcode scanning (own round).
 
 ## Round 12 (2026-11-13) — +15% margin only for amounts the AI guessed ✅
 
