@@ -115,6 +115,7 @@ export function aiStatus() {
     configured: Boolean(process.env.OPENROUTER_API_KEY),
     mock: process.env.AI_MOCK === "1",
     model: MODEL,
+    passcode: Boolean(process.env.APP_PASSCODE?.trim()),
   };
 }
 

@@ -1,4 +1,5 @@
 "use client";
+import { aiFetch } from "../lib/aiFetch";
 // Body: log weight and steps on any day, see a simple weight line,
 // steps bars, and a weekly summary (average, change, progress to target).
 // Steps can be typed or read from a screenshot by the AI.
@@ -150,7 +151,7 @@ function StepsCard({ date, value, onSave }: { date: string; value: number | null
     try {
       // Bigger than food photos, so small numbers on the screen stay sharp.
       const image = await compressImage(f, 1600, 0.85, tr("อ่านรูปไม่ได้ ลองเลือกรูปอื่น", "Couldn't read this picture. Try another one."));
-      const res = await fetch("/api/steps", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image, lang }) });
+      const res = await aiFetch("/api/steps", { image, lang }, lang);
       const data = await res.json().catch(() => null);
       if (!res.ok || !data?.result) {
         setError(data?.message ?? `${tr("เซิร์ฟเวอร์ตอบกลับ", "Server replied")} ${res.status}`);

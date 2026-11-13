@@ -1,4 +1,5 @@
 "use client";
+import { aiFetch } from "../../lib/aiFetch";
 import { Suspense, useRef, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { MealReview, type MealDraft } from "../../components/MealReview";
@@ -53,11 +54,7 @@ function AddInner() {
     setError(null);
     setStep("loading");
     try {
-      const res = await fetch("/api/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: mode === "photo" ? photo : null, text: note, lang }),
-      });
+      const res = await aiFetch("/api/analyze", { image: mode === "photo" ? photo : null, text: note, lang }, lang);
       const data = await res.json().catch(() => null);
       if (!res.ok || !data?.result) {
         setError(data?.message ?? `${tr("เซิร์ฟเวอร์ตอบกลับ", "Server replied")} ${res.status}`);

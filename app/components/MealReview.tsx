@@ -1,4 +1,5 @@
 "use client";
+import { aiFetch } from "../lib/aiFetch";
 import { useMemo, useRef, useState } from "react";
 import { AI_MARGIN, blankItem, changeAmount, cleanBox, cleanNumber, fmtAmount, fmtKcal, newId, pickMacros, sumMacros } from "../lib/nutrition";
 import { useLang } from "../lib/lang";
@@ -169,10 +170,9 @@ export function MealReview({
     setChat((c) => [...c, { role: "user", text }]);
     setMsg("");
     try {
-      const res = await fetch("/api/refine", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const res = await aiFetch(
+        "/api/refine",
+        {
           title,
           items: items.map(({ id, name, amount, unit, kcal, protein, carbs, fat, kind, estimated }) => ({
             id, name, amount, unit, kcal, protein, carbs, fat, kind, estimated,
@@ -180,8 +180,9 @@ export function MealReview({
           history: chat.filter((c) => !c.error).map(({ role, text }) => ({ role, text })),
           message: text,
           lang,
-        }),
-      });
+        },
+        lang,
+      );
       const data = await res.json().catch(() => null);
       if (!res.ok || !data?.result) {
         const why = data?.message ?? `${tr("เซิร์ฟเวอร์ตอบกลับ", "Server replied")} ${res.status}`;

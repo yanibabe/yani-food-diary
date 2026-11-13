@@ -1,5 +1,6 @@
 import { AiError, refineMeal, type RefineInput } from "@/app/lib/server/ai";
 import { trFor } from "@/app/lib/i18n";
+import { passcodeBlock } from "@/app/lib/server/passcode";
 
 export const maxDuration = 60;
 
@@ -11,6 +12,8 @@ export async function POST(req: Request) {
     return Response.json({ error: "bad-request", message: "ข้อมูลที่ส่งมาไม่ถูกต้อง / Bad request" }, { status: 400 });
   }
   const lang = body?.lang === "en" ? "en" : "th";
+  const blocked = await passcodeBlock(req, lang);
+  if (blocked) return blocked;
   if (!body?.message?.trim() || !Array.isArray(body.items)) {
     return Response.json({ error: "bad-request", message: trFor(lang)("พิมพ์ข้อความก่อนส่ง", "Type a message first") }, { status: 400 });
   }
