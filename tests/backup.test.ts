@@ -45,3 +45,22 @@ test("only real pictures are kept from the photos part", () => {
   assert.ok(res.ok);
   assert.deepEqual(Object.keys(res.backup.photos), ["good"]);
 });
+
+test("backup reminder: after 14 days, never for an empty phone, and 'later' hides it 3 days", async () => {
+  const { backupDue, snoozeUntil } = await import("../app/lib/backup.ts");
+  const day = 24 * 60 * 60 * 1000;
+  const now = 100 * day;
+  // nothing saved yet
+  assert.equal(backupDue({ now, lastBackup: null, oldestEntryAt: null, snoozeUntil: null }), null);
+  // never backed up, first meal 13 days ago → not yet; 14 days → yes
+  assert.equal(backupDue({ now, lastBackup: null, oldestEntryAt: now - 13 * day, snoozeUntil: null }), null);
+  assert.deepEqual(backupDue({ now, lastBackup: null, oldestEntryAt: now - 14 * day, snoozeUntil: null }), { days: 14, never: true });
+  // backed up 20 days ago → yes, counted from the backup
+  assert.deepEqual(backupDue({ now, lastBackup: now - 20 * day, oldestEntryAt: now - 90 * day, snoozeUntil: null }), { days: 20, never: false });
+  // backed up 2 days ago → no, even with old meals
+  assert.equal(backupDue({ now, lastBackup: now - 2 * day, oldestEntryAt: now - 90 * day, snoozeUntil: null }), null);
+  // "later" → hidden for 3 days, then back
+  const until = snoozeUntil(now);
+  assert.equal(backupDue({ now: now + 2 * day, lastBackup: null, oldestEntryAt: now - 30 * day, snoozeUntil: until }), null);
+  assert.ok(backupDue({ now: now + 3 * day, lastBackup: null, oldestEntryAt: now - 30 * day, snoozeUntil: until }));
+});

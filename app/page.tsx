@@ -3,6 +3,7 @@ import { Suspense, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { MacroCards, Sheet, StoredPhoto } from "./components/ui";
+import { BackupReminder } from "./components/BackupReminder";
 import { shiftDateKey, thaiDateKey, thaiDateLabel } from "./lib/date";
 import { macroTargets, proteinTargetG } from "./lib/energy";
 import { fmtKcal, pickMacros, sumMacros } from "./lib/nutrition";
@@ -77,6 +78,8 @@ function TodayInner() {
           {tr("บันทึกลงเครื่องไม่สำเร็จ", "Couldn't save on this phone")}: {saveError}
         </div>
       )}
+
+      {ready && date === today && <BackupReminder entries={entries} />}
 
       <section className="card flex flex-col items-center px-5 pb-5 pt-6">
         <div className="relative">

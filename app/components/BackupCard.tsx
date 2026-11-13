@@ -6,6 +6,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   BACKUP_KEYS,
+  LAST_BACKUP_KEY,
   backupCounts,
   backupFileName,
   makeBackup,
@@ -17,7 +18,7 @@ import { thaiDateKey, thaiDateLabel } from "../lib/date";
 import { useLang } from "../lib/lang";
 import { allPhotos, putPhotos } from "../lib/photos";
 
-const LAST_KEY = "yfd:v1:lastBackup";
+const LAST_KEY = LAST_BACKUP_KEY;
 
 function readLast(): number | null {
   try {
@@ -64,7 +65,10 @@ export function BackupCard({ restoreOnly = false }: { restoreOnly?: boolean }) {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLast(readLast());
-  }, []);
+    // Came from the "Back up now" reminder on Today: bring this card into view.
+    if (!restoreOnly && location.hash === "#backup")
+      document.getElementById("backup")?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [restoreOnly]);
 
   const dateOf = (ms: number) => thaiDateLabel(thaiDateKey(new Date(ms)), lang);
 
@@ -148,7 +152,7 @@ export function BackupCard({ restoreOnly = false }: { restoreOnly?: boolean }) {
   const c = pending ? backupCounts(pending) : null;
 
   return (
-    <section className="card space-y-3 p-5" data-testid="backup-card">
+    <section className="card space-y-3 p-5" data-testid="backup-card" id="backup">
       <h2 className="text-[17px] font-semibold">
         {restoreOnly
           ? tr("มีไฟล์สำรองอยู่แล้ว?", "Already have a backup?")

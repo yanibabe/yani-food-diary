@@ -90,3 +90,38 @@ export function parseBackup(text: string, lang: Lang = "th"): { ok: true; backup
   }
   return { ok: true, backup: { app: "snapcal", version: 1, savedAt: o.savedAt, data, photos } };
 }
+
+/** localStorage keys for the backup reminder (not part of the backup itself). */
+export const LAST_BACKUP_KEY = "yfd:v1:lastBackup";
+export const BACKUP_SNOOZE_KEY = "yfd:v1:backupSnooze";
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+/** Remind when the last backup (or the first meal, if never backed up) is this many days old. */
+export const BACKUP_REMIND_DAYS = 14;
+/** "Later" hides the reminder for this many days. */
+export const BACKUP_SNOOZE_DAYS = 3;
+
+/**
+ * Should Today show the gentle "time to back up" card?
+ * - Nothing saved yet → no.
+ * - Never backed up → yes once the oldest meal is 14+ days old.
+ * - Backed up before → yes once that backup is 14+ days old.
+ * - "Later" pressed → hidden until the snooze ends.
+ * Returns the number of days since the last backup (or since the first meal), or null when no reminder.
+ */
+export function backupDue(o: {
+  now: number;
+  lastBackup: number | null;
+  oldestEntryAt: number | null;
+  snoozeUntil: number | null;
+}): { days: number; never: boolean } | null {
+  if (o.snoozeUntil && o.now < o.snoozeUntil) return null;
+  const from = o.lastBackup ?? o.oldestEntryAt;
+  if (!from) return null;
+  const days = Math.floor((o.now - from) / DAY_MS);
+  return days >= BACKUP_REMIND_DAYS ? { days, never: !o.lastBackup } : null;
+}
+
+export function snoozeUntil(now: number): number {
+  return now + BACKUP_SNOOZE_DAYS * DAY_MS;
+}
