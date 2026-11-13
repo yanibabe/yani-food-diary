@@ -38,6 +38,8 @@ export type FoodItem = Macros & {
   dairy?: boolean;
   /** Which dairy, e.g. "นมข้นหวาน". From the AI. */
   dairySource?: string | null;
+  /** true = the AI guessed the amount, so +15% was added. false = exact amount, no margin. Missing on old items. */
+  margin?: boolean;
 };
 
 export type IngredientUnit = "g" | "kg" | "ml" | "l" | "egg" | "piece";

@@ -40,6 +40,14 @@ export function withMargin<T extends Macros>(m: T, margin = AI_MARGIN): T {
   return { ...m, ...scaleMacros(m, 1 + margin) };
 }
 
+/**
+ * The margin is only for amounts the AI guessed. When the user gave the exact
+ * amount (userAmount), the numbers stay as they are. margin says which.
+ */
+export function markMargin<T extends Macros & { userAmount?: boolean }>(i: T): T & { margin: boolean } {
+  return i.userAmount ? { ...i, margin: false } : { ...withMargin(i), margin: true };
+}
+
 /** Change an item's amount and scale its numbers in proportion. */
 export function changeAmount(item: FoodItem, newAmount: number): FoodItem {
   if (!(newAmount >= 0)) return item;

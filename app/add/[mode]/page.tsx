@@ -78,6 +78,7 @@ function AddInner() {
         box: mode === "photo" ? cleanBox(a.box) : null,
         dairy: aiDairy(a.name, a.dairy),
         dairySource: a.dairySource ?? null,
+        margin: a.margin === true,
       }));
       setDraft({ title: r.title || tr("อาหาร", "Meal"), slot: draft.slot, items });
       setQuestion(r.question);

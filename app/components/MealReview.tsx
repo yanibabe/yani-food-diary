@@ -165,6 +165,7 @@ export function MealReview({
   const [title, setTitle] = useState(initial.title);
   const [slot, setSlot] = useState<MealSlot>(initial.slot);
   const [items, setItems] = useState<FoodItem[]>(initial.items);
+  const pct = Math.round(AI_MARGIN * 100);
   const [editingId, setEditingId] = useState<string | null>(startEditingId ?? null);
   const [chat, setChat] = useState<ChatMsg[]>(firstQuestion ? [{ role: "assistant", text: firstQuestion }] : []);
   const [msg, setMsg] = useState("");
@@ -193,8 +194,8 @@ export function MealReview({
         "/api/refine",
         {
           title,
-          items: items.map(({ id, name, amount, unit, kcal, protein, carbs, fat, kind, estimated }) => ({
-            id, name, amount, unit, kcal, protein, carbs, fat, kind, estimated,
+          items: items.map(({ id, name, amount, unit, kcal, protein, carbs, fat, kind, estimated, margin }) => ({
+            id, name, amount, unit, kcal, protein, carbs, fat, kind, estimated, margin: margin === true,
           })),
           history: chat.filter((c) => !c.error).map(({ role, text }) => ({ role, text })),
           message: text,
@@ -241,6 +242,7 @@ export function MealReview({
               box: old.box, // the photo position never changes
               dairy: aiDairy(e.item.name || old.name, e.item.dairy) || old.dairy === true,
               dairySource: e.item.dairySource ?? old.dairySource ?? null,
+              margin: e.item.margin === false ? false : old.margin,
             };
             changed.push(old.id);
           }
@@ -261,6 +263,7 @@ export function MealReview({
             box: cleanBox(a.box),
             dairy: aiDairy(a.name, a.dairy),
             dairySource: a.dairySource ?? null,
+            margin: a.margin === true,
           });
           changed.push(id);
         }
@@ -324,11 +327,11 @@ export function MealReview({
         <p className="text-center text-[14px] text-muted" data-testid="amount-summary">{amountSummary}</p>
         <KcalBig kcal={total.kcal} />
         <MacroCards m={total} />
-        {marginNote && (
+        {marginNote && items.some((i) => i.margin) && (
           <p className="text-center text-[13px] text-muted" data-testid="margin-note">
             {tr(
-              `ตัวเลขจาก AI บวกเผื่อไว้ ${Math.round(AI_MARGIN * 100)}% แล้ว เพราะไม่รู้ค่าจริงแน่นอน`,
-              `AI numbers include a +${Math.round(AI_MARGIN * 100)}% safety margin, because the exact values aren't known`,
+              `รายการที่มีป้าย +${pct}% คือ AI กะปริมาณเอง จึงบวกเผื่อไว้ · ถ้าบอกน้ำหนักจริง (เช่น "แซลมอน 120 กรัม") จะไม่บวกเพิ่ม`,
+              `Items marked +${pct}% are the AI's own guess, so a safety margin is added · Tell it the real weight (e.g. "salmon 120 g") and no margin is added`,
             )}
           </p>
         )}
@@ -354,6 +357,8 @@ export function MealReview({
                     <span className="font-medium">{i.name || tr("ไม่มีชื่อ", "No name")}</span>
                     {i.kind === "extra" && <Badge tone="olive">{tr("เพิ่มเติม", "Extra")}</Badge>}
                     {i.estimated && <Badge>{tr("ประมาณ", "Estimate")}</Badge>}
+                    {marginNote && i.margin && <Badge tone="muted">+{pct}%</Badge>}
+                    {marginNote && i.margin === false && <Badge tone="olive">{tr("น้ำหนักจริง", "Exact amount")}</Badge>}
                     {avoidDairy && isDairy(i) && <Badge>🥛 {tr("นม", "Milk")}</Badge>}
                   </div>
                   <div className="text-[14px] text-muted">

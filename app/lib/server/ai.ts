@@ -4,7 +4,7 @@
 
 import { z } from "zod";
 import { trFor, type Lang } from "../i18n.ts";
-import { AI_MARGIN, withMargin } from "../nutrition.ts";
+import { AI_MARGIN, markMargin } from "../nutrition.ts";
 
 const ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
 export const MODEL = "google/gemini-3.8-flash";
@@ -34,6 +34,7 @@ const ItemSchema = z.object({
   dairy: z.boolean().optional().catch(false).describe("true if this item likely contains milk or any milk product: milk, cream, cheese, yogurt, butter, ghee, condensed or evaporated milk, milk powder, whey, ice cream, creamer. Coconut milk, soy milk, almond/oat milk and peanut butter are NOT dairy."),
   dairySource: z.string().nullish().describe("If dairy is true: the likely milk product in a few words (e.g. sweetened condensed milk); else null"),
   box: BoxSchema.nullish().describe("Where this food is in the photo (fractions 0..1); null if not locatable or no photo"),
+  userAmount: z.boolean().optional().catch(false).describe("true ONLY if the user told you this item's exact weight or volume (e.g. 120 g, 250 ml, 1 kg) or an exact count of a fixed-size thing (e.g. 2 eggs, 1 can), so you did not guess the amount; else false"),
 });
 
 export const AnalysisSchema = z.object({
@@ -83,6 +84,7 @@ Rules:
 - Photo estimates usually come out TOO LOW, because portions look smaller in photos and hidden oil is missed. When you are unsure between two sizes, pick the larger, typical restaurant portion.
 - Check your numbers: kcal should be close to protein×4 + carbs×4 + fat×9.
 - Set estimated=true whenever portion size or recipe is a guess.
+- When the user gives an item's exact weight or volume, use it EXACTLY (do not enlarge it) and set userAmount=true. If they say how it was cooked (e.g. grilled with no oil, air-fried, steamed), follow that: do not add oil they said they did not use. Use plain food-table values for those items; the app adds no margin to them.
 - dairy: think about how the dish is usually made in Thailand (e.g. Thai iced tea, coffee drinks, bakery, creamy soups, some curries and desserts use milk, butter or condensed milk). Set dairy=true when it likely contains ANY milk product, and name it in dairySource.
 - box: when there is a photo and you can locate the food, give its bounding box as fractions (0..1) of the image. Otherwise null.
 - question: ask at most ONE short question only if the answer would change calories a lot. Otherwise null.
@@ -96,7 +98,8 @@ Rules:
 - Change ONLY the items their message is about. Do not touch other items.
 - For an update, return the full new values for that item: amount eaten and nutrients scaled to what was actually eaten. Keep its box unchanged.
 - "Ate it all" / "finished it" means no change for that item.
-- The numbers in the current items already include the app's +${Math.round(AI_MARGIN * 100)}% safety margin. When you update an item, scale from its current numbers so the margin stays. If you must re-estimate an item from scratch, add ${Math.round(AI_MARGIN * 100)}% to your best guess. Do NOT add the margin to new items in adds — the app adds it.
+- Items with margin=true already include the app's +${Math.round(AI_MARGIN * 100)}% safety margin; items with margin=false do not. When you update an item by scaling (e.g. "ate half"), scale from its current numbers and set userAmount=false. If you must re-estimate an item from scratch without an exact amount, add ${Math.round(AI_MARGIN * 100)}% to your best guess (userAmount=false).
+- If the user now gives an item's exact weight or volume (e.g. "salmon was 120 g"), recalculate that item with plain food-table values for exactly that amount, with NO margin, and set userAmount=true. Same for new items in adds: userAmount=true only if they gave the exact amount. Do NOT add the margin yourself to adds — the app adds it when userAmount is false.
 - If they mention oil, sauce or add-ons that are not in the list, add them in adds (kind "extra"); if the amount is unclear, give a typical amount, set estimated=true, and say so in note.
 - For every item you return, set dairy=true (and dairySource) when it likely contains ANY milk product.
 - If a change is ambiguous, make no edit for it and ask one short question.
@@ -206,7 +209,19 @@ async function callAi<T>(system: string, content: Part[], schema: z.ZodType<T>, 
   return parsed.data;
 }
 
-export async function analyzeMeal(input: { image: string | null; text: string; lang: Lang }): Promise<Analysis> {
+type AiItem = Analysis["items"][number];
+/** What the app gets back: each item says if the +15% margin was added (margin=true). */
+export type MarkedItem = AiItem & { margin: boolean };
+export type AnalysisOut = Omit<Analysis, "items"> & { items: MarkedItem[] };
+export type RefineOut = Omit<Refine, "edits" | "adds"> & {
+  edits: (Omit<Refine["edits"][number], "item"> & { item?: (AiItem & { margin?: boolean }) | null })[];
+  adds: MarkedItem[];
+};
+
+/** The margin is only for amounts the AI had to guess. Exact amounts from the user stay as they are. */
+const marked = (i: AiItem): MarkedItem => markMargin(i);
+
+export async function analyzeMeal(input: { image: string | null; text: string; lang: Lang }): Promise<AnalysisOut> {
   if (process.env.AI_MOCK === "1") return addMargin(mockAnalyze(input));
   const content: Part[] = [
     {
@@ -224,20 +239,20 @@ export async function analyzeMeal(input: { image: string | null; text: string; l
   return addMargin(await callAi(ANALYZE_SYSTEM(input.lang), content, AnalysisSchema, input.lang));
 }
 
-/** Every AI guess gets the safety margin (see AI_MARGIN in nutrition.ts). */
-function addMargin(a: Analysis): Analysis {
-  return { ...a, items: a.items.map((i) => withMargin(i)) };
+/** Guessed items get the safety margin (see AI_MARGIN in nutrition.ts); exact ones don't. */
+function addMargin(a: Analysis): AnalysisOut {
+  return { ...a, items: a.items.map(marked) };
 }
 
 export type RefineInput = {
   title: string;
-  items: { id: string; name: string; amount: number; unit: string; kcal: number; protein: number; carbs: number; fat: number; kind: string; estimated: boolean }[];
+  items: { id: string; name: string; amount: number; unit: string; kcal: number; protein: number; carbs: number; fat: number; kind: string; estimated: boolean; margin: boolean }[];
   history: { role: "user" | "assistant"; text: string }[];
   message: string;
   lang: Lang;
 };
 
-export async function refineMeal(input: RefineInput): Promise<Refine> {
+export async function refineMeal(input: RefineInput): Promise<RefineOut> {
   if (process.env.AI_MOCK === "1") return marginOnAdds(mockRefine(input));
   const text = [
     `Meal: ${input.title}`,
@@ -252,9 +267,17 @@ export async function refineMeal(input: RefineInput): Promise<Refine> {
   return marginOnAdds(await callAi(REFINE_SYSTEM(input.lang), [{ type: "text", text }], RefineSchema, input.lang));
 }
 
-/** New items from a chat message get the margin; edits scale from numbers that already have it. */
-function marginOnAdds(r: Refine): Refine {
-  return { ...r, adds: r.adds.map((i) => withMargin(i)) };
+/**
+ * New items from a chat message get the margin unless the amount was exact.
+ * Edits scale from numbers that already have it (margin unchanged), except an
+ * edit with an exact amount, which has no margin.
+ */
+function marginOnAdds(r: Refine): RefineOut {
+  return {
+    ...r,
+    edits: r.edits.map((e) => (e.item?.userAmount ? { ...e, item: { ...e.item, margin: false } } : e)),
+    adds: r.adds.map(marked),
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -276,6 +299,11 @@ function mockAnalyze(input: { image: string | null; text: string; lang: Lang }):
   if (/ชาเย็น|นม/.test(t)) {
     items.push({ name: "ชาเย็น", amount: 1, unit: "แก้ว", kcal: 250, protein: 3, carbs: 42, fat: 8, estimated: true, kind: "food", note: null, dairy: true, dairySource: "นมข้นหวาน นมข้นจืด", box: null });
   }
+  const riceG = t.match(/ข้าว\D{0,6}(\d+)\s*(กรัม|g)/);
+  if (riceG) {
+    const g = Number(riceG[1]);
+    Object.assign(items[0], { amount: g, unit: "กรัม", kcal: g * 1.3, protein: g * 0.027, carbs: g * 0.28, fat: g * 0.003, userAmount: true });
+  }
   if (/น้ำมัน/.test(t)) {
     items.push({ name: "น้ำมันพืช", amount: 1, unit: "ช้อนชา", kcal: 40, protein: 0, carbs: 0, fat: 4.5, estimated: true, kind: "extra", note: "ไม่ได้ระบุปริมาณ ใช้ค่าประมาณ 1 ช้อนชา", box: null });
   }
@@ -292,7 +320,16 @@ function mockRefine(input: RefineInput): Refine {
     if (at < 0) continue;
     // look only at the words right after this food's name
     const after = msg.slice(at, at + key.length + 14);
-    if (/ครึ่ง/.test(after)) {
+    const grams = after.match(/(\d+)\s*(กรัม|g)/);
+    if (grams && /ข้าว/.test(it.name)) {
+      const g = Number(grams[1]);
+      edits.push({
+        id: it.id,
+        action: "update",
+        item: { ...it, kind: "food", amount: g, unit: "กรัม", kcal: g * 1.3, protein: g * 0.027, carbs: g * 0.28, fat: g * 0.003, note: null, box: null, userAmount: true },
+      });
+      touched.push(`${it.name} ${g} กรัม`);
+    } else if (/ครึ่ง/.test(after)) {
       edits.push({
         id: it.id,
         action: "update",

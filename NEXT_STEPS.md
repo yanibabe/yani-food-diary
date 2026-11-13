@@ -6,7 +6,7 @@
 
 ---
 
-## LIVE (updated 2026-11-13, Round 11)
+## LIVE (updated 2026-11-13, Round 12)
 
 - **App:** https://yani-food-diary.vercel.app  (Vercel, exm-labs account, free)
 - **Code:** https://github.com/yanibabe/yani-food-diary  (private; pushes auto-deploy)
@@ -17,6 +17,24 @@
   phone (localStorage + IndexedDB). Nobody sees anyone else's data. But everyone with
   the link uses Yani's OpenRouter key, so their AI photo/text checks spend HER credit.
   Since Round 8 the AI needs a passcode (typed once per phone), so strangers can't spend it.
+
+## Round 12 (2026-11-13) — +15% margin only for amounts the AI guessed ✅
+
+Her question: her home-made salmon + potato + veg recipe = 480 kcal/serving, but a photo of it → 600+.
+Explained: the recipe (weighed) is the most accurate; photo = guess (±20–30%) + her +15% margin + "generous oil /
+larger portion" rules. Advice given: home food with a recipe → log with "เลือกสูตรของฉัน"; photo → tell the AI
+real weights; eating out → photo is fine. She agreed to this fix:
+- AI item field `userAmount` (true only when SHE gave the exact weight/volume or an exact count). Prompt: use her
+  amounts exactly, follow how she says it was cooked (e.g. no oil), plain food-table values for those items.
+- `markMargin()` in `app/lib/nutrition.ts`: userAmount → no margin (`margin: false`); otherwise +15% (`margin: true`).
+  Used for analyze items and chat adds. Chat edits: exact amount → `margin: false`; scaling edits keep the old flag.
+  The refine prompt now gets `margin` per item. `FoodItem.margin?` saved on meals (old meals: missing).
+- Review screen: badge "+15%" (AI guessed) or "น้ำหนักจริง" (exact) per item; note under the total explains
+  "tell it the real weight and no margin is added" (shown only when some item has the margin).
+- Tested: `npm test` 47 pass (2 new, `tests/margin.test.ts`). Pretend AI at iPhone size: "ข้าว 200 กรัม ไก่ทอด ผักลวก"
+  → rice 260 (no margin), chicken 334 (+15%); chat "ข้าว 150 กรัม" → rice 195 น้ำหนักจริง, others unchanged.
+  No console errors. Build passes.
+- **Not tested:** the REAL AI setting userAmount (costs credit). She tries: photo of a home meal + note with grams.
 
 ## Round 11 (2026-11-13) — recipe ingredients: kg / liters + AI looks up any ingredient ✅
 
