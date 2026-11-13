@@ -10,6 +10,8 @@ import { getOffProduct, putOffProduct } from "../lib/food/offStore";
 import { cleanBarcode, servingGrams, servingIsLiquid, type Food } from "../lib/food/provider";
 import { useLang } from "../lib/lang";
 import { fmtG, fmtKcal } from "../lib/nutrition";
+import { applyLabelFix, findFix, fixIsValid, removeFix, upsertFix, type LabelFix } from "../lib/food/labelFix";
+import { readFixes, writeFixes } from "../lib/food/labelFixStore";
 import { LiveBarcodeScanner } from "./LiveBarcodeScanner";
 import { OffAttribution } from "./OffAttribution";
 import { NumberField } from "./ui";
@@ -25,6 +27,10 @@ export function BarcodeLookup({ onPick, onManual }: { onPick: (food: Food, grams
   const [reading, setReading] = useState(false);
   const [readByAi, setReadByAi] = useState(false);
   const [live, setLive] = useState(false);
+  /** The database's own numbers (before her label fix), so she can go back to them. */
+  const [original, setOriginal] = useState<Food | null>(null);
+  const [fixed, setFixed] = useState(false);
+  const [fixForm, setFixForm] = useState<{ servingG: number | null; kcal: number | null; protein: number | null; carbs: number | null; fat: number | null } | null>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => warmUpBarcodeReader(), []);
@@ -92,8 +98,62 @@ export function BarcodeLookup({ onPick, onManual }: { onPick: (food: Food, grams
   }
 
   function show(f: Food) {
-    setFood(f);
-    setGrams(servingGrams(f.servingSize) ?? 100);
+    setOriginal(f);
+    setFixForm(null);
+    const fix = findFix(readFixes(), f.sourceId);
+    const shown = fix ? applyLabelFix(f, fix) : f;
+    setFixed(!!fix);
+    setFood(shown);
+    setGrams(fix ? fix.servingG : (servingGrams(f.servingSize) ?? 100));
+  }
+
+  function openFixForm() {
+    if (!food || !original) return;
+    // Editing again → her saved numbers. First time → only the pack size; she types the rest from the
+    // label (prefilled per-pack numbers would be for the database's pack size, which may be wrong).
+    const saved = findFix(readFixes(), original.sourceId);
+    setFixForm(
+      saved
+        ? { servingG: saved.servingG, kcal: saved.kcal, protein: saved.protein, carbs: saved.carbs, fat: saved.fat }
+        : { servingG: servingGrams(food.servingSize) ?? grams ?? null, kcal: null, protein: null, carbs: null, fat: null },
+    );
+  }
+
+  /** Save her label numbers for this barcode on the phone; used every time she scans it again. */
+  function saveFix() {
+    if (!original || !fixForm || fixForm.servingG == null || fixForm.kcal == null) return;
+    const fix: LabelFix = {
+      code: original.sourceId,
+      servingG: fixForm.servingG,
+      liquid: servingIsLiquid(food?.servingSize ?? original.servingSize),
+      kcal: fixForm.kcal,
+      protein: fixForm.protein,
+      carbs: fixForm.carbs,
+      fat: fixForm.fat,
+      updatedAt: Date.now(),
+    };
+    if (!fixIsValid(fix)) return;
+    const err = writeFixes(upsertFix(readFixes(), fix));
+    if (err) {
+      setError(`${tr("บันทึกไม่ได้", "Couldn't save")}: ${err}`);
+      return;
+    }
+    setFood(applyLabelFix(original, fix));
+    setGrams(fix.servingG);
+    setFixed(true);
+    setFixForm(null);
+  }
+
+  function undoFix() {
+    if (!original) return;
+    const err = writeFixes(removeFix(readFixes(), original.sourceId));
+    if (err) {
+      setError(`${tr("บันทึกไม่ได้", "Couldn't save")}: ${err}`);
+      return;
+    }
+    setFood(original);
+    setGrams(servingGrams(original.servingSize) ?? 100);
+    setFixed(false);
   }
 
   async function lookup(typed: string = code) {
@@ -210,6 +270,60 @@ export function BarcodeLookup({ onPick, onManual }: { onPick: (food: Food, grams
               </div>
             )}
           </div>
+          {fixed ? (
+            <div className="rounded-2xl bg-[#e3ecd6] px-4 py-3 text-center text-[14px] text-ink" data-testid="label-fix-on">
+              ✓ {tr("ใช้ตัวเลขตามฉลากที่คุณแก้ไว้", "Using the numbers you fixed from the label")}
+              <div className="mt-1 flex justify-center gap-4 text-[13px]">
+                <button className="underline" onClick={openFixForm}>{tr("แก้อีกครั้ง", "Edit again")}</button>
+                <button className="underline text-muted" onClick={undoFix} data-testid="label-fix-undo">{tr("ใช้ข้อมูลเดิม", "Use the original data")}</button>
+              </div>
+            </div>
+          ) : (
+            !fixForm && (
+              <button className="w-full text-center text-[14px] text-muted underline" onClick={openFixForm} data-testid="label-fix-open">
+                {tr("ไม่ตรงกับฉลาก? แก้ตามซอง", "Doesn't match the pack? Fix it from the label")}
+              </button>
+            )
+          )}
+          {fixForm && (
+            <div className="space-y-3 rounded-2xl border border-line p-4" data-testid="label-fix-form">
+              <p className="text-[14px] text-muted">
+                {tr(
+                  "กรอกตามที่เขียนบนซอง แอปจะจำไว้ ครั้งหน้าสแกนซองนี้จะใช้ตัวเลขของคุณ",
+                  "Type what the pack says. The app remembers it for the next time you scan this pack.",
+                )}
+              </p>
+              {(
+                [
+                  ["servingG", liquid ? tr("ขนาด 1 ซอง/ขวด (มล.)", "One pack / bottle (mL)") : tr("ขนาด 1 ซอง (กรัม)", "One pack (g)")],
+                  ["kcal", tr("พลังงานต่อซอง (kcal)", "Calories per pack (kcal)")],
+                  ["protein", tr("โปรตีนต่อซอง (g) — ไม่ใส่ก็ได้", "Protein per pack (g) — optional")],
+                  ["carbs", tr("คาร์บต่อซอง (g) — ไม่ใส่ก็ได้", "Carbs per pack (g) — optional")],
+                  ["fat", tr("ไขมันต่อซอง (g) — ไม่ใส่ก็ได้", "Fat per pack (g) — optional")],
+                ] as const
+              ).map(([k, label]) => (
+                <div key={k}>
+                  <label className="label" htmlFor={`fix-${k}`}>
+                    {label}
+                  </label>
+                  <NumberField id={`fix-${k}`} value={fixForm[k]} onChange={(n) => setFixForm({ ...fixForm, [k]: n })} />
+                </div>
+              ))}
+              <div className="flex gap-3">
+                <button className="btn-soft flex-1" onClick={() => setFixForm(null)}>
+                  {tr("ยกเลิก", "Cancel")}
+                </button>
+                <button
+                  className="btn-primary flex-1"
+                  disabled={!(fixForm.servingG != null && fixForm.kcal != null && fixIsValid({ servingG: fixForm.servingG, kcal: fixForm.kcal }))}
+                  onClick={saveFix}
+                  data-testid="label-fix-save"
+                >
+                  {tr("บันทึก", "Save")}
+                </button>
+              </div>
+            </div>
+          )}
           {readByAi && (
             <p className="text-center text-[13px] text-muted" data-testid="barcode-read-by-ai">
               {tr("AI อ่านตัวเลขจากรูปให้ เช็กว่าตรงกับบนห่อนะ", "The AI read the numbers from your photo. Check they match the pack.")}

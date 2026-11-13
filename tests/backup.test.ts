@@ -8,6 +8,7 @@ const data = {
   goals: JSON.stringify({ targetKcal: 1600 }),
   body: JSON.stringify([{ date: "2026-11-12", weightKg: 79, steps: null }]),
   water: JSON.stringify([{ date: "2026-11-12", glasses: 6, updatedAt: 1 }]),
+  labelFixes: JSON.stringify([{ code: "8850000000001", servingG: 20, liquid: false, kcal: 70, protein: null, carbs: null, fat: null, updatedAt: 1 }]),
   lang: "en",
 };
 
@@ -21,7 +22,7 @@ test("a backup survives the trip to a file and back unchanged", () => {
 });
 
 test("empty parts stay empty", () => {
-  const b = makeBackup({ entries: null, recipes: null, goals: null, body: null, water: null, lang: null }, {}, 1);
+  const b = makeBackup({ entries: null, recipes: null, goals: null, body: null, water: null, labelFixes: null, lang: null }, {}, 1);
   const res = parseBackup(JSON.stringify(b));
   assert.ok(res.ok);
   assert.deepEqual(backupCounts(res.backup), { meals: 0, recipes: 0, days: 0, photos: 0 });
