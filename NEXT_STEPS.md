@@ -29,10 +29,10 @@ she picked a mix of A + B.
   pastel protein/carbs/fat cards, yellow pill for the open tab. Tab bar = plain white bar with top line.
   Recipes empty state/cover placeholders back to emoji. Add-food tiles stay pastel.
 - Checked: 76 tests, tsc, eslint, build; built server at phone size (Today, welcome) — no console errors.
-  NOT yet seen on her iPhone.
+  ✅ 2026-11-13: she looked on her iPhone — "Looks good", no tweaks.
 
 ### ▶ NEXT
-1. She looks on her iPhone and says what to tweak.
+1. ~~She looks on her iPhone~~ done, approved.
 2. **Her new feature wish: a dress-up character as her profile picture** — pick body, hair (style + color),
    face, skin color, mouth, outfit. Plan: drawn SVG parts in the app, no AI, free. Own round. Style should be
    simple/minimal to match the app. Start with /idea-style questions (one at a time): where it shows, how many
