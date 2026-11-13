@@ -6,7 +6,7 @@
 
 ---
 
-## LIVE (updated 2026-11-13, Round 15b)
+## LIVE (updated 2026-11-13, Round 16)
 
 - **App:** https://yani-food-diary.vercel.app  (Vercel, exm-labs account, free)
 - **Code:** https://github.com/yanibabe/yani-food-diary  (private; pushes auto-deploy)
@@ -17,6 +17,30 @@
   phone (localStorage + IndexedDB). Nobody sees anyone else's data. But everyone with
   the link uses Yani's OpenRouter key, so their AI photo/text checks spend HER credit.
   Since Round 8 the AI needs a passcode (typed once per phone), so strangers can't spend it.
+
+## Round 16 (2026-11-13) — 💧 Water counter on Today ✅ LIVE
+
+She picked "water counter" from the ideas list.
+- New card "💧 ดื่มน้ำ" on Today, right under "+ เพิ่มอาหาร" (above the week chart). Works for any day
+  on screen (past days too). Shows "5/8 แก้ว", ml drunk, and "อีก 3 แก้ว" or "ครบเป้าแล้ว 🎉".
+- One glass = 250 ml. Big blue "+ 1 แก้ว" button, small "−" button, and a row of glasses (8 per row):
+  tapping glass N fills up to N; tapping the last full glass empties it. Goes past the goal (max 40).
+- Goal: 8 glasses by default; "เป้า 8 แก้ว/วัน · แตะเพื่อเปลี่ยน" opens a − / + stepper (1–20). Saved as
+  `goals.waterGoal`.
+- Saved on the phone in localStorage key `yfd:v1:water` ({date, glasses, updatedAt}[], day dropped at 0).
+  Included in backup (`BACKUP_KEYS.water`); older backups without water still restore.
+- Code: `app/lib/water.ts` (pure logic), `app/components/WaterCard.tsx`, store `waterLogs`/`setWater`,
+  new colors `--water`, `--water-soft`, `--water-ink` in `globals.css`. Tests: `tests/water.test.ts`
+  + backup tests.
+- Checked: 70 tests, tsc, eslint, build pass; own prod server (preview "food-diary-verify", port 3227)
+  at phone size: +/−/tap glass/goal editor/reload keeps it/yesterday separate, no overflow, no console
+  errors. Live site checked after deploy (tap + saved). NOT yet on her iPhone.
+- Note: the other chat's dev server on 3217 did not pick up the new CSS colors (stale); use
+  "food-diary-verify" (build first) when checking styles.
+
+### ▶ NEXT
+1. She tries the water card on her iPhone.
+2. Ideas still open: live camera barcode scanning · monthly look-back (kcal + weight; could add water).
 
 ## Round 15b (2026-11-13) — "กินซ้ำ" moved into its own tile + search ✅
 
@@ -31,8 +55,6 @@ to tap into, a name search, and the list sorted by the day she last ate it.
 - Checked: 65 tests, tsc, eslint, build pass; mock browser at phone size: tile → list in right order,
   search "ข้าว" narrows to one, tap adds + Undo removes, no console errors. Tried on her iPhone 2026-11-13: works ✓
 
-### ▶ NEXT
-1. Pick the next round. Ideas still open: live camera barcode scanning · monthly look-back (kcal + weight) · water counter.
 
 ## Round 15 (2026-11-13) — 🔁 "กินซ้ำ" / Eat again, one tap ✅ LIVE
 
