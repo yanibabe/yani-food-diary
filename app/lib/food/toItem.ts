@@ -2,7 +2,7 @@
 // Label values: no +15% margin. A missing nutrient counts as 0 and the item is marked "estimated".
 
 import type { FoodItem } from "../types.ts";
-import type { Food } from "./provider.ts";
+import { servingIsLiquid, type Food } from "./provider.ts";
 
 export function foodToItem(food: Food, grams: number, id: string, fallbackName: string): FoodItem {
   const f = grams > 0 ? grams / 100 : 0;
@@ -12,7 +12,7 @@ export function foodToItem(food: Food, grams: number, id: string, fallbackName: 
     id,
     name: food.name ?? fallbackName,
     amount: grams,
-    unit: "g",
+    unit: servingIsLiquid(food.servingSize) ? "mL" : "g", // drinks: 1 mL ≈ 1 g
     kcal: Math.round((food.kcal ?? 0) * f),
     protein: per(food.protein),
     carbs: per(food.carbs),

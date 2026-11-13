@@ -3,7 +3,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { OffError, OpenFoodFactsProvider, normalizeOffProduct, parseNum, retryDelay } from "../app/lib/food/openFoodFacts.ts";
 import { OFF_STAGING_AUTH, OFF_STAGING_URL, offConfig } from "../app/lib/food/config.ts";
-import { cleanBarcode, servingGrams } from "../app/lib/food/provider.ts";
+import { barcodeCheckOk, cleanBarcode, servingGrams, servingIsLiquid } from "../app/lib/food/provider.ts";
 import { foodToItem } from "../app/lib/food/toItem.ts";
 
 const UA = "SnapCal/0.1.0 (test@example.com)";
@@ -173,7 +173,13 @@ test("helpers: barcode cleaning, serving grams, retry delay", () => {
   assert.equal(cleanBarcode("123456789012345"), null);
   assert.equal(servingGrams("15 g"), 15);
   assert.equal(servingGrams("30g (2 biscuits)"), 30);
-  assert.equal(servingGrams("1 cup (240 ml)"), null);
+  assert.equal(servingGrams("1 cup (240 ml)"), 240);
+  assert.equal(servingGrams("325 mL"), 325);
+  assert.equal(servingGrams("33 cl"), 330);
+  assert.equal(servingGrams("1.5 L"), 1500);
+  assert.equal(servingGrams("2 pieces"), null);
+  assert.equal(servingIsLiquid("325 mL"), true);
+  assert.equal(servingIsLiquid("30 g"), false);
   assert.equal(servingGrams(null), null);
   assert.equal(retryDelay("120", 0), 30_000);
   assert.equal(retryDelay(null, 2), 4000);
@@ -193,4 +199,14 @@ test("a meal item from an OFF food: grams eaten, no margin, source kept, missing
   assert.equal(partial.name, "Product");
   assert.equal(partial.fat, 0);
   assert.equal(partial.estimated, true);
+});
+
+test("barcode check digit catches a misread number", () => {
+  assert.equal(barcodeCheckOk("8851959132074"), true); // Coke Zero (her real can)
+  assert.equal(barcodeCheckOk("3017624010701"), true); // Nutella
+  assert.equal(barcodeCheckOk("8851959132075"), false); // last digit wrong
+  assert.equal(barcodeCheckOk("8851959132704"), false); // two digits swapped
+  assert.equal(barcodeCheckOk("96385074"), true); // EAN-8
+  assert.equal(barcodeCheckOk("036000291452"), true); // UPC-A
+  assert.equal(barcodeCheckOk("12345"), false);
 });

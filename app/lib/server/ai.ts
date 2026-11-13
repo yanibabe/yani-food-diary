@@ -439,3 +439,39 @@ function mockIngredient(name: string): IngredientRef {
   if (/xyz/i.test(name)) return { known: false, kcal: 0, protein: 0, carbs: 0, fat: 0, unitG: null, gPerMl: null };
   return { known: true, kcal: 100, protein: 3, carbs: 15, fat: 2, unitG: null, gPerMl: null };
 }
+
+// ---------------------------------------------------------------------------
+// Barcode digits from a photo (backup when the free stripe reader on the phone fails).
+// The AI reads the NUMBERS printed under the stripes. The app then checks the
+// last digit (check digit), so a misread number is caught before any lookup.
+// ---------------------------------------------------------------------------
+
+export const BarcodeDigitsSchema = z.object({
+  digits: z.string().nullable().catch(null).describe("The digits printed under the barcode, digits only, no spaces; null if you cannot read them all clearly"),
+});
+
+const BARCODE_SYSTEM = `You read the numbers printed under a product barcode (EAN-13, EAN-8, UPC-A) in a photo of food or drink packaging.
+Rules:
+- Read every digit printed under or beside the black-and-white stripes, left to right, including the small first and last digits outside the stripes.
+- Return digits only (no spaces or dashes). Usually 13 digits, sometimes 8 or 12.
+- Do NOT guess. If any digit is blurry, cut off or hidden, return null.
+- Ignore other numbers on the pack (weights, dates, phone numbers, nutrition).
+Return ONLY a JSON object matching this JSON Schema:
+${shapeOf(BarcodeDigitsSchema)}`;
+
+export async function readBarcodeDigits(input: { image: string; lang: Lang }): Promise<string | null> {
+  if (!/^data:image\/(jpeg|png|webp);base64,/.test(input.image))
+    throw new AiError("bad-output", trFor(input.lang)("รูปแบบรูปไม่รองรับ", "This picture format is not supported"), 400);
+  if (process.env.AI_MOCK === "1") return "3017624010701";
+  const r = await callAi(
+    BARCODE_SYSTEM,
+    [
+      { type: "text", text: "Photo of a product barcode." },
+      { type: "image_url", image_url: { url: input.image } },
+    ],
+    BarcodeDigitsSchema,
+    input.lang,
+  );
+  const digits = (r.digits ?? "").replace(/\D/g, "");
+  return digits || null;
+}

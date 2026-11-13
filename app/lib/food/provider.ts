@@ -44,11 +44,34 @@ export function cleanBarcode(input: string): string | null {
   return digits.length >= 8 && digits.length <= 14 ? digits : null;
 }
 
-/** Grams in a serving text like "15 g" or "30g (2 biscuits)". null if it isn't in grams. */
+/**
+ * Grams in a serving text like "15 g", "30g (2 biscuits)" or, for drinks, "325 mL".
+ * Drinks count 1 mL as about 1 g (close enough for water, soda, juice, milk).
+ * null if no size is found.
+ */
 export function servingGrams(serving: string | null): number | null {
   if (!serving) return null;
-  const m = serving.replace(",", ".").match(/(\d+(?:\.\d+)?)\s*g\b/i);
+  const m = serving.replace(",", ".").match(/(\d+(?:\.\d+)?)\s*(g|ml|cl|l)(?![a-z])/i);
   if (!m) return null;
-  const n = Number(m[1]);
-  return n > 0 && n < 5000 ? n : null;
+  const perUnit: Record<string, number> = { g: 1, ml: 1, cl: 10, l: 1000 };
+  const n = Number(m[1]) * perUnit[m[2].toLowerCase()];
+  return n > 0 && n < 5000 ? Math.round(n * 10) / 10 : null;
+}
+
+/** True if the serving size is written as a drink amount (mL / cL / L). */
+export function servingIsLiquid(serving: string | null): boolean {
+  return /\d\s*(ml|cl|l)(?![a-z])/i.test(serving ?? "");
+}
+
+/**
+ * Every shop barcode (EAN-8, UPC-A, EAN-13, GTIN-14) ends with a check digit.
+ * True if the last digit matches the others, so a misread number is caught.
+ */
+export function barcodeCheckOk(code: string): boolean {
+  if (!/^\d{8}$|^\d{12,14}$/.test(code)) return false;
+  const digits = code.split("").map(Number);
+  const check = digits.pop()!;
+  let sum = 0;
+  digits.reverse().forEach((d, i) => (sum += d * (i % 2 === 0 ? 3 : 1)));
+  return (10 - (sum % 10)) % 10 === check;
 }

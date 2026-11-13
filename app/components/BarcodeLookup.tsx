@@ -1,11 +1,13 @@
 "use client";
-// Type a barcode → look it up in Open Food Facts (phone cache first) → choose grams eaten.
+// Photo or typed barcode → look it up in Open Food Facts (phone cache first) → choose grams eaten.
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { aiFetch } from "../lib/aiFetch";
+import { scanBarcodePhoto, warmUpBarcodeReader } from "../lib/barcodeScan";
+import { compressImage } from "../lib/photos";
 import { normalizeOffProduct, type OffProduct } from "../lib/food/openFoodFacts";
 import { getOffProduct, putOffProduct } from "../lib/food/offStore";
-import { cleanBarcode, servingGrams, type Food } from "../lib/food/provider";
+import { cleanBarcode, servingGrams, servingIsLiquid, type Food } from "../lib/food/provider";
 import { useLang } from "../lib/lang";
 import { fmtG, fmtKcal } from "../lib/nutrition";
 import { OffAttribution } from "./OffAttribution";
@@ -19,17 +21,69 @@ export function BarcodeLookup({ onPick, onManual }: { onPick: (food: Food, grams
   const [notFound, setNotFound] = useState(false);
   const [food, setFood] = useState<Food | null>(null);
   const [grams, setGrams] = useState<number | null>(100);
+  const [reading, setReading] = useState(false);
+  const [readByAi, setReadByAi] = useState(false);
+  const cameraRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => warmUpBarcodeReader(), []);
+
+  /** Photo → free reader on the phone first; if it can't, the AI reads the printed digits. */
+  async function fromPhoto(file: File | undefined) {
+    if (!file) return;
+    setError(null);
+    setNotFound(false);
+    setFood(null);
+    setReadByAi(false);
+    setReading(true);
+    let found: string | null = null;
+    let usedAi = false;
+    try {
+      try {
+        found = await scanBarcodePhoto(file);
+      } catch (e) {
+        console.warn("[barcode] free reader failed", e);
+      }
+      if (!found) {
+        usedAi = true;
+        const image = await compressImage(file, 1600, 0.85, tr("อ่านรูปไม่ได้ ลองเลือกรูปอื่น", "Couldn't read this picture. Try another one."));
+        const res = await aiFetch("/api/food/barcode-photo", { image, lang }, lang);
+        const data = (await res.json().catch(() => null)) as { code?: string | null; message?: string } | null;
+        if (!res.ok || !data) {
+          setError(data?.message ?? `${tr("เซิร์ฟเวอร์ตอบกลับ", "Server replied")} ${res.status}`);
+          return;
+        }
+        found = data.code ?? null;
+      }
+    } catch (e) {
+      setError(`${tr("อ่านรูปไม่ได้", "Couldn't read the photo")}: ${e instanceof Error ? e.message : String(e)}`);
+      return;
+    } finally {
+      setReading(false);
+    }
+    if (!found) {
+      setError(
+        tr(
+          "อ่านบาร์โค้ดในรูปไม่ออก ลองถ่ายใหม่ใกล้ ๆ ให้ชัดและไม่เอียง หรือพิมพ์ตัวเลขเองด้านล่าง",
+          "Couldn't read the barcode in this photo. Try again closer, sharp and straight, or type the numbers below.",
+        ),
+      );
+      return;
+    }
+    setCode(found);
+    setReadByAi(usedAi);
+    await lookup(found);
+  }
 
   function show(f: Food) {
     setFood(f);
     setGrams(servingGrams(f.servingSize) ?? 100);
   }
 
-  async function lookup() {
+  async function lookup(typed: string = code) {
     setError(null);
     setNotFound(false);
     setFood(null);
-    const clean = cleanBarcode(code);
+    const clean = cleanBarcode(typed);
     if (!clean) {
       setError(tr("บาร์โค้ดต้องเป็นตัวเลข 8–14 หลัก", "A barcode is 8–14 digits"));
       return;
@@ -62,9 +116,28 @@ export function BarcodeLookup({ onPick, onManual }: { onPick: (food: Food, grams
 
   const per = (v: number | null, unit: string) => (v == null ? "—" : `${unit === "kcal" ? fmtKcal(v) : fmtG(v)} ${unit}`);
 
+  const liquid = servingIsLiquid(food?.servingSize ?? null);
+
   return (
     <div className="space-y-5">
       <div className="card space-y-3 p-4">
+        <button className="btn-primary w-full" onClick={() => cameraRef.current?.click()} disabled={busy || reading} data-testid="barcode-photo">
+          {reading ? tr("กำลังอ่านบาร์โค้ด…", "Reading the barcode…") : `📷 ${tr("ถ่ายรูปบาร์โค้ด", "Take a photo of the barcode")}`}
+        </button>
+        <input
+          ref={cameraRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          hidden
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            e.target.value = ""; // same photo can be picked again
+            fromPhoto(f);
+          }}
+          data-testid="barcode-photo-input"
+        />
+        <p className="text-center text-[13px] text-muted">{tr("หรือพิมพ์ตัวเลขเอง", "or type the numbers")}</p>
         <label className="label" htmlFor="barcode">
           {tr("ตัวเลขใต้บาร์โค้ด", "The numbers under the barcode")}
         </label>
@@ -74,12 +147,15 @@ export function BarcodeLookup({ onPick, onManual }: { onPick: (food: Food, grams
           inputMode="numeric"
           autoComplete="off"
           value={code}
-          onChange={(e) => setCode(e.target.value.replace(/[^\d\s-]/g, ""))}
+          onChange={(e) => {
+            setCode(e.target.value.replace(/[^\d\s-]/g, ""));
+            setReadByAi(false);
+          }}
           onKeyDown={(e) => e.key === "Enter" && lookup()}
           placeholder="8850000000000"
           data-testid="barcode-input"
         />
-        <button className="btn-primary w-full" onClick={lookup} disabled={busy || !code.trim()}>
+        <button className="btn-soft w-full" onClick={() => lookup()} disabled={busy || reading || !code.trim()}>
           {busy ? tr("กำลังค้นหา…", "Looking it up…") : tr("ค้นหา", "Look it up")}
         </button>
       </div>
@@ -103,7 +179,7 @@ export function BarcodeLookup({ onPick, onManual }: { onPick: (food: Food, grams
             {food.brand && <div className="text-[14px] text-muted">{food.brand}</div>}
           </div>
           <div className="rounded-2xl bg-cream px-4 py-3 text-[15px]">
-            <div className="mb-1 text-[13px] text-muted">{tr("ต่อ 100 กรัม", "Per 100 g")}</div>
+            <div className="mb-1 text-[13px] text-muted">{liquid ? tr("ต่อ 100 มล.", "Per 100 mL") : tr("ต่อ 100 กรัม", "Per 100 g")}</div>
             <div>
               {per(food.kcal, "kcal")} · {tr("โปรตีน", "Protein")} {per(food.protein, "g")} · {tr("คาร์บ", "Carbs")} {per(food.carbs, "g")} ·{" "}
               {tr("ไขมัน", "Fat")} {per(food.fat, "g")}
@@ -114,6 +190,11 @@ export function BarcodeLookup({ onPick, onManual }: { onPick: (food: Food, grams
               </div>
             )}
           </div>
+          {readByAi && (
+            <p className="text-center text-[13px] text-muted" data-testid="barcode-read-by-ai">
+              {tr("AI อ่านตัวเลขจากรูปให้ เช็กว่าตรงกับบนห่อนะ", "The AI read the numbers from your photo. Check they match the pack.")}
+            </p>
+          )}
           {food.kcal == null && (
             <p className="rounded-2xl bg-warn px-4 py-3 text-[14px] text-warn-ink">
               {tr("สินค้านี้ไม่มีข้อมูลแคลอรี่ ตรวจกับฉลากแล้วแก้ในหน้าถัดไปนะ", "This product has no calorie info. Check the label and fix it on the next page.")}
@@ -121,7 +202,7 @@ export function BarcodeLookup({ onPick, onManual }: { onPick: (food: Food, grams
           )}
           <div>
             <label className="label" htmlFor="grams">
-              {tr("กินไปกี่กรัม", "How many grams did you eat?")}
+              {liquid ? tr("ดื่มไปกี่ มล.", "How many mL did you drink?") : tr("กินไปกี่กรัม", "How many grams did you eat?")}
             </label>
             <NumberField id="grams" value={grams} onChange={setGrams} />
           </div>
