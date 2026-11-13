@@ -6,7 +6,7 @@
 
 ---
 
-## LIVE (updated 2026-11-13, Round 16)
+## LIVE (updated 2026-11-13, Round 17)
 
 - **App:** https://yani-food-diary.vercel.app  (Vercel, exm-labs account, free)
 - **Code:** https://github.com/yanibabe/yani-food-diary  (private; pushes auto-deploy)
@@ -17,6 +17,29 @@
   phone (localStorage + IndexedDB). Nobody sees anyone else's data. But everyone with
   the link uses Yani's OpenRouter key, so their AI photo/text checks spend HER credit.
   Since Round 8 the AI needs a passcode (typed once per phone), so strangers can't spend it.
+
+## Round 17 (2026-11-13) — 📷 Live camera barcode scanning ✅ LIVE
+
+She picked "live camera scanning" from the ideas list.
+- Barcode page now: big "📷 สแกนด้วยกล้อง" (Scan with camera) on top; the old photo button stays below as
+  "🖼️ ถ่ายรูปบาร์โค้ดแทน" (backup, still with the AI digit-reading fallback); typing still works.
+- Scan opens a full-screen black camera view with a white guide box ("เล็งบาร์โค้ดให้อยู่ในกรอบ") and Cancel.
+  It reads frames every ~120 ms, ONLY inside the guide box (middle 80% × 40% of the frame, shrunk to ≤960 px),
+  with the free on-phone reader (`scanBarcodeFrame`, fast settings). A code counts only after the SAME
+  number is read twice in a row (check digit OK too). Then camera turns off → number filled → looked up.
+- After 12 s with no read, a "อ่านไม่ได้? ถ่ายรูปแทน" button appears. Camera blocked / missing → friendly
+  message + "ถ่ายรูปแทน" button. No AI, no cost, nothing recorded or sent.
+- Code: `app/components/LiveBarcodeScanner.tsx`, `app/lib/liveScan.ts` (scanArea, makeConfirmer,
+  cameraErrorKind), `scanBarcodeFrame` in `app/lib/barcodeScan.ts`, wiring in `BarcodeLookup.tsx`.
+- Checked: 73 tests, tsc, eslint, build pass. Built server "food-diary-verify" at phone size with a fake
+  camera (drawn EAN-13 of her Coke Zero 8851959132074): read it, closed, filled the number. Denied camera
+  → message + photo button; Cancel closes. (Local lookup said "not set up" — expected, no OFF env locally.)
+  Live site: deployed Ready, new button found in the live code. NOT yet tried on her iPhone (real camera,
+  home-screen app permission prompt).
+
+### ▶ NEXT
+1. She tries "สแกนด้วยกล้อง" on her iPhone with a real pack.
+2. Idea still open: monthly look-back (kcal + weight line; could add water).
 
 ## Round 16 (2026-11-13) — 💧 Water counter on Today ✅ LIVE
 
@@ -38,9 +61,7 @@ She picked "water counter" from the ideas list.
 - Note: the other chat's dev server on 3217 did not pick up the new CSS colors (stale); use
   "food-diary-verify" (build first) when checking styles.
 
-### ▶ NEXT: she is choosing the next feature. Ideas still open:
-1. Live camera barcode scanning (no photo button).
-2. Monthly look-back: average kcal + weight line together (could add water).
+### ▶ NEXT (done → see Round 17)
 
 ## Round 15b (2026-11-13) — "กินซ้ำ" moved into its own tile + search ✅
 
