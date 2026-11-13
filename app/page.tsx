@@ -6,6 +6,7 @@ import { MacroCards, Sheet, StoredPhoto } from "./components/ui";
 import { BackupReminder } from "./components/BackupReminder";
 import { WeekKcalChart } from "./components/WeekKcalChart";
 import { WaterCard } from "./components/WaterCard";
+import { Blob } from "./components/Blob";
 import { guessSlot, shiftDateKey, shortDayLabel, thaiDateKey, thaiDateLabel } from "./lib/date";
 import { copyMeal, recentMeals, searchMeals } from "./lib/repeat";
 import { macroTargets, proteinTargetG } from "./lib/energy";
@@ -14,6 +15,8 @@ import { useLang } from "./lib/lang";
 import { useStore } from "./lib/store";
 import { SLOT_LABEL, SLOTS, type Entry } from "./lib/types";
 
+const SLOT_COLORS = ["var(--yellow)", "var(--mint)", "var(--sky)", "var(--pink)"];
+
 function Ring({ eaten, target }: { eaten: number; target: number }) {
   const r = 86;
   const c = 2 * Math.PI * r;
@@ -21,13 +24,13 @@ function Ring({ eaten, target }: { eaten: number; target: number }) {
   const over = eaten > target;
   return (
     <svg viewBox="0 0 200 200" className="h-[210px] w-[210px]" aria-hidden>
-      <circle cx="100" cy="100" r={r} fill="none" stroke="var(--olive-soft)" strokeWidth="16" />
+      <circle cx="100" cy="100" r={r} fill="none" stroke="var(--cream)" strokeWidth="16" />
       {p > 0 && <circle
         cx="100"
         cy="100"
         r={r}
         fill="none"
-        stroke={over ? "var(--warn-ink)" : "var(--olive)"}
+        stroke={over ? "var(--pink)" : "var(--yellow-deep)"}
         strokeWidth="16"
         strokeLinecap="round"
         strokeDasharray={`${c * p} ${c}`}
@@ -84,9 +87,9 @@ function TodayInner() {
         </button>
         <div className="text-center">
           {goals.profile?.name && date === today && (
-            <p className="text-[15px] text-olive-dark" data-testid="greeting">{tr("สวัสดี", "Hi")} {goals.profile.name} 🌿</p>
+            <p className="text-[15px] text-muted" data-testid="greeting">{tr("สวัสดี", "Hi")} {goals.profile.name}</p>
           )}
-          <h1 className="text-[24px] font-bold">{date === today ? tr("วันนี้", "Today") : tr("ย้อนดู", "Looking back")}</h1>
+          <h1 className="text-[26px]">{date === today ? tr("วันนี้", "Today") : tr("ย้อนดู", "Looking back")}</h1>
           <p className="text-[14px] text-muted">{thaiDateLabel(date, lang)}</p>
         </div>
         <button
@@ -107,11 +110,12 @@ function TodayInner() {
 
       {ready && date === today && <BackupReminder entries={entries} />}
 
-      <section className="card flex flex-col items-center px-5 pb-5 pt-6">
+      <section className="card relative flex flex-col items-center overflow-hidden px-5 pb-5 pt-6">
+        <Blob color="var(--yellow)" size={74} shape={1} look={-3} className="absolute -right-4 -top-3" />
         <div className="relative">
           <Ring eaten={ready ? total.kcal : 0} target={target} />
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="num text-[52px] font-bold leading-none" data-testid="eaten-kcal">
+            <span className="num text-[54px] leading-none" data-testid="eaten-kcal">
               {ready ? fmtKcal(total.kcal) : "–"}
             </span>
             <span className="mt-1 text-[15px] text-muted">
@@ -129,7 +133,7 @@ function TodayInner() {
         </div>
       </section>
 
-      <button className="btn-primary w-full !min-h-[58px] text-[19px]" onClick={openAdd}>
+      <button className="btn-primary btn-arrow w-full !min-h-[58px] text-[19px]" onClick={openAdd}>
         + {tr("เพิ่มอาหาร", "Add food")}
       </button>
 
@@ -137,13 +141,16 @@ function TodayInner() {
 
       {ready && <WeekKcalChart entries={entries} date={date} today={today} target={target} onPick={go} />}
 
-      {SLOTS.map((slot) => {
+      {SLOTS.map((slot, i) => {
         const list = dayEntries.filter((e) => e.slot === slot);
         const kcal = sumMacros(list.flatMap((e) => e.items.map(pickMacros))).kcal;
         return (
           <section key={slot} className="card p-4" data-testid={`slot-${slot}`}>
             <div className="mb-1 flex items-baseline justify-between px-1">
-              <h2 className="text-[19px] font-semibold">{SLOT_LABEL[slot][lang]}</h2>
+              <h2 className="flex items-center gap-2 text-[19px]">
+                <Blob color={SLOT_COLORS[i % SLOT_COLORS.length]} size={30} shape={(i % 3) as 0 | 1 | 2} />
+                {SLOT_LABEL[slot][lang]}
+              </h2>
               <span className="num text-[15px] text-muted">{fmtKcal(kcal)} kcal</span>
             </div>
             {list.length === 0 ? (
@@ -235,16 +242,16 @@ function TodayInner() {
         ) : (
         <div className="grid grid-cols-2 gap-3 pb-3">
           {[
-            { href: `/add/photo${q}`, icon: "📷", label: tr("ถ่ายรูป", "Take a photo") },
-            { href: `/add/text${q}`, icon: "💬", label: tr("พิมพ์ให้ AI ช่วย", "Type it, AI helps") },
-            { href: `/recipes${q}`, icon: "📖", label: tr("เลือกสูตรของฉัน", "From my recipes") },
-            { href: `/add/manual${q}`, icon: "✏️", label: tr("กรอกเอง", "Enter it myself") },
-            { href: `/add/barcode${q}`, icon: "🏷️", label: tr("บาร์โค้ด", "Barcode") },
+            { href: `/add/photo${q}`, bg: "bg-yellow", icon: "📷", label: tr("ถ่ายรูป", "Take a photo") },
+            { href: `/add/text${q}`, bg: "bg-sky", icon: "💬", label: tr("พิมพ์ให้ AI ช่วย", "Type it, AI helps") },
+            { href: `/recipes${q}`, bg: "bg-mint", icon: "📖", label: tr("เลือกสูตรของฉัน", "From my recipes") },
+            { href: `/add/manual${q}`, bg: "bg-pink", icon: "✏️", label: tr("กรอกเอง", "Enter it myself") },
+            { href: `/add/barcode${q}`, bg: "bg-cream", icon: "🏷️", label: tr("บาร์โค้ด", "Barcode") },
           ].map((o) => (
             <Link
               key={o.href}
               href={o.href}
-              className="flex min-h-[112px] flex-col items-center justify-center gap-2 rounded-[22px] bg-cream text-[17px] font-medium active:scale-[0.98]"
+              className={`flex min-h-[112px] flex-col items-center justify-center gap-2 rounded-[22px] ${o.bg} text-[17px] font-medium active:scale-[0.98]`}
             >
               <span className="text-[34px]" aria-hidden>{o.icon}</span>
               {o.label}

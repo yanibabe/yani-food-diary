@@ -6,7 +6,7 @@
 
 ---
 
-## LIVE (updated 2026-11-13, Round 18b — tried on iPhone ✓)
+## LIVE (updated 2026-11-13, Round 19 — new look)
 
 - **App:** https://yani-food-diary.vercel.app  (Vercel, exm-labs account, free)
 - **Code:** https://github.com/yanibabe/yani-food-diary  (private; pushes auto-deploy)
@@ -17,6 +17,33 @@
   phone (localStorage + IndexedDB). Nobody sees anyone else's data. But everyone with
   the link uses Yani's OpenRouter key, so their AI photo/text checks spend HER credit.
   Since Round 8 the AI needs a passcode (typed once per phone), so strangers can't spend it.
+
+## Round 19 (2026-11-13) — 🎨 New look: beige paper, black pills, pastel blob friends ✅ LIVE
+
+She asked to decorate ("ตกแต่ง") and shared a reference board (Japanese design-studio style: off-white #F7F3EF,
+black #111 pill buttons with a yellow arrow circle, pastels yellow #FFE59A · pink #FFB5C1 · mint #B7E1D1 ·
+sky #A9D3FF, rounded type, white/pastel blobs with two dot eyes). We took the STYLE only — our own blob drawings,
+no logo/text copied.
+- `app/globals.css`: new tokens. Old names kept so nothing broke: `olive`/`olive-dark` = black, `olive-soft` =
+  soft yellow. New: `yellow`, `yellow-deep`, `pink`, `mint`, `sky`. Macro cards pink/yellow/blue. `.btn-soft`
+  is now an outline pill (black border). `.btn-arrow` adds the yellow → circle (used on "+ เพิ่มอาหาร" and the
+  welcome "ถัดไป"). Disabled primary = light grey-beige.
+- Fonts (`app/layout.tsx`): h1/h2/h3 + `.num` use Nunito (digits/English) then Mitr (Thai); body stays Noto Sans
+  Thai. (Mitr alone had a slashed zero "Ø" — that's why Nunito is first.)
+- `app/components/Blob.tsx`: the mascot (3 shapes, color, eyes, look). Used: peeking from the kcal ring card,
+  one per meal slot (yellow/mint/sky/pink), recipes empty state + recipe cards without photo, welcome hero.
+- Tab bar: floating white rounded bar, thin line icons (no emoji), open tab = yellow pill.
+- Kcal ring: yellow on beige (pink when over). Week chart bars: yellow, selected day black, over = pink.
+- Add-food sheet tiles: photo yellow · AI text sky · recipes mint · manual pink · barcode beige.
+- Checked: tests pass, tsc, eslint, build. Built server at phone size: Today, add sheet, recipes, weight,
+  profile, welcome — no console errors. NOT yet seen on her iPhone. App icon NOT changed (still old).
+- Note: the old `npm run dev:mock` server (port 3217) had stopped noticing file changes; I used the
+  `food-diary-verify` build server instead.
+
+### ▶ NEXT
+1. She looks at it on her iPhone and says what to tweak.
+2. Optional: new home-screen icon with a blob friend (matching the new look).
+3. Idea still open: monthly look-back (kcal + weight line; could add water).
 
 ## Round 18b (2026-11-13) — 📷 Photo of the nutrition label fills it in ✅ LIVE
 

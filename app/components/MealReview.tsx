@@ -126,7 +126,7 @@ export function ItemEditor({
       )}
       {item.note && <p className="rounded-2xl bg-warn px-4 py-3 text-[14px] text-warn-ink">{item.note}</p>}
       <div className="flex gap-3 pt-1">
-        <button className="btn-soft flex-1 !bg-[#f6e1dc] !text-danger" onClick={onDelete}>{tr("ลบรายการนี้", "Delete this item")}</button>
+        <button className="btn-soft flex-1 !border-danger !text-danger" onClick={onDelete}>{tr("ลบรายการนี้", "Delete this item")}</button>
         <button className="btn-primary flex-1" onClick={onDone}>{tr("เสร็จ", "Done")}</button>
       </div>
     </div>

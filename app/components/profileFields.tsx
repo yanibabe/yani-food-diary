@@ -249,7 +249,7 @@ export function PlanSummary({ p, plan, onUseSafe }: { p: Profile; plan: WeightPl
               </>
             )}
           </p>
-          <button type="button" className="btn-soft !min-h-[44px] !bg-paper" onClick={() => onUseSafe(plan.safeMonths)}>
+          <button type="button" className="btn-soft !min-h-[44px]" onClick={() => onUseSafe(plan.safeMonths)}>
             {tr(`เปลี่ยนเป็น ${plan.safeMonths} เดือน`, `Change to ${plan.safeMonths} months`)}
           </button>
         </div>

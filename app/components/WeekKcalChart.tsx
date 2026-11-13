@@ -57,7 +57,7 @@ export function WeekKcalChart({ entries, date, today, target, onPick }: { entrie
             const p = dayParts(d.date, lang);
             const sel = d.date === date;
             const over = d.kcal > target;
-            const color = over ? (sel ? "bg-warn-ink" : "bg-[#f0c48f]") : sel ? "bg-olive-dark" : "bg-olive";
+            const color = over ? (sel ? "bg-[#f48aa0]" : "bg-pink") : sel ? "bg-ink" : "bg-yellow-deep";
             return (
               <button
                 key={d.date}
@@ -69,7 +69,7 @@ export function WeekKcalChart({ entries, date, today, target, onPick }: { entrie
               >
                 <span className="num relative z-10 rounded bg-paper/85 px-0.5 text-[10px] text-muted">{d.logged ? (d.kcal >= 1000 ? `${(d.kcal / 1000).toFixed(1)}k` : Math.round(d.kcal)) : ""}</span>
                 {d.logged ? (
-                  <span className={`w-full rounded-t-lg ${color}`} style={{ height: Math.max(4, h(d.kcal)), opacity: sel ? 1 : 0.75 }} />
+                  <span className={`w-full rounded-t-lg ${color}`} style={{ height: Math.max(4, h(d.kcal)) }} />
                 ) : (
                   <span className="h-[4px] w-full rounded-full bg-cream" />
                 )}

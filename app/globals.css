@@ -1,26 +1,32 @@
 @import "tailwindcss";
 
-/* SnapCal — warm cream, olive buttons, soft pastel nutrient cards. */
+/* SnapCal — soft beige paper, black pill buttons, pastel blob friends
+   (yellow · pink · mint · sky). Old "olive" names now mean the black/yellow pair. */
 :root {
-  --cream: #fbf6ec;
-  --paper: #fffdf8;
-  --line: #ece3d1;
-  --ink: #2f2a22;
-  --muted: #857c6c;
-  --olive: #66763a;
-  --olive-dark: #4f5c2b;
-  --olive-soft: #e9edd9;
-  --protein: #f6ddd5;
-  --protein-ink: #8f4334;
-  --carbs: #f7ebc6;
-  --carbs-ink: #7e6113;
-  --fat: #dbe6f1;
-  --fat-ink: #375a80;
-  --water: #4f8db5;
-  --water-soft: #e2eef5;
-  --water-ink: #2f5f80;
-  --kcal: #f0e2cf;
-  --warn: #fbe7cf;
+  --cream: #f7f3ef;
+  --paper: #fffdfa;
+  --line: #ece6df;
+  --ink: #1a1a1a;
+  --muted: #8b857e;
+  --olive: #1a1a1a;
+  --olive-dark: #111111;
+  --olive-soft: #fff1bf;
+  --yellow: #ffe59a;
+  --yellow-deep: #ffd84d;
+  --pink: #ffb5c1;
+  --mint: #b7e1d1;
+  --sky: #a9d3ff;
+  --protein: #ffe1e6;
+  --protein-ink: #a03a50;
+  --carbs: #fff1bf;
+  --carbs-ink: #7a5b00;
+  --fat: #dcebff;
+  --fat-ink: #2e5c8f;
+  --water: #5ea4e8;
+  --water-soft: #e3f0ff;
+  --water-ink: #2e5c8f;
+  --kcal: #fff1bf;
+  --warn: #ffe9c7;
   --warn-ink: #8a5212;
   --danger: #b24a3a;
 }
@@ -34,6 +40,11 @@
   --color-olive: var(--olive);
   --color-olive-dark: var(--olive-dark);
   --color-olive-soft: var(--olive-soft);
+  --color-yellow: var(--yellow);
+  --color-yellow-deep: var(--yellow-deep);
+  --color-pink: var(--pink);
+  --color-mint: var(--mint);
+  --color-sky: var(--sky);
   --color-protein: var(--protein);
   --color-protein-ink: var(--protein-ink);
   --color-carbs: var(--carbs);
@@ -70,9 +81,19 @@ select {
   font-size: 17px;
 }
 
+/* Titles and numbers wear the soft, round font. */
+h1,
+h2,
+h3,
+.num,
+.font-round {
+  font-family: var(--font-round-latin), var(--font-round), var(--font-thai), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 500;
+}
 .num {
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.02em;
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
 .btn-primary {
@@ -90,14 +111,34 @@ select {
 }
 .btn-primary:active {
   transform: scale(0.98);
-  background: var(--olive-dark);
+  background: #000;
+}
+/* The little yellow circle with an arrow, for the main buttons. */
+.btn-arrow::after {
+  content: "→";
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: var(--yellow);
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 700;
+  margin-left: 4px;
 }
 .btn-primary:disabled {
-  opacity: 0.45;
+  background: #d8d2cb;
+  color: #fff;
+}
+.btn-primary:disabled::after {
+  opacity: 0.6;
 }
 .btn-soft {
-  background: var(--olive-soft);
-  color: var(--olive-dark);
+  background: var(--paper);
+  color: var(--ink);
+  border: 1.5px solid var(--ink);
   border-radius: 999px;
   min-height: 48px;
   padding: 0 18px;
@@ -113,7 +154,8 @@ select {
 .card {
   background: var(--paper);
   border: 1px solid var(--line);
-  border-radius: 22px;
+  border-radius: 26px;
+  box-shadow: 0 1px 2px rgb(60 40 20 / 0.03);
 }
 .field {
   width: 100%;
@@ -125,8 +167,8 @@ select {
   outline: none;
 }
 .field:focus {
-  border-color: var(--olive);
-  box-shadow: 0 0 0 3px var(--olive-soft);
+  border-color: var(--ink);
+  box-shadow: 0 0 0 3px var(--yellow);
 }
 .label {
   font-size: 14px;
