@@ -6,7 +6,7 @@
 
 ---
 
-## LIVE (updated 2026-11-13, Round 12)
+## LIVE (updated 2026-11-13, Round 12 live · Round 13 built, not deployed)
 
 - **App:** https://yani-food-diary.vercel.app  (Vercel, exm-labs account, free)
 - **Code:** https://github.com/yanibabe/yani-food-diary  (private; pushes auto-deploy)
@@ -17,6 +17,38 @@
   phone (localStorage + IndexedDB). Nobody sees anyone else's data. But everyone with
   the link uses Yani's OpenRouter key, so their AI photo/text checks spend HER credit.
   Since Round 8 the AI needs a passcode (typed once per phone), so strangers can't spend it.
+
+## Round 13 (2026-11-13) — barcode lookup via Open Food Facts ✅ built · ⏸ NOT deployed
+
+She pasted a technical spec: Open Food Facts (OFF) as barcode source behind a provider interface
+(USDA FoodData Central + FatSecret plug in later). Plan approved; contact email = her exm-labs email
+(she said so in chat). The phone test round (photo / milk warning / backup) is paused, not done.
+- `app/lib/food/provider.ts` — `FoodProvider` (getByBarcode / getById) + `Food` (per 100 g, nullable),
+  `SNAPSHOT_ALLOWED` (off yes, usda yes, fatsecret no until its terms are checked), `cleanBarcode`, `servingGrams`.
+- `app/lib/food/openFoodFacts.ts` — server-side provider: API **v3** (docs mark v2 deprecated), custom
+  User-Agent on every call, 15 reads/min throttle, 429/503 → wait (Retry-After or 1 s, 2 s) max 2 retries,
+  unknown barcode (v3 404 "product_not_found" / v2 status 0) → null, defensive number parsing, kJ→kcal
+  fallback, `saveProduct` stub (writing needs an OFF account — out of scope).
+- `app/lib/food/config.ts` — dev/tests always staging (world.openfoodfacts.net, basic auth off/off);
+  production ONLY from `OFF_BASE_URL`; `OFF_CONTACT_EMAIL` from env (in .env.local, NOT in git).
+- `app/api/food/barcode/route.ts` — POST {code, lang}, passcode-protected, small memory cache (found 24 h,
+  not found 1 h). Returns the raw OFF product + normalized food.
+- `app/lib/food/offStore.ts` — OFF's own IndexedDB db `yfd-off`/`products`: raw product unchanged + fetchedAt,
+  7-day cache. Not in backups (meals keep their own number snapshot).
+- UI: Today "Add food" → 🏷️ Barcode (`/add/barcode`): type digits → product card (per 100 g) → grams (prefilled
+  from serving size, else 100) → normal review. No +15% margin. Item gets `ref: {source:"off", sourceId}`;
+  entry `source: "barcode"`. "Data from Open Food Facts (ODbL)" shows on the product card and in the review.
+- Tests: `tests/off.test.ts` (11) — all 58 pass; tsc, eslint, next build clean. Live staging lookup of
+  3017624010701 → Nutella 539 kcal / 6.3 P / 57.5 C / 30.9 F per 100 g. Checked in the browser (mobile size).
+- Doc differences told to her: v3 not v2; 15 reads/min (not 100); no facet limit in docs; over-limit = 503 /
+  IP ban (429 only in retry advice); unknown barcode undocumented (checked live: v3 → HTTP 404).
+- Known gaps: no camera scanning (iPhone Safari can't read barcodes alone; needs a library — its own round);
+  the milk warning only checks the product NAME (e.g. "Nutella" isn't flagged); OFF allergen data not used yet.
+
+### ▶ To deploy (needs her OK)
+1. Add to Vercel (Production): `OFF_CONTACT_EMAIL` (her exm-labs email) and `OFF_BASE_URL=https://world.openfoodfacts.org`.
+2. Push → auto-deploy. Without step 1 the Barcode screen says "not set up on the server".
+Then: resume the paused phone tests (photo → milk warning → backup).
 
 ## Round 12 (2026-11-13) — +15% margin only for amounts the AI guessed ✅
 

@@ -139,6 +139,7 @@ function TodayInner() {
             { href: `/add/text${q}`, icon: "💬", label: tr("พิมพ์ให้ AI ช่วย", "Type it, AI helps") },
             { href: `/recipes${q}`, icon: "📖", label: tr("เลือกสูตรของฉัน", "From my recipes") },
             { href: `/add/manual${q}`, icon: "✏️", label: tr("กรอกเอง", "Enter it myself") },
+            { href: `/add/barcode${q}`, icon: "🏷️", label: tr("บาร์โค้ด", "Barcode") },
           ].map((o) => (
             <Link
               key={o.href}
@@ -164,7 +165,7 @@ function EntryRow({ e }: { e: Entry }) {
           <StoredPhoto id={e.photoId} className="h-14 w-14 shrink-0 rounded-2xl object-cover" />
         ) : (
           <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-cream text-[24px]" aria-hidden>
-            {e.source === "recipe" ? "📖" : e.source === "text" ? "💬" : "✏️"}
+            {e.source === "recipe" ? "📖" : e.source === "text" ? "💬" : e.source === "barcode" ? "🏷️" : "✏️"}
           </span>
         )}
         <div className="min-w-0 flex-1">

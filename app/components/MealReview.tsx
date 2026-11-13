@@ -1,4 +1,5 @@
 "use client";
+import { OffAttribution } from "./OffAttribution";
 import { aiFetch } from "../lib/aiFetch";
 import { useMemo, useRef, useState } from "react";
 import { AI_MARGIN, blankItem, changeAmount, cleanBox, cleanNumber, fmtAmount, fmtKcal, newId, pickMacros, sumMacros } from "../lib/nutrition";
@@ -327,6 +328,7 @@ export function MealReview({
         <p className="text-center text-[14px] text-muted" data-testid="amount-summary">{amountSummary}</p>
         <KcalBig kcal={total.kcal} />
         <MacroCards m={total} />
+        {items.some((i) => i.ref?.source === "off") && <OffAttribution />}
         {marginNote && items.some((i) => i.margin) && (
           <p className="text-center text-[13px] text-muted" data-testid="margin-note">
             {tr(

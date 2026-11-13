@@ -40,7 +40,13 @@ export type FoodItem = Macros & {
   dairySource?: string | null;
   /** true = the AI guessed the amount, so +15% was added. false = exact amount, no margin. Missing on old items. */
   margin?: boolean;
+  /** Where the numbers came from, when it was an outside food database (e.g. Open Food Facts).
+   *  The amount/unit above is the quantity; the macros above are the snapshot. */
+  ref?: FoodRef | null;
 };
+
+/** source + id in that database. "off" = Open Food Facts (id = barcode). */
+export type FoodRef = { source: "off" | "usda" | "fatsecret"; sourceId: string };
 
 export type IngredientUnit = "g" | "kg" | "ml" | "l" | "egg" | "piece";
 
@@ -113,7 +119,7 @@ export type Entry = {
   slot: MealSlot;
   title: string;
   items: FoodItem[];
-  source: "photo" | "text" | "recipe" | "manual";
+  source: "photo" | "text" | "recipe" | "manual" | "barcode";
   photoId: string | null;
   recipe: RecipeLog | null;
   createdAt: number;

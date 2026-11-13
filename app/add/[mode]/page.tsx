@@ -3,6 +3,7 @@ import { aiDairy } from "../../lib/dairy";
 import { aiFetch } from "../../lib/aiFetch";
 import { Suspense, useRef, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { BarcodeLookup } from "../../components/BarcodeLookup";
 import { MealReview, type MealDraft } from "../../components/MealReview";
 import { useAiStatus } from "../../components/ui";
 import { guessSlot, thaiDateKey } from "../../lib/date";
@@ -10,13 +11,16 @@ import { useLang } from "../../lib/lang";
 import { blankItem, cleanBox, cleanNumber, newId } from "../../lib/nutrition";
 import { compressImage, savePhoto } from "../../lib/photos";
 import { useStore } from "../../lib/store";
+import { foodToItem } from "../../lib/food/toItem";
+import type { Food } from "../../lib/food/provider";
 import type { FoodItem } from "../../lib/types";
 
-type Mode = "photo" | "text" | "manual";
+type Mode = "photo" | "text" | "manual" | "barcode";
 
 function AddInner() {
   const params = useParams<{ mode: string }>();
-  const mode: Mode = params.mode === "text" ? "text" : params.mode === "manual" ? "manual" : "photo";
+  const mode: Mode =
+    params.mode === "text" ? "text" : params.mode === "manual" ? "manual" : params.mode === "barcode" ? "barcode" : "photo";
   const search = useSearchParams();
   const date = search.get("date") || thaiDateKey();
   const router = useRouter();
@@ -90,6 +94,14 @@ function AddInner() {
     }
   }
 
+  function pickBarcode(food: Food, grams: number) {
+    const item = { ...foodToItem(food, grams, newId("it"), tr("สินค้า", "Product")) };
+    item.dairy = aiDairy(item.name, undefined);
+    setDraft((d) => ({ ...d, title: item.name, items: [item] }));
+    setStartEdit(null);
+    setStep("review");
+  }
+
   function goManual() {
     const first = blankItem(defaultUnit);
     setDraft((d) => ({ ...d, items: [first] }));
@@ -124,7 +136,13 @@ function AddInner() {
   }
 
   const heading =
-    mode === "photo" ? tr("ถ่ายรูปอาหาร", "Food photo") : mode === "text" ? tr("พิมพ์ให้ AI ช่วย", "Type it, AI helps") : tr("กรอกเอง", "Enter it myself");
+    mode === "photo"
+      ? tr("ถ่ายรูปอาหาร", "Food photo")
+      : mode === "text"
+        ? tr("พิมพ์ให้ AI ช่วย", "Type it, AI helps")
+        : mode === "barcode"
+          ? tr("บาร์โค้ด", "Barcode")
+          : tr("กรอกเอง", "Enter it myself");
 
   return (
     <main className="page">
@@ -135,7 +153,9 @@ function AddInner() {
         <h1 className="text-[22px] font-semibold">{step === "review" ? tr("ตรวจผล", "Check the result") : heading}</h1>
       </header>
 
-      {step === "input" && (
+      {step === "input" && mode === "barcode" && <BarcodeLookup onPick={pickBarcode} onManual={goManual} />}
+
+      {step === "input" && mode !== "barcode" && (
         <div className="space-y-5">
           {mode === "photo" && (
             <div className="card overflow-hidden">
@@ -228,7 +248,7 @@ function AddInner() {
           photo={mode === "photo" ? photo : null}
           initial={draft}
           mockBadge={mock}
-          marginNote={mode !== "manual"}
+          marginNote={mode !== "manual" && mode !== "barcode"}
           firstQuestion={question}
           chatEnabled={aiReady}
           chatDisabledReason={tr("ยังไม่ได้ตั้งค่า AI (OpenRouter) — แตะรายการเพื่อแก้เองได้", "The AI (OpenRouter) is not set up — tap an item to edit it yourself")}
