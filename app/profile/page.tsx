@@ -4,6 +4,7 @@
 // only replaces the target after she confirms.
 
 import { useMemo, useState } from "react";
+import { BackupCard } from "../components/BackupCard";
 import {
   ActivityFields,
   BigTarget,
@@ -71,6 +72,7 @@ export default function ProfilePage() {
         <h2 className="text-[17px] font-semibold">ภาษา / Language</h2>
         <LangToggle />
       </section>
+      {!editing && <BackupCard />}
       <Method />
     </main>
   );

@@ -6,7 +6,7 @@
 
 ---
 
-## LIVE (updated 2026-11-12, Round 4)
+## LIVE (updated 2026-11-13, Round 7)
 
 - **App:** https://yani-food-diary.vercel.app  (Vercel, exm-labs account, free)
 - **Code:** https://github.com/yanibabe/yani-food-diary  (private; pushes auto-deploy)
@@ -17,6 +17,28 @@
   phone (localStorage + IndexedDB). Nobody sees anyone else's data. But everyone with
   the link uses Yani's OpenRouter key, so their AI photo/text checks spend HER credit.
   A simple passcode could be a later round.
+
+## Round 7 (2026-11-13) — backup / restore ✅
+
+- **Profile page → "สำรองข้อมูล / Backup" card** (`app/components/BackupCard.tsx`):
+  - "💾 บันทึกไฟล์สำรอง" puts EVERYTHING on the phone in one file `snapcal-backup-YYYY-MM-DD.json`:
+    meals, recipes, profile/goals, weight+steps, language, and all photos (from IndexedDB).
+    On iPhone it opens the share sheet → she picks "Save to Files" (iCloud Drive is best).
+    Falls back to a normal download when sharing isn't possible.
+  - Shows "สำรองล่าสุด: <date>" (`localStorage` key `yfd:v1:lastBackup`, not part of the backup).
+  - "กู้คืนจากไฟล์สำรอง" → pick the file → shows date + counts (meals · recipes · days · photos)
+    + a warning that everything on the phone now will be REPLACED → confirm → app restarts on Today.
+- **First setup screen (`/welcome`, step 1)** has a small "มีไฟล์สำรองอยู่แล้ว?" restore box, so a
+  new phone can restore without doing setup first.
+- Math/checks in `app/lib/backup.ts` (`makeBackup`, `parseBackup`, `backupCounts`, `backupFileName`);
+  photo helpers `allPhotos()` / `putPhotos()` in `app/lib/photos.ts`. Wrong or broken files are
+  refused with "ไฟล์นี้ไม่ใช่ไฟล์สำรองของ SnapCal" (nothing is changed).
+- Tested: `npm test` 35 pass (4 new). Browser at iPhone size: made a backup (meal + photo + weight +
+  profile), wiped everything like a new phone, restored from the setup screen → Today showed
+  "สวัสดี Yani", 600 / 1,500 kcal, photo and weight back. Wrong file → message. English OK. Build passes.
+- **Not tested:** the real iPhone share sheet / "Save to Files", and picking the file back from Files
+  on the phone. She should try once: Profile → Save a backup → Save to Files.
+- Ideas: a gentle "last backup was 2+ weeks ago" reminder on Today.
 
 ## Small add (2026-11-12) — link preview card for sharing
 - `app/opengraph-image.tsx` makes a 1200×630 picture (plate + "SnapCal / Snap your food. Know your
@@ -93,7 +115,7 @@
   with old values filled in.
 - Still not tested: real phone-camera food photos; home-screen install; storage after
   closing Safari.
-- Ideas from the brief: weekly charts · backup/export of local data · allergy warnings ·
+- Ideas from the brief: weekly charts · allergy warnings ·
   a simple passcode so strangers with the link can't spend AI credit.
 
 ## Fix (2026-11-12) — photo calorie guesses came out low

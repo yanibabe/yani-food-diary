@@ -15,6 +15,7 @@ import {
   validKcal,
 } from "../components/profileFields";
 import { estimateEnergy, proteinTargetG, usesWeightGoal, weightPlan } from "../lib/energy";
+import { BackupCard } from "../components/BackupCard";
 import { LangToggle, useLang } from "../lib/lang";
 import { fmtKcal } from "../lib/nutrition";
 import { EMPTY_PROFILE, fillProfile } from "../lib/profile";
@@ -137,6 +138,11 @@ export default function WelcomePage() {
         )}
       </section>
 
+      {step === 0 && (
+        <div className="mt-4">
+          <BackupCard restoreOnly />
+        </div>
+      )}
       {step === 3 && p.reason && problem && (
         <p className="mt-3 text-center text-[14px] text-warn-ink">{problem}</p>
       )}

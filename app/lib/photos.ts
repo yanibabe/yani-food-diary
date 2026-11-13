@@ -74,3 +74,32 @@ export function compressImage(
     img.src = url;
   });
 }
+
+/** Every saved photo (id → picture), for the backup file. */
+export async function allPhotos(): Promise<Record<string, string>> {
+  const db = await open();
+  return new Promise((resolve, reject) => {
+    const out: Record<string, string> = {};
+    const req = db.transaction(STORE, "readonly").objectStore(STORE).openCursor();
+    req.onsuccess = () => {
+      const c = req.result;
+      if (!c) return resolve(out);
+      if (typeof c.value === "string") out[String(c.key)] = c.value;
+      c.continue();
+    };
+    req.onerror = () => reject(req.error);
+  });
+}
+
+/** Put many photos back at once (restoring a backup). Existing ids are replaced. */
+export async function putPhotos(photos: Record<string, string>): Promise<void> {
+  const db = await open();
+  await new Promise<void>((resolve, reject) => {
+    const t = db.transaction(STORE, "readwrite");
+    const s = t.objectStore(STORE);
+    for (const [id, url] of Object.entries(photos)) s.put(url, id);
+    t.oncomplete = () => resolve();
+    t.onerror = () => reject(t.error);
+    t.onabort = () => reject(t.error);
+  });
+}
