@@ -16,7 +16,7 @@
 - Sharing the link: each person's diary, recipes and profile live ONLY on their own
   phone (localStorage + IndexedDB). Nobody sees anyone else's data. But everyone with
   the link uses Yani's OpenRouter key, so their AI photo/text checks spend HER credit.
-  A simple passcode could be a later round.
+  Since Round 8 the AI needs a passcode (typed once per phone), so strangers can't spend it.
 
 ## Round 8 (2026-11-13) — "all three" round: reminder ✅ · passcode ⏳ · allergies ⏳
 
@@ -27,8 +27,26 @@ She asked for all three ideas: backup reminder, AI passcode, allergy warnings. O
   (`localStorage` `yfd:v1:backupSnooze`). Logic `backupDue()` / `snoozeUntil()` in `app/lib/backup.ts`.
   Tested: `npm test` 36 pass (1 new); browser at iPhone size: card shows at 20 days (Thai),
   "Back up now" lands on the card, a fresh backup hides it, 16 days → English text, Later hides it. Build passes.
-- **Passcode for AI ⏳:** not started — design question asked first.
-- **Allergy warnings ⏳:** not started — planned for the next chat.
+- **Passcode for AI ✅ (live):** her pick = "type once per phone".
+  - Server: Vercel env `APP_PASSCODE` (Production, Sensitive — she typed it herself in a terminal
+    tab; nobody else has seen it, it can't be read back; if forgotten, set a new one with
+    `vercel env rm APP_PASSCODE production` + `vercel env add APP_PASSCODE production`, then redeploy).
+    When `APP_PASSCODE` is NOT set (e.g. on this Mac), AI is open as before.
+  - `app/lib/server/passcode.ts` `passcodeBlock()` runs first in `/api/analyze`, `/api/refine`,
+    `/api/steps` → 401 `{error:"passcode"}` + 0.8 s pause on a wrong one. `/api/passcode` checks a code.
+    `/api/status` now also says `passcode: true/false`.
+  - Phone: every AI call goes through `aiFetch()` (`app/lib/aiFetch.ts`). It sends header
+    `x-snapcal-passcode` (URI-encoded, so Thai works) from `localStorage` `yfd:v1:passcode`.
+    On a passcode 401 it opens `PasscodeBox` (`app/components/PasscodeBox.tsx`, mounted in layout),
+    which checks the code first, then the call is retried. Closing the box → "ต้องใส่รหัสผ่านก่อนใช้ AI".
+    The passcode is NOT in the backup file (a new phone asks once).
+  - Tested: `npm test` 38 pass (2 new). Test server `food-diary-passcode` (port 3219, pretend passcode
+    `test-1234`, pretend AI) at iPhone size: box appears on first analyze, wrong → message, right →
+    result + remembered, chat afterwards doesn't ask, close → message. Live: status says passcode on,
+    AI call without code → 401, wrong code → 401.
+  - **Not tested:** the REAL passcode on her phone (only she knows it). She should: open the app →
+    type a food → Analyze → enter passcode once. Her MOM's phone will ask too — Yani tells her the passcode.
+- **Allergy warnings ⏳:** not started — next chat.
 
 ## Round 7 (2026-11-13) — backup / restore ✅
 
@@ -118,7 +136,12 @@ She asked for all three ideas: backup reminder, AI passcode, allergy warnings. O
 - Analyze waiting screen (`app/add/[mode]/page.tsx`) and AI-chat sending (`MealReview.tsx`) now say:
   don't close this page or switch apps, or you may need to start again. Checked in the test app.
 
-## ▶ NEXT: ideas for a later round (nothing agreed yet)
+## ▶ NEXT: allergy warnings (agreed 2026-11-13, last of her "all three")
+
+Start by asking her (one question at a time, Thai): which foods she / mom are allergic to or
+avoid, and what a warning should look like (on the AI result screen? on recipes?). Then build.
+
+## Older ideas (nothing agreed yet)
 
 - Try Round 4 on her iPhone: Profile → English, then one real photo/text AI check
 - Re-try the "700 vs 520 kcal" meal photo after the calorie-prompt fix; if still low, tune the prompt again
