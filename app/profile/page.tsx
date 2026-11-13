@@ -66,6 +66,7 @@ export default function ProfilePage() {
         <>
           <TargetCard goals={goals} onSaved={() => flash(tr("บันทึกเป้าแล้ว", "Target saved"))} />
           <InfoCard p={p} onEdit={() => setEditing(true)} />
+          <AvoidCard />
         </>
       )}
       <section className="card space-y-2 p-5">
@@ -123,6 +124,32 @@ function TargetCard({ goals, onSaved }: { goals: Goals; onSaved: () => void }) {
               `สัดส่วนทั่วไป P20/C50/F30 → โปรตีน ${Math.round(mt.protein)} g · คาร์บ ${Math.round(mt.carbs)} g · ไขมัน ${Math.round(mt.fat)} g`,
               `Usual split P20/C50/F30 → Protein ${Math.round(mt.protein)} g · Carbs ${Math.round(mt.carbs)} g · Fat ${Math.round(mt.fat)} g`,
             )}
+      </p>
+    </section>
+  );
+}
+
+function AvoidCard() {
+  const { goals, setGoals } = useStore();
+  const { tr } = useLang();
+  return (
+    <section className="card space-y-2 p-5" data-testid="avoid-card">
+      <h2 className="text-[17px] font-semibold">{tr("อาหารที่เลี่ยง", "Foods I avoid")}</h2>
+      <label className="flex min-h-[52px] items-center gap-3 rounded-2xl bg-cream px-4 text-[16px]">
+        <input
+          type="checkbox"
+          className="h-5 w-5 accent-[var(--olive)]"
+          checked={goals.avoidDairy === true}
+          onChange={(e) => setGoals({ ...goals, avoidDairy: e.target.checked })}
+          data-testid="avoid-dairy"
+        />
+        🥛 {tr("นมและผลิตภัณฑ์จากนม", "Milk and milk products")}
+      </label>
+      <p className="px-1 text-[13px] text-muted">
+        {tr(
+          "นม ครีม ชีส โยเกิร์ต เนย นมข้น ไอศกรีม · แอปจะเตือนเมื่ออาหารอาจมีนม (เป็นการเดา ไม่ใช่ข้อมูลแน่นอน)",
+          "Milk, cream, cheese, yogurt, butter, condensed milk, ice cream · The app warns when a food may have milk (a guess, not a sure thing)",
+        )}
       </p>
     </section>
   );

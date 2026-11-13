@@ -34,6 +34,10 @@ export type FoodItem = Macros & {
   kind: "food" | "extra";
   note: string | null;
   box: Box | null;
+  /** May contain milk / dairy. Missing on old items (then the name is checked). */
+  dairy?: boolean;
+  /** Which dairy, e.g. "นมข้นหวาน". From the AI. */
+  dairySource?: string | null;
 };
 
 export type IngredientUnit = "g" | "ml" | "egg" | "piece";
@@ -135,4 +139,6 @@ export type Goals = {
   /** Maintenance estimate from the last CONFIRMED calculation (kept, no longer shown). */
   maintenanceKcal: number | null;
   skippedEstimate: boolean;
+  /** Warn when a food may contain milk or milk products. */
+  avoidDairy?: boolean;
 };

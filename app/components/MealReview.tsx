@@ -2,7 +2,9 @@
 import { aiFetch } from "../lib/aiFetch";
 import { useMemo, useRef, useState } from "react";
 import { AI_MARGIN, blankItem, changeAmount, cleanBox, cleanNumber, fmtAmount, fmtKcal, newId, pickMacros, sumMacros } from "../lib/nutrition";
+import { aiDairy, dairyItems, isDairy } from "../lib/dairy";
 import { useLang } from "../lib/lang";
+import { useStore } from "../lib/store";
 import { SLOT_LABEL, SLOTS, type FoodItem, type MealSlot } from "../lib/types";
 import { Badge, KcalBig, MacroCards, NumberField, Sheet } from "./ui";
 
@@ -54,7 +56,9 @@ export function ItemEditor({
   onChange,
   onDelete,
   onDone,
+  showDairy,
 }: {
+  showDairy?: boolean;
   item: FoodItem;
   onChange: (it: FoodItem) => void;
   onDelete: () => void;
@@ -107,6 +111,18 @@ export function ItemEditor({
         <input type="checkbox" className="h-5 w-5 accent-[var(--olive)]" checked={item.estimated} onChange={(e) => set({ estimated: e.target.checked })} />
         <span>{tr("เป็นค่าประมาณ", "This is an estimate")}</span>
       </label>
+      {showDairy && (
+        <label className="flex min-h-[48px] items-center gap-3 rounded-2xl bg-cream px-4">
+          <input
+            type="checkbox"
+            className="h-5 w-5 accent-[var(--olive)]"
+            checked={isDairy(item)}
+            onChange={(e) => set({ dairy: e.target.checked })}
+            data-testid="dairy-check"
+          />
+          <span>🥛 {tr("มีนมหรือผลิตภัณฑ์จากนม", "Has milk or milk products")}</span>
+        </label>
+      )}
       {item.note && <p className="rounded-2xl bg-warn px-4 py-3 text-[14px] text-warn-ink">{item.note}</p>}
       <div className="flex gap-3 pt-1">
         <button className="btn-soft flex-1 !bg-[#f6e1dc] !text-danger" onClick={onDelete}>{tr("ลบรายการนี้", "Delete this item")}</button>
@@ -158,6 +174,9 @@ export function MealReview({
   const chatEnd = useRef<HTMLDivElement>(null);
 
   const total = useMemo(() => sumMacros(items.map(pickMacros)), [items]);
+  const { goals } = useStore();
+  const avoidDairy = goals.avoidDairy === true;
+  const milky = avoidDairy ? dairyItems(items) : [];
   const editing = items.find((i) => i.id === editingId) ?? null;
   const amountSummary = items.length
     ? items.map((i) => `${i.name || tr("ไม่มีชื่อ", "No name")} ${fmtAmount(i.amount)} ${i.unit}`).join(" · ")
@@ -220,6 +239,8 @@ export function MealReview({
               estimated: Boolean(e.item.estimated),
               note: e.item.note ?? old.note,
               box: old.box, // the photo position never changes
+              dairy: aiDairy(e.item.name || old.name, e.item.dairy) || old.dairy === true,
+              dairySource: e.item.dairySource ?? old.dairySource ?? null,
             };
             changed.push(old.id);
           }
@@ -238,6 +259,8 @@ export function MealReview({
             kind: a.kind === "extra" ? "extra" : "food",
             note: a.note ?? null,
             box: cleanBox(a.box),
+            dairy: aiDairy(a.name, a.dairy),
+            dairySource: a.dairySource ?? null,
           });
           changed.push(id);
         }
@@ -280,6 +303,16 @@ export function MealReview({
 
       {photo && <LabeledPhoto src={photo} items={items} onTap={setEditingId} />}
 
+      {milky.length > 0 && (
+        <div className="rounded-[22px] bg-warn px-4 py-3 text-warn-ink" role="note" data-testid="dairy-warning">
+          <p className="font-semibold">🥛 {tr("อาจมีนม", "May contain milk")}</p>
+          <p className="text-[15px]">
+            {milky.map((i) => `${i.name || tr("ไม่มีชื่อ", "No name")}${i.dairySource ? ` (${i.dairySource})` : ""}`).join(" · ")}
+          </p>
+          <p className="mt-1 text-[13px] opacity-80">{tr("คุณตั้งไว้ว่าเลี่ยงนม · เป็นการเดา ไม่ใช่ข้อมูลแน่นอน", "You chose to avoid milk · This is a guess, not a sure thing")}</p>
+        </div>
+      )}
+
       <div className="card space-y-4 p-5">
         <input
           className="w-full bg-transparent text-center text-[24px] font-semibold outline-none"
@@ -321,6 +354,7 @@ export function MealReview({
                     <span className="font-medium">{i.name || tr("ไม่มีชื่อ", "No name")}</span>
                     {i.kind === "extra" && <Badge tone="olive">{tr("เพิ่มเติม", "Extra")}</Badge>}
                     {i.estimated && <Badge>{tr("ประมาณ", "Estimate")}</Badge>}
+                    {avoidDairy && isDairy(i) && <Badge>🥛 {tr("นม", "Milk")}</Badge>}
                   </div>
                   <div className="text-[14px] text-muted">
                     {fmtAmount(i.amount)} {i.unit}
@@ -430,6 +464,7 @@ export function MealReview({
       <Sheet open={!!editing} onClose={() => setEditingId(null)} title={tr("แก้รายการ", "Edit item")}>
         {editing && (
           <ItemEditor
+            showDairy={avoidDairy}
             item={editing}
             onChange={(it) => setItems((p) => p.map((x) => (x.id === it.id ? it : x)))}
             onDelete={() => {

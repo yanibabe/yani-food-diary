@@ -6,6 +6,7 @@ import { Badge, KcalBig, MacroCards, NumberField, Sheet, StoredPhoto } from "../
 import { guessSlot, thaiDateKey } from "../../lib/date";
 import { fmtAmount, fmtG, fmtKcal, newId } from "../../lib/nutrition";
 import { ingredientMacros, mealFromRecipe, totalsForRecipe } from "../../lib/recipe";
+import { dairyIngredients, looksDairy } from "../../lib/dairy";
 import { useLang } from "../../lib/lang";
 import { useStore } from "../../lib/store";
 import { SLOT_LABEL, SLOTS, UNIT_LABEL, type Ingredient, type MealSlot, type Recipe } from "../../lib/types";
@@ -51,6 +52,8 @@ function LogSheet({ recipe, open, onClose, date }: { recipe: Recipe; open: boole
           kind: "food",
           note: changed ? tr("ปรับวัตถุดิบเฉพาะมื้อนี้", "Ingredients changed for this meal only") : null,
           box: null,
+          dairy: looksDairy(recipe.name) || dairyIngredients(ings.filter((i) => i.amount > 0)).length > 0,
+          dairySource: dairyIngredients(ings.filter((i) => i.amount > 0)).map((i) => i.name).join(", ") || null,
         },
       ],
       recipe: {
@@ -166,7 +169,7 @@ function RecipeInner() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const date = useSearchParams().get("date") || thaiDateKey();
-  const { ready, recipes, deleteRecipe } = useStore();
+  const { ready, recipes, deleteRecipe, goals } = useStore();
   const recipe = recipes.find((r) => r.id === id);
   const [logOpen, setLogOpen] = useState(false);
   const [confirmDel, setConfirmDel] = useState(false);
@@ -181,6 +184,8 @@ function RecipeInner() {
       </main>
     );
   const t = totalsForRecipe(recipe, lang);
+  const avoidDairy = goals.avoidDairy === true;
+  const milky = avoidDairy ? dairyIngredients(recipe.ingredients) : [];
 
   return (
     <main className="page !pt-0 space-y-5">
@@ -221,6 +226,13 @@ function RecipeInner() {
         )}
       </section>
 
+      {milky.length > 0 && (
+        <div className="rounded-[22px] bg-warn px-4 py-3 text-warn-ink" role="note" data-testid="dairy-warning">
+          <p className="font-semibold">🥛 {tr("สูตรนี้มีนม", "This recipe has milk")}</p>
+          <p className="text-[15px]">{milky.map((i) => i.name).join(" · ")}</p>
+        </div>
+      )}
+
       <button className="btn-primary w-full !min-h-[58px] text-[19px]" onClick={() => setLogOpen(true)} disabled={!t.complete}>
         {tr("บันทึกว่ากิน", "I ate this")}
       </button>
@@ -237,6 +249,7 @@ function RecipeInner() {
                   <div className="text-[14px] text-muted">{fmtAmount(i.amount)} {UNIT_LABEL[i.unit][lang]}</div>
                   <div className="num mt-1 text-[15px] font-semibold">{r.ok ? `${fmtKcal(r.macros.kcal)} kcal` : "–"}</div>
                   {r.ok && <div className="mt-1">{r.source === "label" ? <Badge tone="olive">{tr("ฉลาก", "Label")}</Badge> : <Badge>{tr("ประมาณ", "Estimate")}</Badge>}</div>}
+                  {avoidDairy && looksDairy(i.name) && <div className="mt-1"><Badge>🥛 {tr("นม", "Milk")}</Badge></div>}
                 </div>
               </div>
             );

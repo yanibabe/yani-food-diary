@@ -31,6 +31,8 @@ const ItemSchema = z.object({
   estimated: z.boolean().catch(false).describe("true if amount or recipe is uncertain"),
   kind: z.enum(["food", "extra"]).catch("food").describe("extra = oil, sauce, dressing, sugar or add-on"),
   note: z.string().nullish().describe("Short note, e.g. why it is an estimate; or null"),
+  dairy: z.boolean().optional().catch(false).describe("true if this item likely contains milk or any milk product: milk, cream, cheese, yogurt, butter, ghee, condensed or evaporated milk, milk powder, whey, ice cream, creamer. Coconut milk, soy milk, almond/oat milk and peanut butter are NOT dairy."),
+  dairySource: z.string().nullish().describe("If dairy is true: the likely milk product in a few words (e.g. sweetened condensed milk); else null"),
   box: BoxSchema.nullish().describe("Where this food is in the photo (fractions 0..1); null if not locatable or no photo"),
 });
 
@@ -63,8 +65,8 @@ function shapeOf(schema: z.ZodType): string {
 /** The app can be in Thai or English; the AI writes in the same language. */
 function languageRule(lang: Lang): string {
   return lang === "en"
-    ? "Write every name, unit, note, reply and question in simple English (Thai dish names may be given in English, e.g. \"Pad kra pao (stir-fried basil pork)\")."
-    : "Write every name, unit, note, reply and question in Thai.";
+    ? "Write every name, unit, note, dairySource, reply and question in simple English (Thai dish names may be given in English, e.g. \"Pad kra pao (stir-fried basil pork)\")."
+    : "Write every name, unit, note, dairySource, reply and question in Thai.";
 }
 
 const ANALYZE_SYSTEM = (lang: Lang) => `You are a careful nutrition assistant inside a Thai food diary app.
@@ -81,6 +83,7 @@ Rules:
 - Photo estimates usually come out TOO LOW, because portions look smaller in photos and hidden oil is missed. When you are unsure between two sizes, pick the larger, typical restaurant portion.
 - Check your numbers: kcal should be close to protein×4 + carbs×4 + fat×9.
 - Set estimated=true whenever portion size or recipe is a guess.
+- dairy: think about how the dish is usually made in Thailand (e.g. Thai iced tea, coffee drinks, bakery, creamy soups, some curries and desserts use milk, butter or condensed milk). Set dairy=true when it likely contains ANY milk product, and name it in dairySource.
 - box: when there is a photo and you can locate the food, give its bounding box as fractions (0..1) of the image. Otherwise null.
 - question: ask at most ONE short question only if the answer would change calories a lot. Otherwise null.
 - Use typical Thai portion sizes and Thai food composition values (e.g. INMU Thai Food Composition Table). Be realistic: do not shrink portions or leave out cooking fat.
@@ -95,6 +98,7 @@ Rules:
 - "Ate it all" / "finished it" means no change for that item.
 - The numbers in the current items already include the app's +${Math.round(AI_MARGIN * 100)}% safety margin. When you update an item, scale from its current numbers so the margin stays. If you must re-estimate an item from scratch, add ${Math.round(AI_MARGIN * 100)}% to your best guess. Do NOT add the margin to new items in adds — the app adds it.
 - If they mention oil, sauce or add-ons that are not in the list, add them in adds (kind "extra"); if the amount is unclear, give a typical amount, set estimated=true, and say so in note.
+- For every item you return, set dairy=true (and dairySource) when it likely contains ANY milk product.
 - If a change is ambiguous, make no edit for it and ask one short question.
 - ${languageRule(lang)}
 Return ONLY a JSON object matching this JSON Schema:
@@ -268,6 +272,9 @@ function mockAnalyze(input: { image: string | null; text: string; lang: Lang }):
   if (/ครึ่ง/.test(t) && /ไก่/.test(t)) {
     const c = items[1];
     Object.assign(c, { amount: 0.5, kcal: c.kcal / 2, protein: c.protein / 2, carbs: c.carbs / 2, fat: c.fat / 2 });
+  }
+  if (/ชาเย็น|นม/.test(t)) {
+    items.push({ name: "ชาเย็น", amount: 1, unit: "แก้ว", kcal: 250, protein: 3, carbs: 42, fat: 8, estimated: true, kind: "food", note: null, dairy: true, dairySource: "นมข้นหวาน นมข้นจืด", box: null });
   }
   if (/น้ำมัน/.test(t)) {
     items.push({ name: "น้ำมันพืช", amount: 1, unit: "ช้อนชา", kcal: 40, protein: 0, carbs: 0, fat: 4.5, estimated: true, kind: "extra", note: "ไม่ได้ระบุปริมาณ ใช้ค่าประมาณ 1 ช้อนชา", box: null });

@@ -6,7 +6,7 @@
 
 ---
 
-## LIVE (updated 2026-11-13, Round 8)
+## LIVE (updated 2026-11-13, Round 9)
 
 - **App:** https://yani-food-diary.vercel.app  (Vercel, exm-labs account, free)
 - **Code:** https://github.com/yanibabe/yani-food-diary  (private; pushes auto-deploy)
@@ -18,7 +18,29 @@
   the link uses Yani's OpenRouter key, so their AI photo/text checks spend HER credit.
   Since Round 8 the AI needs a passcode (typed once per phone), so strangers can't spend it.
 
-## Round 8 (2026-11-13) — "all three" round: reminder ✅ · passcode ⏳ · allergies ⏳
+## Round 9 (2026-11-13) — milk warnings ✅ (the allergy idea, finished "all three")
+
+Her need: milk upsets her stomach right away (sounds like lactose intolerance — told her
+we're not doctors). Her picks: warn for ALL milk products (milk, cream, cheese, yogurt, butter,
+condensed milk, ice cream), and a gentle warning only (no extra "are you sure?" when saving).
+- **Switch:** Profile → "อาหารที่เลี่ยง / Foods I avoid" → ☐ 🥛 นมและผลิตภัณฑ์จากนม. Saved as
+  `goals.avoidDairy` (so it's in the backup). Off by default → mom's phone never warns.
+- **AI:** every item now has `dairy` + `dairySource` (e.g. "นมข้นหวาน"), for analyze AND chat
+  edits/adds. The prompt explains Thai dishes that hide milk (Thai tea, coffee, bakery, creamy soups).
+- **Word check** `app/lib/dairy.ts` (`looksDairy`, `isDairy`, `aiDairy`, `dairyItems`, `dairyIngredients`):
+  for typed names. Look-alikes are skipped: ขนม…, นมถั่วเหลือง/อัลมอนด์/โอ๊ต/มะพร้าว, เนยถั่ว,
+  soy/almond/oat/coconut milk, peanut butter. AI items = AI yes OR milky name.
+- **Review screen:** orange box under the photo "🥛 อาจมีนม: ชาเย็น (นมข้นหวาน…)" + "🥛 นม" badge on
+  the item. In the item editor a checkbox "มีนมหรือผลิตภัณฑ์จากนม" lets her fix a wrong guess.
+- **Recipes:** "🥛 สูตรนี้มีนม: เนยสด" box + badge on the ingredient (word check only). Logging a
+  recipe saves `dairy` on the meal item.
+- Not shown on Today's meal list (not asked for).
+- Tested: `npm test` 40 pass (2 new). Pretend AI at iPhone size: switch saves; "ข้าวไก่ทอด กับชาเย็น"
+  → warning + badge; untick → warning gone; re-tick → back; saved meal keeps `dairy: true`; recipe
+  with เนยสด → warning + badge; switch off → no warnings anywhere; English text OK. Build passes.
+- **Not tested:** the REAL AI marking milk (costs credit). She tries: type "ชาเย็น 1 แก้ว" → Analyze.
+
+## Round 8 (2026-11-13) — "all three" round: reminder ✅ · passcode ✅ · allergies ✅ (Round 9)
 
 She asked for all three ideas: backup reminder, AI passcode, allergy warnings. One at a time.
 - **Backup reminder ✅ (live):** `app/components/BackupReminder.tsx` on Today (today only).
@@ -46,7 +68,7 @@ She asked for all three ideas: backup reminder, AI passcode, allergy warnings. O
     AI call without code → 401, wrong code → 401.
   - **Not tested:** the REAL passcode on her phone (only she knows it). She should: open the app →
     type a food → Analyze → enter passcode once. Her MOM's phone will ask too — Yani tells her the passcode.
-- **Allergy warnings ⏳:** not started — next chat.
+- **Allergy warnings:** done as Round 9 (milk only, her need).
 
 ## Round 7 (2026-11-13) — backup / restore ✅
 
@@ -136,10 +158,10 @@ She asked for all three ideas: backup reminder, AI passcode, allergy warnings. O
 - Analyze waiting screen (`app/add/[mode]/page.tsx`) and AI-chat sending (`MealReview.tsx`) now say:
   don't close this page or switch apps, or you may need to start again. Checked in the test app.
 
-## ▶ NEXT: allergy warnings (agreed 2026-11-13, last of her "all three")
+## ▶ NEXT: nothing agreed yet
 
-Start by asking her (one question at a time, Thai): which foods she / mom are allergic to or
-avoid, and what a warning should look like (on the AI result screen? on recipes?). Then build.
+Ask her what she'd like next. Ideas: try the real AI milk warning + passcode on her phone first;
+more foods to avoid (only if she asks); a small 🥛 mark on Today's meal list; weekly calorie chart.
 
 ## Older ideas (nothing agreed yet)
 

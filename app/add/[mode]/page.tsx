@@ -1,4 +1,5 @@
 "use client";
+import { aiDairy } from "../../lib/dairy";
 import { aiFetch } from "../../lib/aiFetch";
 import { Suspense, useRef, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
@@ -75,6 +76,8 @@ function AddInner() {
         kind: a.kind === "extra" ? "extra" : "food",
         note: a.note ?? null,
         box: mode === "photo" ? cleanBox(a.box) : null,
+        dairy: aiDairy(a.name, a.dairy),
+        dairySource: a.dairySource ?? null,
       }));
       setDraft({ title: r.title || tr("อาหาร", "Meal"), slot: draft.slot, items });
       setQuestion(r.question);

@@ -302,3 +302,22 @@ test("BMI uses Asian cut-offs and waits for real numbers", () => {
   assert.equal(bmiInfo(0, 60), null);
   assert.equal(bmiInfo(160, 5), null);
 });
+
+// --- Round 9: milk warnings ---
+import { looksDairy, isDairy, aiDairy } from "../app/lib/dairy.ts";
+
+test("dairy word check: milk products yes, look-alikes no", () => {
+  for (const n of ["ชาเย็น", "นมสด", "กาแฟลาเต้", "ชีสเค้ก", "ขนมปังเนยสด", "โยเกิร์ต", "ไอติมกะทิ", "Butter", "Mozzarella cheese", "Greek yoghurt", "ice cream"])
+    assert.equal(looksDairy(n), true, n);
+  for (const n of ["ขนมจีน", "ขนมปังโฮลวีท", "นมถั่วเหลือง", "แกงเขียวหวาน", "เนยถั่ว", "soy milk", "peanut butter", "coconut milk", "ไข่เจียว"])
+    assert.equal(looksDairy(n), false, n);
+});
+
+test("dairy flag: her choice wins over the name; AI yes or a milky name counts", () => {
+  assert.equal(isDairy({ name: "ชาเย็น", dairy: false }), false);
+  assert.equal(isDairy({ name: "ผัดกะเพรา", dairy: true }), true);
+  assert.equal(isDairy({ name: "นมสด" }), true);
+  assert.equal(aiDairy("ซุปฟักทอง", true), true);
+  assert.equal(aiDairy("ชาเย็น", false), true);
+  assert.equal(aiDairy("ข้าวผัด", false), false);
+});
