@@ -6,7 +6,7 @@
 
 ---
 
-## LIVE (updated 2026-11-13, Round 18b)
+## LIVE (updated 2026-11-13, Round 18b — tried on iPhone ✓)
 
 - **App:** https://yani-food-diary.vercel.app  (Vercel, exm-labs account, free)
 - **Code:** https://github.com/yanibabe/yani-food-diary  (private; pushes auto-deploy)
@@ -33,11 +33,10 @@ app can't know the database is wrong — only the pack knows. She chose: photo t
 - Checked: 76 tests, tsc, eslint, build pass; built mock server at phone size: label photo → 20 ก. = 70 kcal,
   card 350/100 g, grams 20; "ใช้ข้อมูลเดิม" clicked → back to 300/30 g, fix removed. No console errors.
   Live: `/api/food/label-photo` without passcode → 401 (route live, guarded).
-  NOT checked: a REAL AI read of a real label (mock only) and on her iPhone.
+  ✅ 2026-11-13: she tried it on her iPhone with the real Taro pack — a REAL AI read of the label worked ("ได้ผล").
 
 ### ▶ NEXT
-1. She scans Taro → "📷 ไม่ตรงกับซอง? ถ่ายรูปฉลาก" → photo of the back → checks it says 20 ก. = 70 kcal.
-2. Idea still open: monthly look-back (kcal + weight line; could add water).
+1. Idea still open: monthly look-back (kcal + weight line; could add water).
 
 ## Round 18 (2026-11-13) — ✏️ "Fix it from the label" for barcode products ✅ LIVE
 
