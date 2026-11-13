@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { MacroCards, Sheet, StoredPhoto } from "./components/ui";
 import { BackupReminder } from "./components/BackupReminder";
+import { WeekKcalChart } from "./components/WeekKcalChart";
 import { shiftDateKey, thaiDateKey, thaiDateLabel } from "./lib/date";
 import { macroTargets, proteinTargetG } from "./lib/energy";
 import { fmtKcal, pickMacros, sumMacros } from "./lib/nutrition";
@@ -106,6 +107,8 @@ function TodayInner() {
       <button className="btn-primary w-full !min-h-[58px] text-[19px]" onClick={() => setAddOpen(true)}>
         + {tr("เพิ่มอาหาร", "Add food")}
       </button>
+
+      {ready && <WeekKcalChart entries={entries} date={date} today={today} target={target} onPick={go} />}
 
       {SLOTS.map((slot) => {
         const list = dayEntries.filter((e) => e.slot === slot);

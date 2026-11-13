@@ -6,7 +6,7 @@
 
 ---
 
-## LIVE (updated 2026-11-13, Round 9)
+## LIVE (updated 2026-11-13, Round 10)
 
 - **App:** https://yani-food-diary.vercel.app  (Vercel, exm-labs account, free)
 - **Code:** https://github.com/yanibabe/yani-food-diary  (private; pushes auto-deploy)
@@ -17,6 +17,20 @@
   phone (localStorage + IndexedDB). Nobody sees anyone else's data. But everyone with
   the link uses Yani's OpenRouter key, so their AI photo/text checks spend HER credit.
   Since Round 8 the AI needs a passcode (typed once per phone), so strangers can't spend it.
+
+## Round 10 (2026-11-13) — weekly calorie chart on Today ✅
+
+- Her pick: on the **Today** page (between "+ Add food" and the meal groups).
+- `app/components/WeekKcalChart.tsx`: bars Mon → Sun for the week that holds the day she is
+  looking at (go back days → earlier weeks), dashed goal line ("เป้า 1,500"), big average
+  "เฉลี่ย kcal/วัน" top right. Over-target bars are soft orange; the day on screen is darker
+  with a dark weekday chip. Tap a bar → that day. Future days are faded and can't be tapped.
+- Line under the chart: "บันทึก N วัน · ต่ำกว่า/เกินเป้า X kcal/วัน · เกินเป้า N วัน".
+  **The average only counts days with meals** (empty days don't pull it down) — said on screen.
+- Math in `app/lib/week.ts` (`calorieWeek`), uses `weekStart` from `body.ts`.
+- Tested: `npm test` 42 pass (2 new). Pretend AI at iPhone size with test meals: average
+  1,361 checked by hand; tap Monday → Today shows Monday; previous day → last week's chart;
+  Thai + English; no console errors. Build passes.
 
 ## Round 9 (2026-11-13) — milk warnings ✅ (the allergy idea, finished "all three")
 
@@ -161,7 +175,7 @@ She asked for all three ideas: backup reminder, AI passcode, allergy warnings. O
 ## ▶ NEXT: nothing agreed yet
 
 Ask her what she'd like next. Ideas: try the real AI milk warning + passcode on her phone first;
-more foods to avoid (only if she asks); a small 🥛 mark on Today's meal list; weekly calorie chart.
+more foods to avoid (only if she asks); a small 🥛 mark on Today's meal list; protein in the weekly chart.
 
 ## Older ideas (nothing agreed yet)
 
