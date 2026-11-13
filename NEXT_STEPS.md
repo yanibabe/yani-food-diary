@@ -29,11 +29,10 @@ to tap into, a name search, and the list sorted by the day she last ate it.
 - Code: `recentMeals` (sort by date, no limit), new `searchMeals` in `app/lib/repeat.ts`;
   new `shortDayLabel` in `app/lib/date.ts`; UI in `app/page.tsx` (`againView`, `againQuery`).
 - Checked: 65 tests, tsc, eslint, build pass; mock browser at phone size: tile → list in right order,
-  search "ข้าว" narrows to one, tap adds + Undo removes, no console errors. NOT yet on her iPhone.
+  search "ข้าว" narrows to one, tap adds + Undo removes, no console errors. Tried on her iPhone 2026-11-13: works ✓
 
 ### ▶ NEXT
-1. She tries the new "กินซ้ำ" tile + search on her iPhone.
-2. Ideas still open: live camera barcode scanning · monthly look-back (kcal + weight) · water counter.
+1. Pick the next round. Ideas still open: live camera barcode scanning · monthly look-back (kcal + weight) · water counter.
 
 ## Round 15 (2026-11-13) — 🔁 "กินซ้ำ" / Eat again, one tap ✅ LIVE
 
