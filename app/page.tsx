@@ -91,7 +91,7 @@ function TodayInner() {
         </button>
         <div className="text-center">
           {date === today && (
-            <div className="mb-1 flex items-center justify-center gap-2">
+            <div className="mb-1 flex flex-col items-center gap-0.5">
               <button
                 className="h-[52px] w-[52px] shrink-0 rounded-full"
                 onClick={() => setBuddyOpen(true)}

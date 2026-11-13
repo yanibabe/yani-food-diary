@@ -22,7 +22,7 @@
 
 Built from the approved design in `docs/buddy-design/prototype.html` (her own idea: a soft blob/food buddy
 where she picks the parts; add-ons flat soft color, NO dark outline).
-- Small buddy (52px) at the top of Today, next to "สวัสดี <name>". Only on today's date, nowhere else.
+- Small buddy (52px) at the top of Today, ABOVE "สวัสดี <name>" (she asked: side by side looked odd). Only on today's date, nowhere else.
   Before she makes one: default buddy (blob, blue, ตาวิบวับ, ยิ้ม, แก้มชมพู, nothing on the head).
 - Tap it → sheet "แต่งตัวของฉัน": preview (stays at the top while she scrolls), rows: shape (6) · color (7) ·
   eyes (6) · mouth (6) · on the head (pick 1 of 9 incl. none) · other extras (pick many of 5) · Save.
