@@ -9,6 +9,7 @@ export const BACKUP_KEYS = {
   recipes: "yfd:v1:recipes",
   goals: "yfd:v1:goals",
   body: "yfd:v1:body",
+  water: "yfd:v1:water",
   lang: "yfd:v1:lang",
 } as const;
 
@@ -76,7 +77,7 @@ export function parseBackup(text: string, lang: Lang = "th"): { ok: true; backup
     try {
       const parsed = k === "lang" ? raw : JSON.parse(raw);
       if (k === "lang" && raw !== "th" && raw !== "en") return bad;
-      if ((k === "entries" || k === "recipes" || k === "body") && !Array.isArray(parsed)) return bad;
+      if ((k === "entries" || k === "recipes" || k === "body" || k === "water") && !Array.isArray(parsed)) return bad;
       if (k === "goals" && (typeof parsed !== "object" || parsed === null || Array.isArray(parsed))) return bad;
     } catch {
       return bad;

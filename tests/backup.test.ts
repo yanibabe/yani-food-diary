@@ -7,6 +7,7 @@ const data = {
   recipes: JSON.stringify([{ id: "r" }]),
   goals: JSON.stringify({ targetKcal: 1600 }),
   body: JSON.stringify([{ date: "2026-11-12", weightKg: 79, steps: null }]),
+  water: JSON.stringify([{ date: "2026-11-12", glasses: 6, updatedAt: 1 }]),
   lang: "en",
 };
 
@@ -20,7 +21,7 @@ test("a backup survives the trip to a file and back unchanged", () => {
 });
 
 test("empty parts stay empty", () => {
-  const b = makeBackup({ entries: null, recipes: null, goals: null, body: null, lang: null }, {}, 1);
+  const b = makeBackup({ entries: null, recipes: null, goals: null, body: null, water: null, lang: null }, {}, 1);
   const res = parseBackup(JSON.stringify(b));
   assert.ok(res.ok);
   assert.deepEqual(backupCounts(res.backup), { meals: 0, recipes: 0, days: 0, photos: 0 });
@@ -37,6 +38,16 @@ test("wrong or broken files are refused with a message", () => {
   assert.ok(!parseBackup(JSON.stringify(broken)).ok);
   const notList = makeBackup({ ...data, recipes: JSON.stringify({}) }, {}, 1);
   assert.ok(!parseBackup(JSON.stringify(notList)).ok);
+  const badWater = makeBackup({ ...data, water: JSON.stringify({}) }, {}, 1);
+  assert.ok(!parseBackup(JSON.stringify(badWater)).ok);
+});
+
+test("an older backup without water still opens (water stays empty)", () => {
+  const old = makeBackup(data, {}, 1) as { data: Record<string, unknown> };
+  delete old.data.water;
+  const res = parseBackup(JSON.stringify(old));
+  assert.ok(res.ok);
+  assert.equal(res.backup.data.water, null);
 });
 
 test("only real pictures are kept from the photos part", () => {

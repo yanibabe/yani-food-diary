@@ -16,6 +16,9 @@
   --carbs-ink: #7e6113;
   --fat: #dbe6f1;
   --fat-ink: #375a80;
+  --water: #4f8db5;
+  --water-soft: #e2eef5;
+  --water-ink: #2f5f80;
   --kcal: #f0e2cf;
   --warn: #fbe7cf;
   --warn-ink: #8a5212;
@@ -37,6 +40,9 @@
   --color-carbs-ink: var(--carbs-ink);
   --color-fat: var(--fat);
   --color-fat-ink: var(--fat-ink);
+  --color-water: var(--water);
+  --color-water-soft: var(--water-soft);
+  --color-water-ink: var(--water-ink);
   --color-kcal: var(--kcal);
   --color-warn: var(--warn);
   --color-warn-ink: var(--warn-ink);

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { MacroCards, Sheet, StoredPhoto } from "./components/ui";
 import { BackupReminder } from "./components/BackupReminder";
 import { WeekKcalChart } from "./components/WeekKcalChart";
+import { WaterCard } from "./components/WaterCard";
 import { guessSlot, shiftDateKey, shortDayLabel, thaiDateKey, thaiDateLabel } from "./lib/date";
 import { copyMeal, recentMeals, searchMeals } from "./lib/repeat";
 import { macroTargets, proteinTargetG } from "./lib/energy";
@@ -131,6 +132,8 @@ function TodayInner() {
       <button className="btn-primary w-full !min-h-[58px] text-[19px]" onClick={openAdd}>
         + {tr("เพิ่มอาหาร", "Add food")}
       </button>
+
+      {ready && <WaterCard date={date} />}
 
       {ready && <WeekKcalChart entries={entries} date={date} today={today} target={target} onPick={go} />}
 

@@ -163,4 +163,6 @@ export type Goals = {
   skippedEstimate: boolean;
   /** Warn when a food may contain milk or milk products. */
   avoidDairy?: boolean;
+  /** Glasses of water per day (250 ml each). Missing = 8. */
+  waterGoal?: number;
 };

@@ -5,6 +5,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { Entry, Goals, Recipe } from "./types.ts";
 import { upsertLog, type BodyLog } from "./body.ts";
+import { setGlasses, type WaterLog } from "./water.ts";
 import { upgradeSlot } from "./date.ts";
 
 const KEY = {
@@ -12,6 +13,7 @@ const KEY = {
   recipes: "yfd:v1:recipes",
   goals: "yfd:v1:goals",
   body: "yfd:v1:body",
+  water: "yfd:v1:water",
 };
 
 export const DEFAULT_GOALS: Goals = {
@@ -54,6 +56,9 @@ type Store = {
   bodyLogs: BodyLog[];
   /** Save weight and/or steps for one day (null clears that part). */
   setBody: (date: string, patch: Partial<Pick<BodyLog, "weightKg" | "steps">>) => void;
+  waterLogs: WaterLog[];
+  /** Save how many glasses of water she drank on one day. */
+  setWater: (date: string, glasses: number) => void;
 };
 
 const Ctx = createContext<Store | null>(null);
@@ -65,6 +70,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [goals, setGoalsState] = useState<Goals>(DEFAULT_GOALS);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [bodyLogs, setBodyLogs] = useState<BodyLog[]>([]);
+  const [waterLogs, setWaterLogs] = useState<WaterLog[]>([]);
 
   useEffect(() => {
     // Load once on the device (localStorage is not available on the server).
@@ -77,6 +83,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     setRecipes(read(KEY.recipes, []));
     setGoalsState({ ...DEFAULT_GOALS, ...read(KEY.goals, DEFAULT_GOALS) });
     setBodyLogs(read(KEY.body, []));
+    setWaterLogs(read(KEY.water, []));
     setReady(true);
   }, []);
 
@@ -121,9 +128,17 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const setWater = useCallback((date: string, glasses: number) => {
+    setWaterLogs((prev) => {
+      const next = setGlasses(prev, date, glasses);
+      setSaveError(write(KEY.water, next));
+      return next;
+    });
+  }, []);
+
   const value = useMemo(
-    () => ({ ready, saveError, entries, recipes, goals, upsertEntry, deleteEntry, upsertRecipe, deleteRecipe, setGoals, bodyLogs, setBody }),
-    [ready, saveError, entries, recipes, goals, upsertEntry, deleteEntry, upsertRecipe, deleteRecipe, setGoals, bodyLogs, setBody],
+    () => ({ ready, saveError, entries, recipes, goals, upsertEntry, deleteEntry, upsertRecipe, deleteRecipe, setGoals, bodyLogs, setBody, waterLogs, setWater }),
+    [ready, saveError, entries, recipes, goals, upsertEntry, deleteEntry, upsertRecipe, deleteRecipe, setGoals, bodyLogs, setBody, waterLogs, setWater],
   );
   // Draw screens only after the saved data is loaded on the device, so the
   // first paint always matches (avoids React "hydration mismatch").
