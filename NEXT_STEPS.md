@@ -6,7 +6,7 @@
 
 ---
 
-## LIVE (updated 2026-11-13, Round 17)
+## LIVE (updated 2026-11-13, Round 18)
 
 - **App:** https://yani-food-diary.vercel.app  (Vercel, exm-labs account, free)
 - **Code:** https://github.com/yanibabe/yani-food-diary  (private; pushes auto-deploy)
@@ -17,6 +17,32 @@
   phone (localStorage + IndexedDB). Nobody sees anyone else's data. But everyone with
   the link uses Yani's OpenRouter key, so their AI photo/text checks spend HER credit.
   Since Round 8 the AI needs a passcode (typed once per phone), so strangers can't spend it.
+
+## Round 18 (2026-11-13) — ✏️ "Fix it from the label" for barcode products ✅ LIVE
+
+Her first live scan (Taro "รสเข้มข้น") worked, but Open Food Facts said 300 kcal/100 g, serving 30 g, while
+HER pack says 20 g = 70 kcal (= 350/100 g). 20 g → app said 60. The math was right; the volunteer data was
+wrong / another pack size. Told her: the label on the pack always wins.
+- Product card now has a small link "ไม่ตรงกับฉลาก? แก้ตามซอง". It opens a form: pack size (g, or mL for
+  drinks; prefilled from the database), calories per pack (required, empty), protein/carbs/fat per pack
+  (optional, empty — blank keeps the database's per-100 g number). Prefilling macros was tried and removed:
+  they were for the database's pack size, so they'd be wrong after changing the size.
+- Save → card switches to her numbers (stored per 100 g like every Food), grams prefilled to her pack size,
+  green note "✓ ใช้ตัวเลขตามฉลากที่คุณแก้ไว้" with "แก้อีกครั้ง" (edit again, prefilled with her saved
+  numbers) and "ใช้ข้อมูลเดิม" (remove her fix, back to the database).
+- Remembered per barcode on the phone: localStorage `yfd:v1:labelFixes` (array of LabelFix), included in the
+  backup (`BACKUP_KEYS.labelFixes`; old backups without it still open). Never sent to Open Food Facts.
+- Code: `app/lib/food/labelFix.ts` (applyLabelFix, fixIsValid, find/upsert/removeFix — pure),
+  `app/lib/food/labelFixStore.ts` (localStorage), UI in `BarcodeLookup.tsx`. Tests: `tests/labelFix.test.ts`
+  (her Taro case) + backup test.
+- Checked: 76 tests, tsc, eslint, build pass. Built server at phone size with a fake cached Taro product
+  (300 kcal, 30 g): fix 20 g / 70 kcal → card 350 kcal/100 g, grams 20; reopen + scan again → still fixed;
+  Next → review says 70 kcal. No console errors. NOT clicked in the browser: "ใช้ข้อมูลเดิม" (unit-tested only).
+  Live site has the new code. NOT yet tried on her iPhone.
+
+### ▶ NEXT
+1. She fixes Taro on her iPhone (rescan → "ไม่ตรงกับฉลาก? แก้ตามซอง" → 20 / 70) and checks it says 70.
+2. Idea still open: monthly look-back (kcal + weight line; could add water).
 
 ## Round 17 (2026-11-13) — 📷 Live camera barcode scanning ✅ LIVE
 
@@ -34,12 +60,10 @@ She picked "live camera scanning" from the ideas list.
 - Checked: 73 tests, tsc, eslint, build pass. Built server "food-diary-verify" at phone size with a fake
   camera (drawn EAN-13 of her Coke Zero 8851959132074): read it, closed, filled the number. Denied camera
   → message + photo button; Cancel closes. (Local lookup said "not set up" — expected, no OFF env locally.)
-  Live site: deployed Ready, new button found in the live code. NOT yet tried on her iPhone (real camera,
-  home-screen app permission prompt).
+  Live site: deployed Ready, new button found in the live code. Tried on her iPhone: works ✓
 
 ### ▶ NEXT
-1. She tries "สแกนด้วยกล้อง" on her iPhone with a real pack.
-2. Idea still open: monthly look-back (kcal + weight line; could add water).
+1. ✅ Tried on her iPhone 2026-11-13: scanned Taro fine. Its numbers were off → Round 18.
 
 ## Round 16 (2026-11-13) — 💧 Water counter on Today ✅ LIVE
 
