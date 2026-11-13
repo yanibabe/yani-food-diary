@@ -29,7 +29,9 @@ export function BarcodeLookup({ onPick, onManual }: { onPick: (food: Food, grams
   const [live, setLive] = useState(false);
   /** The database's own numbers (before her label fix), so she can go back to them. */
   const [original, setOriginal] = useState<Food | null>(null);
-  const [fixed, setFixed] = useState(false);
+  const [fixed, setFixed] = useState<LabelFix | null>(null);
+  const [readingLabel, setReadingLabel] = useState(false);
+  const labelRef = useRef<HTMLInputElement>(null);
   const [fixForm, setFixForm] = useState<{ servingG: number | null; kcal: number | null; protein: number | null; carbs: number | null; fat: number | null } | null>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
 
@@ -102,7 +104,7 @@ export function BarcodeLookup({ onPick, onManual }: { onPick: (food: Food, grams
     setFixForm(null);
     const fix = findFix(readFixes(), f.sourceId);
     const shown = fix ? applyLabelFix(f, fix) : f;
-    setFixed(!!fix);
+    setFixed(fix);
     setFood(shown);
     setGrams(fix ? fix.servingG : (servingGrams(f.servingSize) ?? 100));
   }
@@ -121,17 +123,47 @@ export function BarcodeLookup({ onPick, onManual }: { onPick: (food: Food, grams
 
   /** Save her label numbers for this barcode on the phone; used every time she scans it again. */
   function saveFix() {
-    if (!original || !fixForm || fixForm.servingG == null || fixForm.kcal == null) return;
-    const fix: LabelFix = {
-      code: original.sourceId,
-      servingG: fixForm.servingG,
-      liquid: servingIsLiquid(food?.servingSize ?? original.servingSize),
-      kcal: fixForm.kcal,
-      protein: fixForm.protein,
-      carbs: fixForm.carbs,
-      fat: fixForm.fat,
-      updatedAt: Date.now(),
-    };
+    if (!fixForm || fixForm.servingG == null || fixForm.kcal == null) return;
+    keepFix({ ...fixForm, servingG: fixForm.servingG, kcal: fixForm.kcal, liquid: servingIsLiquid(food?.servingSize ?? original?.servingSize ?? null) });
+  }
+
+  /** Photo of the nutrition label → the AI reads the pack's numbers → saved as her fix for this barcode. */
+  async function fromLabelPhoto(file: File | undefined) {
+    if (!file || !original) return;
+    setError(null);
+    setReadingLabel(true);
+    try {
+      const image = await compressImage(file, 1600, 0.85, tr("อ่านรูปไม่ได้ ลองเลือกรูปอื่น", "Couldn't read this picture. Try another one."));
+      const res = await aiFetch("/api/food/label-photo", { image, lang }, lang);
+      const data = (await res.json().catch(() => null)) as {
+        label?: { servingG: number; liquid: boolean; kcal: number; protein: number | null; carbs: number | null; fat: number | null } | null;
+        message?: string;
+      } | null;
+      if (!res.ok || !data) {
+        setError(data?.message ?? `${tr("เซิร์ฟเวอร์ตอบกลับ", "Server replied")} ${res.status}`);
+        return;
+      }
+      if (!data.label) {
+        setError(
+          tr(
+            "อ่านตัวเลขบนฉลากไม่ออก ลองถ่ายใหม่ให้เห็นตารางโภชนาการชัด ๆ ไม่เอียง ไม่สะท้อนแสง",
+            "Couldn't read the label. Try again with the nutrition table sharp, straight and without glare.",
+          ),
+        );
+        return;
+      }
+      setFixForm(null);
+      keepFix(data.label);
+    } catch (e) {
+      setError(`${tr("อ่านรูปไม่ได้", "Couldn't read the photo")}: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setReadingLabel(false);
+    }
+  }
+
+  function keepFix(v: Omit<LabelFix, "code" | "updatedAt">) {
+    if (!original) return;
+    const fix: LabelFix = { code: original.sourceId, ...v, updatedAt: Date.now() };
     if (!fixIsValid(fix)) return;
     const err = writeFixes(upsertFix(readFixes(), fix));
     if (err) {
@@ -140,7 +172,7 @@ export function BarcodeLookup({ onPick, onManual }: { onPick: (food: Food, grams
     }
     setFood(applyLabelFix(original, fix));
     setGrams(fix.servingG);
-    setFixed(true);
+    setFixed(fix);
     setFixForm(null);
   }
 
@@ -153,7 +185,7 @@ export function BarcodeLookup({ onPick, onManual }: { onPick: (food: Food, grams
     }
     setFood(original);
     setGrams(servingGrams(original.servingSize) ?? 100);
-    setFixed(false);
+    setFixed(null);
   }
 
   async function lookup(typed: string = code) {
@@ -272,19 +304,42 @@ export function BarcodeLookup({ onPick, onManual }: { onPick: (food: Food, grams
           </div>
           {fixed ? (
             <div className="rounded-2xl bg-[#e3ecd6] px-4 py-3 text-center text-[14px] text-ink" data-testid="label-fix-on">
-              ✓ {tr("ใช้ตัวเลขตามฉลากที่คุณแก้ไว้", "Using the numbers you fixed from the label")}
+              ✓ {tr("ใช้ตัวเลขตามฉลาก", "Using the label's numbers")}:{" "}
+              <b className="num">
+                {fixed.servingG} {fixed.liquid ? tr("มล.", "mL") : tr("ก.", "g")} = {fmtKcal(fixed.kcal)} kcal
+              </b>
+              <div className="text-[12px] text-muted">{tr("เช็กว่าตรงกับบนซองนะ", "Check it matches the pack")}</div>
               <div className="mt-1 flex justify-center gap-4 text-[13px]">
-                <button className="underline" onClick={openFixForm}>{tr("แก้อีกครั้ง", "Edit again")}</button>
+                <button className="underline" onClick={() => labelRef.current?.click()} disabled={readingLabel}>{tr("ถ่ายใหม่", "Retake")}</button>
+                <button className="underline" onClick={openFixForm}>{tr("แก้เอง", "Edit")}</button>
                 <button className="underline text-muted" onClick={undoFix} data-testid="label-fix-undo">{tr("ใช้ข้อมูลเดิม", "Use the original data")}</button>
               </div>
             </div>
           ) : (
             !fixForm && (
-              <button className="w-full text-center text-[14px] text-muted underline" onClick={openFixForm} data-testid="label-fix-open">
-                {tr("ไม่ตรงกับฉลาก? แก้ตามซอง", "Doesn't match the pack? Fix it from the label")}
-              </button>
+              <div className="space-y-2 text-center">
+                <button className="btn-soft w-full" onClick={() => labelRef.current?.click()} disabled={readingLabel} data-testid="label-photo">
+                  {readingLabel ? tr("กำลังอ่านฉลาก…", "Reading the label…") : `📷 ${tr("ไม่ตรงกับซอง? ถ่ายรูปฉลาก", "Doesn't match the pack? Photo the label")}`}
+                </button>
+                <button className="text-[13px] text-muted underline" onClick={openFixForm} data-testid="label-fix-open">
+                  {tr("หรือพิมพ์เอง", "or type it")}
+                </button>
+              </div>
             )
           )}
+          <input
+            ref={labelRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            hidden
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              e.target.value = "";
+              fromLabelPhoto(f);
+            }}
+            data-testid="label-photo-input"
+          />
           {fixForm && (
             <div className="space-y-3 rounded-2xl border border-line p-4" data-testid="label-fix-form">
               <p className="text-[14px] text-muted">

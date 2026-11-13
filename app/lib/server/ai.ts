@@ -475,3 +475,45 @@ export async function readBarcodeDigits(input: { image: string; lang: Lang }): P
   const digits = (r.digits ?? "").replace(/\D/g, "");
   return digits || null;
 }
+
+// ---------------------------------------------------------------------------
+// Nutrition label photo → the numbers printed on the pack (per serving / per pack).
+// Used when the barcode database has the wrong numbers. The label always wins.
+// ---------------------------------------------------------------------------
+
+export const LabelSchema = z.object({
+  servingG: z.number().nullable().catch(null).describe("Grams (or mL) of the amount the numbers below are for, e.g. 20 for '1 ซอง (20 ก.)'; null if not printed"),
+  liquid: z.boolean().catch(false).describe("true if that amount is in mL (a drink)"),
+  kcal: z.number().nullable().catch(null).describe("Energy in kcal for that amount; null if not readable"),
+  protein: z.number().nullable().catch(null).describe("Protein in g for that amount; null if not printed"),
+  carbs: z.number().nullable().catch(null).describe("Total carbohydrate in g for that amount; null if not printed"),
+  fat: z.number().nullable().catch(null).describe("Total fat in g for that amount; null if not printed"),
+});
+export type LabelRead = z.infer<typeof LabelSchema>;
+
+const LABEL_SYSTEM = `You read the nutrition numbers printed on a food or drink package in a photo (Thai or any language).
+Thai words: ข้อมูลโภชนาการ = nutrition facts; หนึ่งหน่วยบริโภค = one serving; ซอง = sachet/pack; ก. or กรัม = g; มล. = mL;
+พลังงานทั้งหมด / พลังงาน = energy (กิโลแคลอรี = kcal); โปรตีน = protein; คาร์โบไฮเดรตทั้งหมด = total carbs; ไขมันทั้งหมด = total fat.
+Rules:
+- Prefer the numbers for ONE SERVING (หนึ่งหน่วยบริโภค). servingG = the grams/mL of that serving as printed.
+- If only a front "per pack" box is visible (e.g. "พลังงาน 70 กิโลแคลอรี" with net weight 20 ก.), use the whole pack: servingG = net weight.
+- If only per-100 g numbers are printed, use servingG = 100 and those numbers.
+- If energy is only in kJ, convert: kcal = kJ / 4.184, rounded.
+- Copy numbers exactly as printed. Do NOT guess. Anything not clearly readable = null.
+Return ONLY a JSON object matching this JSON Schema:
+${shapeOf(LabelSchema)}`;
+
+export async function readNutritionLabel(input: { image: string; lang: Lang }): Promise<LabelRead> {
+  if (!/^data:image\/(jpeg|png|webp);base64,/.test(input.image))
+    throw new AiError("bad-output", trFor(input.lang)("รูปแบบรูปไม่รองรับ", "This picture format is not supported"), 400);
+  if (process.env.AI_MOCK === "1") return { servingG: 20, liquid: false, kcal: 70, protein: 1, carbs: 12, fat: 2 };
+  return callAi(
+    LABEL_SYSTEM,
+    [
+      { type: "text", text: "Photo of a nutrition label." },
+      { type: "image_url", image_url: { url: input.image } },
+    ],
+    LabelSchema,
+    input.lang,
+  );
+}
