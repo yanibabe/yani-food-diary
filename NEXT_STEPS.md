@@ -34,13 +34,13 @@ She picked "water counter" from the ideas list.
   + backup tests.
 - Checked: 70 tests, tsc, eslint, build pass; own prod server (preview "food-diary-verify", port 3227)
   at phone size: +/−/tap glass/goal editor/reload keeps it/yesterday separate, no overflow, no console
-  errors. Live site checked after deploy (tap + saved). NOT yet on her iPhone.
+  errors. Live site checked after deploy (tap + saved). Tried on her iPhone 2026-11-13: works ✓
 - Note: the other chat's dev server on 3217 did not pick up the new CSS colors (stale); use
   "food-diary-verify" (build first) when checking styles.
 
-### ▶ NEXT
-1. She tries the water card on her iPhone.
-2. Ideas still open: live camera barcode scanning · monthly look-back (kcal + weight; could add water).
+### ▶ NEXT: she is choosing the next feature. Ideas still open:
+1. Live camera barcode scanning (no photo button).
+2. Monthly look-back: average kcal + weight line together (could add water).
 
 ## Round 15b (2026-11-13) — "กินซ้ำ" moved into its own tile + search ✅
 
