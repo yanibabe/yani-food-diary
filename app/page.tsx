@@ -1,11 +1,12 @@
 "use client";
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { MacroCards, Sheet, StoredPhoto } from "./components/ui";
 import { BackupReminder } from "./components/BackupReminder";
 import { WeekKcalChart } from "./components/WeekKcalChart";
-import { shiftDateKey, thaiDateKey, thaiDateLabel } from "./lib/date";
+import { guessSlot, shiftDateKey, thaiDateKey, thaiDateLabel } from "./lib/date";
+import { copyMeal, recentMeals } from "./lib/repeat";
 import { macroTargets, proteinTargetG } from "./lib/energy";
 import { fmtKcal, pickMacros, sumMacros } from "./lib/nutrition";
 import { useLang } from "./lib/lang";
@@ -36,12 +37,13 @@ function Ring({ eaten, target }: { eaten: number; target: number }) {
 }
 
 function TodayInner() {
-  const { ready, entries, goals, saveError } = useStore();
+  const { ready, entries, goals, saveError, upsertEntry, deleteEntry } = useStore();
   const search = useSearchParams();
   const router = useRouter();
   const today = thaiDateKey();
   const date = search.get("date") || today;
   const [addOpen, setAddOpen] = useState(false);
+  const [added, setAdded] = useState<Entry | null>(null);
   const { tr, lang } = useLang();
 
   const dayEntries = useMemo(() => entries.filter((e) => e.date === date).sort((a, b) => a.createdAt - b.createdAt), [entries, date]);
@@ -50,6 +52,20 @@ function TodayInner() {
   const left = target - total.kcal;
   const go = (d: string) => router.replace(d === today ? "/" : `/?date=${d}`);
   const q = date === today ? "" : `?date=${date}`;
+  const recent = useMemo(() => recentMeals(entries), [entries]);
+
+  // "Eat again": copy the meal to the day on screen. Today → meal slot from the time now; past day → its old slot.
+  const eatAgain = (e: Entry) => {
+    const copy = copyMeal(e, date, date === today ? guessSlot() : e.slot);
+    upsertEntry(copy);
+    setAdded(copy);
+    setAddOpen(false);
+  };
+  useEffect(() => {
+    if (!added) return;
+    const t = setTimeout(() => setAdded(null), 6000);
+    return () => clearTimeout(t);
+  }, [added]);
 
   return (
     <main className="page space-y-5">
@@ -132,7 +148,63 @@ function TodayInner() {
         );
       })}
 
+      {added && (
+        <div
+          className="fixed inset-x-4 bottom-[calc(96px+env(safe-area-inset-bottom))] z-40 mx-auto flex max-w-[440px] items-center gap-3 rounded-[22px] bg-ink px-4 py-3 text-paper shadow-lg"
+          role="status"
+          data-testid="eat-again-toast"
+        >
+          <span className="min-w-0 flex-1 text-[15px]">
+            ✓ {tr("เพิ่ม", "Added")} <b className="font-semibold">{added.title}</b> {tr("ใน", "to")} {SLOT_LABEL[added.slot][lang]}
+          </span>
+          <button
+            className="shrink-0 rounded-full bg-paper/15 px-4 py-2 text-[15px] font-semibold"
+            onClick={() => {
+              deleteEntry(added.id);
+              setAdded(null);
+            }}
+            data-testid="eat-again-undo"
+          >
+            {tr("เลิกทำ", "Undo")}
+          </button>
+        </div>
+      )}
+
       <Sheet open={addOpen} onClose={() => setAddOpen(false)} title={tr("เพิ่มอาหาร", "Add food")}>
+        {recent.length > 0 && (
+          <div className="pb-4" data-testid="eat-again">
+            <h3 className="px-1 pb-1 text-[16px] font-semibold">🔁 {tr("กินซ้ำ", "Eat again")}</h3>
+            <p className="px-1 pb-2 text-[13px] text-muted">
+              {tr("แตะครั้งเดียว บันทึกเลย · ไม่ต้องใช้ AI", "One tap to log it · no AI needed")}
+            </p>
+            <ul className="divide-y divide-line rounded-[22px] bg-cream px-3">
+              {recent.map((e) => (
+                <li key={e.id}>
+                  <button
+                    className="flex w-full items-center gap-3 py-2.5 text-left active:opacity-60"
+                    onClick={() => eatAgain(e)}
+                    data-testid="eat-again-item"
+                  >
+                    {e.photoId ? (
+                      <StoredPhoto id={e.photoId} className="h-11 w-11 shrink-0 rounded-xl object-cover" />
+                    ) : (
+                      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-paper text-[20px]" aria-hidden>
+                        {sourceIcon(e)}
+                      </span>
+                    )}
+                    <span className="min-w-0 flex-1 truncate text-[16px] font-medium">{e.title}</span>
+                    <span className="num shrink-0 text-[15px] text-muted">
+                      {fmtKcal(sumMacros(e.items.map(pickMacros)).kcal)} kcal
+                    </span>
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-olive text-[20px] leading-none text-paper" aria-hidden>
+                      +
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         <div className="grid grid-cols-2 gap-3 pb-3">
           {[
             { href: `/add/photo${q}`, icon: "📷", label: tr("ถ่ายรูป", "Take a photo") },
@@ -156,6 +228,10 @@ function TodayInner() {
   );
 }
 
+function sourceIcon(e: Entry): string {
+  return e.source === "recipe" ? "📖" : e.source === "photo" ? "📷" : e.source === "text" ? "💬" : e.source === "barcode" ? "🏷️" : "✏️";
+}
+
 function EntryRow({ e }: { e: Entry }) {
   const m = sumMacros(e.items.map(pickMacros));
   return (
@@ -165,7 +241,7 @@ function EntryRow({ e }: { e: Entry }) {
           <StoredPhoto id={e.photoId} className="h-14 w-14 shrink-0 rounded-2xl object-cover" />
         ) : (
           <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-cream text-[24px]" aria-hidden>
-            {e.source === "recipe" ? "📖" : e.source === "text" ? "💬" : e.source === "barcode" ? "🏷️" : "✏️"}
+            {sourceIcon(e)}
           </span>
         )}
         <div className="min-w-0 flex-1">

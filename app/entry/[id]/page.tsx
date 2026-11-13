@@ -4,6 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import { MealReview } from "../../components/MealReview";
 import { useAiStatus } from "../../components/ui";
 import { deletePhoto, getPhoto } from "../../lib/photos";
+import { photoStillUsed } from "../../lib/repeat";
 import { useLang } from "../../lib/lang";
 import { useStore } from "../../lib/store";
 
@@ -65,7 +66,7 @@ export default function EntryPage() {
         }}
         onCancel={() => router.push(`/?date=${entry.date}`)}
         onDelete={() => {
-          if (entry.photoId) deletePhoto(entry.photoId);
+          if (entry.photoId && !photoStillUsed(entries, entry.photoId, entry.id)) deletePhoto(entry.photoId);
           deleteEntry(entry.id);
           router.push(`/?date=${entry.date}`);
         }}

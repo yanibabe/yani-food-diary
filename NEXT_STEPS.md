@@ -6,7 +6,7 @@
 
 ---
 
-## LIVE (updated 2026-11-13, Round 14)
+## LIVE (updated 2026-11-13, Round 15)
 
 - **App:** https://yani-food-diary.vercel.app  (Vercel, exm-labs account, free)
 - **Code:** https://github.com/yanibabe/yani-food-diary  (private; pushes auto-deploy)
@@ -17,6 +17,25 @@
   phone (localStorage + IndexedDB). Nobody sees anyone else's data. But everyone with
   the link uses Yani's OpenRouter key, so their AI photo/text checks spend HER credit.
   Since Round 8 the AI needs a passcode (typed once per phone), so strangers can't spend it.
+
+## Round 15 (2026-11-13) — 🔁 "กินซ้ำ" / Eat again, one tap ✅ LIVE
+
+She picked this from the ideas list. Today → "+ เพิ่มอาหาร" sheet now starts with "🔁 กินซ้ำ": her 6 most
+recent DIFFERENT meals (same title + same total kcal = same meal), each with photo/icon, kcal and a "+".
+- One tap = saved right away to the day on screen. Today → meal slot from the time now (`guessSlot`);
+  a past day → the meal's old slot. No AI call, no credit. Sheet closes; a dark note at the bottom says
+  "✓ เพิ่ม X ใน มื้อ…" with "เลิกทำ" (Undo, deletes the copy) for 6 seconds.
+- `app/lib/repeat.ts`: `recentMeals`, `copyMeal` (new ids, same numbers, SAME photoId — shared, not copied),
+  `photoStillUsed`. Deleting a meal (`app/entry/[id]/page.tsx`) now only deletes the photo if no other
+  meal uses it.
+- Tests: `tests/repeat.test.ts` (4) — 63 pass; tsc, eslint, build clean. Checked in the browser (phone size):
+  list dedupes, tap adds to today (dinner by time), Undo removes it, past day keeps the old slot (snack),
+  no console errors. NOT checked on her real iPhone yet.
+
+### ▶ NEXT
+1. She tries "กินซ้ำ" on her iPhone.
+2. Other ideas still open: live camera barcode scanning · monthly look-back (kcal + weight) · water counter.
+3. Check on a real iPhone: food photo from the real camera.
 
 ## Small change (2026-11-13) — milk warnings switched OFF for now ✅
 
