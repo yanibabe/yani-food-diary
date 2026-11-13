@@ -3,7 +3,16 @@
 // may have milk in it. The AI marks each item; for names typed by hand (manual
 // items, recipe ingredients) a simple word check is used instead.
 
-import type { FoodItem, Ingredient } from "./types.ts";
+import type { FoodItem, Goals, Ingredient } from "./types.ts";
+
+/** Milk warnings are switched OFF for now (2026-11-13: she said she doesn't need them yet).
+ *  Set to true to bring back the Profile switch and the warnings. Saved data is kept. */
+export const MILK_WARNING_ON = false;
+
+/** true when the app should warn about milk. */
+export function warnDairy(goals: Pick<Goals, "avoidDairy">): boolean {
+  return MILK_WARNING_ON && goals.avoidDairy === true;
+}
 
 /** Words that look like milk but are NOT dairy. Removed before checking. */
 const NOT_DAIRY = [

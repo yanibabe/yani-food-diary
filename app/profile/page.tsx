@@ -1,4 +1,5 @@
 "use client";
+import { MILK_WARNING_ON } from "../lib/dairy";
 // Profile: who she is, her plan, and the daily kcal target (tap to edit).
 // "แก้ข้อมูล" edits the same answers as first-run setup; a new suggestion
 // only replaces the target after she confirms.
@@ -66,7 +67,7 @@ export default function ProfilePage() {
         <>
           <TargetCard goals={goals} onSaved={() => flash(tr("บันทึกเป้าแล้ว", "Target saved"))} />
           <InfoCard p={p} onEdit={() => setEditing(true)} />
-          <AvoidCard />
+          {MILK_WARNING_ON && <AvoidCard />}
         </>
       )}
       <section className="card space-y-2 p-5">

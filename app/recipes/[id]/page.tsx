@@ -6,7 +6,7 @@ import { Badge, KcalBig, MacroCards, NumberField, Sheet, StoredPhoto } from "../
 import { guessSlot, thaiDateKey } from "../../lib/date";
 import { fmtAmount, fmtG, fmtKcal, newId } from "../../lib/nutrition";
 import { ingredientMacros, mealFromRecipe, totalsForRecipe } from "../../lib/recipe";
-import { dairyIngredients, looksDairy } from "../../lib/dairy";
+import { dairyIngredients, looksDairy, warnDairy } from "../../lib/dairy";
 import { useLang } from "../../lib/lang";
 import { useStore } from "../../lib/store";
 import { SLOT_LABEL, SLOTS, UNIT_LABEL, type Ingredient, type MealSlot, type Recipe } from "../../lib/types";
@@ -184,7 +184,7 @@ function RecipeInner() {
       </main>
     );
   const t = totalsForRecipe(recipe, lang);
-  const avoidDairy = goals.avoidDairy === true;
+  const avoidDairy = warnDairy(goals);
   const milky = avoidDairy ? dairyIngredients(recipe.ingredients) : [];
 
   return (

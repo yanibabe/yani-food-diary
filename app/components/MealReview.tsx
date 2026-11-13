@@ -3,7 +3,7 @@ import { OffAttribution } from "./OffAttribution";
 import { aiFetch } from "../lib/aiFetch";
 import { useMemo, useRef, useState } from "react";
 import { AI_MARGIN, blankItem, changeAmount, cleanBox, cleanNumber, fmtAmount, fmtKcal, newId, pickMacros, sumMacros } from "../lib/nutrition";
-import { aiDairy, dairyItems, isDairy } from "../lib/dairy";
+import { aiDairy, dairyItems, isDairy, warnDairy } from "../lib/dairy";
 import { useLang } from "../lib/lang";
 import { useStore } from "../lib/store";
 import { SLOT_LABEL, SLOTS, type FoodItem, type MealSlot } from "../lib/types";
@@ -177,7 +177,7 @@ export function MealReview({
 
   const total = useMemo(() => sumMacros(items.map(pickMacros)), [items]);
   const { goals } = useStore();
-  const avoidDairy = goals.avoidDairy === true;
+  const avoidDairy = warnDairy(goals);
   const milky = avoidDairy ? dairyItems(items) : [];
   const editing = items.find((i) => i.id === editingId) ?? null;
   const amountSummary = items.length

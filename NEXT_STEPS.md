@@ -18,6 +18,21 @@
   the link uses Yani's OpenRouter key, so their AI photo/text checks spend HER credit.
   Since Round 8 the AI needs a passcode (typed once per phone), so strangers can't spend it.
 
+## Small change (2026-11-13) — milk warnings switched OFF for now ✅
+
+She said the milk warning isn't needed yet. One switch: `MILK_WARNING_ON = false` in `app/lib/dairy.ts`.
+`warnDairy(goals)` is used by MealReview + recipe page; Profile hides the "Foods I avoid" card. All code,
+saved flags and the AI's `dairy` field are KEPT, so turning it back on = set the switch to true.
+Checked: 59 tests, tsc, eslint, build pass; mock browser with avoidDairy=true saved → no Profile card,
+"ชาเย็น" meal shows no warning/badge/checkbox.
+
+### ▶ NEXT: she is choosing the next feature. Ideas offered (2026-11-13):
+1. "กินซ้ำ" — re-log a meal she ate before in one tap (recent meals list) — recommended.
+2. Live camera barcode scanning (no photo button).
+3. Monthly look-back: average kcal + weight line together.
+4. Water glasses counter.
+Fixes to check: real iPhone food photo; data still there after a long time / iOS clearing storage (backup exists).
+
 ## Round 14 (2026-11-13) — barcode from a PHOTO + mL drink sizes ✅ LIVE
 
 Started from her first real phone test: Coke Zero 8851959132074 was found (0 kcal ✓) but the amount
@@ -43,7 +58,7 @@ said 100 instead of the can's 325 mL. She then asked: can a photo fill the numbe
 ### ▶ NEXT
 1. ✅ She tried 📷 on her iPhone with a real pack (2026-11-13): worked, "very fast".
 2. Resume the paused phone tests: photo → milk warning → backup.
-3. Ideas: use OFF allergen data for the milk warning; live camera scanning without taking a photo (own round).
+3. ~~milk warning~~ switched off (see above); live camera scanning without taking a photo (own round).
 
 ## Round 13 (2026-11-13) — barcode lookup via Open Food Facts ✅ LIVE
 
