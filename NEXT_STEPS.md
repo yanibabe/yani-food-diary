@@ -6,7 +6,7 @@
 
 ---
 
-## LIVE (updated 2026-11-13, Round 19b — clean minimal look)
+## LIVE (updated 2026-11-13, Round 19b — clean minimal look; Round 20 buddy designed, not built)
 
 - **App:** https://yani-food-diary.vercel.app  (Vercel, exm-labs account, free)
 - **Code:** https://github.com/yanibabe/yani-food-diary  (private; pushes auto-deploy)
@@ -17,6 +17,36 @@
   phone (localStorage + IndexedDB). Nobody sees anyone else's data. But everyone with
   the link uses Yani's OpenRouter key, so their AI photo/text checks spend HER credit.
   Since Round 8 the AI needs a passcode (typed once per phone), so strangers can't spend it.
+
+## Round 20 (NEXT — design APPROVED 2026-11-13, not built yet) — 🍡 "My buddy" profile character
+
+**Start here in the next chat.** Design talk is finished; just build it.
+
+How we got here: tried 20+ styles (flat people, outline, pixel art, paper, crayon, watercolor, cute people
+with poses). She said people-style looked stiff, "like parts glued together", not a real character. Her own
+idea won: **a soft blob/food buddy where she picks the face parts** (inspired by mood-blob icons; we made
+our OWN shapes — never copy references). She said "อันนี้โอเคเลย ไอเดียดีมาก", then "เอาาา".
+
+**The exact approved design is in `docs/buddy-design/prototype.html`** (open it in a browser — it is a
+working maker). Copy shapes / colors / parts from it. Summary:
+- Shape (pick 1): ก้อนนุ่ม blob · โมจิ · ข้าวปั้น onigiri (with nori) · ซาลาเปา bun · เมฆ cloud · เยลลี่ jelly
+- Color (pick 1): 7 pastels incl. white (white gets a faint edge)
+- Eyes (pick 1): จุด · ตาวิบวับ · ยิ้มตาปิด · สงบ · > < · ขยิบตา
+- Mouth (pick 1): ยิ้ม · ω · ยิ้มกว้าง · o · เฉยๆ · แลบลิ้น
+- On the head (pick ONLY 1, keeps it minimal): ไม่มี · โบว์ · ใบไม้ · ดอกไม้ · หมวก · กิ๊บ · เชอร์รี่ · สตรอว์เบอร์รี่ · ส้ม
+- Other extras (pick many): แก้มชมพู · จมูก · แว่น · ต่างหู · แก้วกาแฟ
+- **Her rule: add-ons are flat soft color, NO dark outline** (she rejected outlined bow/leaf as "not minimal").
+  Only eyes/mouth/glasses use the dark line.
+
+Decided: buddy shows **at the top of the Today page** (head-only, small, next to the greeting). Just ONE
+buddy, nowhere else (Round 19 had many blobs and she found it too busy).
+
+Build plan (my defaults — fine to change if she says so):
+- `app/lib/buddy/` pure parts data + `renderBuddy(config)` → SVG; `app/components/Buddy.tsx`.
+- Tap the buddy on Today → a sheet/page "แต่งตัวของฉัน" with big preview + rows of choices (like the
+  prototype), Save. Before she makes one: show a default buddy (blob, blue, ตาวิบวับ, ยิ้ม, แก้มชมพู).
+- Store on the phone: localStorage `yfd:v1:buddy`; add to backup (`BACKUP_KEYS`), old backups still open.
+- Tests for config validation + backup. Then tsc, eslint, build, phone-size check, deploy, try on iPhone.
 
 ## Round 19b (2026-11-13) — 🤍 Calmer, minimal look (her pick: mix of A + B) ✅ LIVE
 
