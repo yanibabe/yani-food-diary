@@ -6,7 +6,7 @@
 
 ---
 
-## LIVE (updated 2026-11-13, Round 7)
+## LIVE (updated 2026-11-13, Round 8)
 
 - **App:** https://yani-food-diary.vercel.app  (Vercel, exm-labs account, free)
 - **Code:** https://github.com/yanibabe/yani-food-diary  (private; pushes auto-deploy)
@@ -17,6 +17,18 @@
   phone (localStorage + IndexedDB). Nobody sees anyone else's data. But everyone with
   the link uses Yani's OpenRouter key, so their AI photo/text checks spend HER credit.
   A simple passcode could be a later round.
+
+## Round 8 (2026-11-13) — "all three" round: reminder ✅ · passcode ⏳ · allergies ⏳
+
+She asked for all three ideas: backup reminder, AI passcode, allergy warnings. One at a time.
+- **Backup reminder ✅ (live):** `app/components/BackupReminder.tsx` on Today (today only).
+  Shows when the last backup — or, if never, the first meal — is 14+ days old. "สำรองเลย" →
+  `/profile#backup` (scrolls to the Backup card); "ไว้ทีหลัง" hides it 3 days
+  (`localStorage` `yfd:v1:backupSnooze`). Logic `backupDue()` / `snoozeUntil()` in `app/lib/backup.ts`.
+  Tested: `npm test` 36 pass (1 new); browser at iPhone size: card shows at 20 days (Thai),
+  "Back up now" lands on the card, a fresh backup hides it, 16 days → English text, Later hides it. Build passes.
+- **Passcode for AI ⏳:** not started — design question asked first.
+- **Allergy warnings ⏳:** not started — planned for the next chat.
 
 ## Round 7 (2026-11-13) — backup / restore ✅
 
