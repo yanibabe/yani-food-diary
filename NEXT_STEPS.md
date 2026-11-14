@@ -25,10 +25,11 @@ everyone else's apps. Her decision: use her own stationery-brand character (eats
 monocle). **Her rule: use her file exactly — never redraw, never recolor, never change the shape.**
 - Original file kept: `docs/character-original.png` (sheet with 4 sizes). `public/character.png` = the big one,
   cut out with `sips` (crop only, pixels untouched, white background kept). Shown on Today in a 72px white circle.
-- Today no longer opens the dress-up sheet. The old buddy/studio code (Buddy.tsx, app/lib/buddy, app/studio,
-  app/api/studio, tests/buddy.test.ts) is still in the folder but UNUSED — I asked her before deleting it.
+- Today no longer opens the dress-up sheet. With her OK, the old buddy/studio code was DELETED (Buddy.tsx,
+  app/lib/buddy, app/studio, app/api/studio, tests/buddy.test.ts). Old saved buddies in backups still restore
+  (backup key `buddy` kept, just unused). Design drafts in docs/buddy-design kept. Tests 78/78, tsc, eslint, build OK.
 - Idea 3 (buddy made from each person's name) she liked but couldn't picture; I showed a demo. Not decided.
-- Next: ask her (1) OK to delete the unused dress-up/studio code, (2) push live, (3) maybe use the character
+- Next: (1) push live (ask first) and try on iPhone, (2) maybe use the character
   elsewhere (app icon? empty states?) — ask, don't assume.
 
 ## Round 21 (2026-11-14) — 🎨 Yani's Parts Studio ✅ BUILT, saved in git, NOT pushed/live yet
