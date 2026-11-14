@@ -6,7 +6,7 @@ import { MacroCards, Sheet, StoredPhoto } from "./components/ui";
 import { BackupReminder } from "./components/BackupReminder";
 import { WeekKcalChart } from "./components/WeekKcalChart";
 import { WaterCard } from "./components/WaterCard";
-import Image from "next/image";
+import { CharacterMaker, CharacterPicture, useCharLook } from "./components/Character";
 import { guessSlot, shiftDateKey, shortDayLabel, thaiDateKey, thaiDateLabel } from "./lib/date";
 import { copyMeal, recentMeals, searchMeals } from "./lib/repeat";
 import { macroTargets, proteinTargetG } from "./lib/energy";
@@ -51,6 +51,8 @@ function TodayInner() {
   const [againView, setAgainView] = useState(false);
   const [againQuery, setAgainQuery] = useState("");
   const { tr, lang } = useLang();
+  const { look, save: saveLook } = useCharLook();
+  const [charOpen, setCharOpen] = useState(false);
 
   const dayEntries = useMemo(() => entries.filter((e) => e.date === date).sort((a, b) => a.createdAt - b.createdAt), [entries, date]);
   const total = useMemo(() => sumMacros(dayEntries.flatMap((e) => e.items.map(pickMacros))), [dayEntries]);
@@ -88,10 +90,10 @@ function TodayInner() {
         <div className="text-center">
           {date === today && (
             <div className="mb-1 flex flex-col items-center gap-0.5">
-              {/* Yani's own brand character. Her file, used exactly as drawn (only cut out of the sheet). */}
-              <span className="flex h-[72px] w-[72px] shrink-0 items-center justify-center overflow-hidden rounded-full bg-white" data-testid="character">
-                <Image src="/character.png" alt="" width={68} height={68} priority />
-              </span>
+              {/* Yani's own brand character. Her lines exactly as drawn; tap to dress up. */}
+              <button type="button" onClick={() => setCharOpen(true)} aria-label={tr("แต่งตัวน้อง", "Dress up")} data-testid="character">
+                <CharacterPicture look={look} size={84} />
+              </button>
               {goals.profile?.name && (
                 <p className="text-[15px] text-muted" data-testid="greeting">{tr("สวัสดี", "Hi")} {goals.profile.name}</p>
               )}
@@ -194,6 +196,8 @@ function TodayInner() {
           </button>
         </div>
       )}
+
+      {charOpen && <CharacterMaker start={look} onClose={() => setCharOpen(false)} onSave={saveLook} />}
 
       <Sheet open={addOpen} onClose={() => setAddOpen(false)} title={tr("เพิ่มอาหาร", "Add food")}>
         {againView ? (

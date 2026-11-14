@@ -6,7 +6,7 @@
 
 ---
 
-## LIVE (updated 2026-11-13, Round 20; Round 22 own brand character LIVE — "my buddy" character on Today)
+## LIVE (updated 2026-11-13, Round 20; Round 22 own character LIVE; Round 23 color+decorations local, not pushed — "my buddy" character on Today)
 
 - **App:** https://yani-food-diary.vercel.app  (Vercel, exm-labs account, free)
 - **Code:** https://github.com/yanibabe/yani-food-diary  (private; pushes auto-deploy)
@@ -17,6 +17,21 @@
   phone (localStorage + IndexedDB). Nobody sees anyone else's data. But everyone with
   the link uses Yani's OpenRouter key, so their AI photo/text checks spend HER credit.
   Since Round 8 the AI needs a passcode (typed once per phone), so strangers can't spend it.
+
+## Round 23 (2026-11-14) — 🎨 See-through character + body color + small decorations (local, NOT pushed)
+
+She asked: no white circle (just the character, like a PNG), and the color change + small decorations we talked about.
+- `scripts/character-layers.mjs` (no packages, Node zlib) turns `public/character.png` into:
+  `public/character-lines.png` (her ink exactly, paper see-through; spoon/fork/monocle/mouth stay solid white)
+  and `public/character-body.png` (mask of body + both hands + both feet, grown 3px under her lines).
+  White areas are found automatically; BODY_IDS = [1,5,6,8,9] (body, right hand, left hand, feet).
+- Today: tap the character → "แต่งตัวน้อง" sheet: 8 colors (white = original) + any-color picker,
+  ONE decoration (bow, flower, cherry, strawberry, clip, star, heart), pink cheeks, "back to original".
+  Saved in localStorage key `yfd:v1:buddy` (already in backups). Old Round 20 buddy data opens (color + cheeks kept).
+- Code: `app/lib/character.ts` (+ `tests/character.test.ts`), `app/components/Character.tsx`.
+- Checked in browser at iPhone size: every decoration, cheeks, colors, save, original look. 82/82 tests, tsc, eslint, build OK.
+- Small note: the hair clip is hard to see on a pink body (yellow+pink). Ask her if she wants other clip colors.
+- Next: push live (ask first), then try on her iPhone.
 
 ## Round 22 (2026-11-14) — 🐥 Yani's OWN brand character replaces the dress-up buddy ✅ LIVE
 
