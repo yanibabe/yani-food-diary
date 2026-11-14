@@ -6,7 +6,7 @@
 
 ---
 
-## LIVE (updated 2026-11-13, Round 20; Round 21 studio dropped; Round 22 own character, local, not pushed — "my buddy" character on Today)
+## LIVE (updated 2026-11-13, Round 20; Round 22 own brand character LIVE — "my buddy" character on Today)
 
 - **App:** https://yani-food-diary.vercel.app  (Vercel, exm-labs account, free)
 - **Code:** https://github.com/yanibabe/yani-food-diary  (private; pushes auto-deploy)
@@ -18,7 +18,7 @@
   the link uses Yani's OpenRouter key, so their AI photo/text checks spend HER credit.
   Since Round 8 the AI needs a passcode (typed once per phone), so strangers can't spend it.
 
-## Round 22 (2026-11-14) — 🐥 Yani's OWN brand character replaces the dress-up buddy (local, NOT pushed)
+## Round 22 (2026-11-14) — 🐥 Yani's OWN brand character replaces the dress-up buddy ✅ LIVE
 
 She tried the studio and said it was too complicated, and that pick-a-shape/face/color feels the same as
 everyone else's apps. Her decision: use her own stationery-brand character (eats with spoon + fork, wink,
@@ -29,7 +29,9 @@ monocle). **Her rule: use her file exactly — never redraw, never recolor, neve
   app/lib/buddy, app/studio, app/api/studio, tests/buddy.test.ts). Old saved buddies in backups still restore
   (backup key `buddy` kept, just unused). Design drafts in docs/buddy-design kept. Tests 78/78, tsc, eslint, build OK.
 - Idea 3 (buddy made from each person's name) she liked but couldn't picture; I showed a demo. Not decided.
-- Next: (1) push live (ask first) and try on iPhone, (2) maybe use the character
+- Pushed 2026-11-14 (2aafd0a). Live check: home 200, /character.png 200 and byte-identical to the local file,
+  /studio 404, AI status configured. NOT yet tried on her iPhone.
+- Next: (1) she tries it on her iPhone, (2) maybe use the character
   elsewhere (app icon? empty states?) — ask, don't assume.
 
 ## Round 21 (2026-11-14) — 🎨 Yani's Parts Studio ✅ BUILT, saved in git, NOT pushed/live yet
