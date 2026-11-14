@@ -6,7 +6,7 @@
 
 ---
 
-## LIVE (updated 2026-11-13, Round 20; Round 22 own character LIVE; Round 23 color+decorations local, not pushed — "my buddy" character on Today)
+## LIVE (updated 2026-11-13, Round 20; Round 22 own character LIVE; Round 23 color+decorations LIVE — "my buddy" character on Today)
 
 - **App:** https://yani-food-diary.vercel.app  (Vercel, exm-labs account, free)
 - **Code:** https://github.com/yanibabe/yani-food-diary  (private; pushes auto-deploy)
@@ -18,7 +18,7 @@
   the link uses Yani's OpenRouter key, so their AI photo/text checks spend HER credit.
   Since Round 8 the AI needs a passcode (typed once per phone), so strangers can't spend it.
 
-## Round 23 (2026-11-14) — 🎨 See-through character + body color + small decorations (local, NOT pushed)
+## Round 23 (2026-11-14) — 🎨 See-through character + body color + small decorations ✅ LIVE
 
 She asked: no white circle (just the character, like a PNG), and the color change + small decorations we talked about.
 - `scripts/character-layers.mjs` (no packages, Node zlib) turns `public/character.png` into:
@@ -31,7 +31,8 @@ She asked: no white circle (just the character, like a PNG), and the color chang
 - Code: `app/lib/character.ts` (+ `tests/character.test.ts`), `app/components/Character.tsx`.
 - Checked in browser at iPhone size: every decoration, cheeks, colors, save, original look. 82/82 tests, tsc, eslint, build OK.
 - Small note: the hair clip is hard to see on a pink body (yellow+pink). Ask her if she wants other clip colors.
-- Next: push live (ask first), then try on her iPhone.
+- Pushed 2c57f28; live check: home 200, both new layer files byte-identical to local, AI configured. NOT yet tried on her iPhone.
+- Next: she tries it on her iPhone.
 
 ## Round 22 (2026-11-14) — 🐥 Yani's OWN brand character replaces the dress-up buddy ✅ LIVE
 
