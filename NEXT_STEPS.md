@@ -30,6 +30,11 @@ She saw a wall of colorful doodle-face circles and asked for that style. Steps s
   default color (she can change, incl. any color); cheeks row added. "Day mood": she designs her own face;
   the app swaps only EYES + MOUTH (+ pink cheeks): ปกติ (own) · ง่วงๆ (morning, nothing logged) ·
   ดีใจ (water goal / all meals logged) · ใจดี (over target — NEVER sad about eating). On/off switch.
+- v4 (2026-11-14): she found some fruit SHAPES unnatural ("dragon fruit spikes look too AI"). Her idea: the
+  body is ALWAYS a circle; order = color → eyes/brows/nose/mouth/cheeks → "แต่งเป็นผลไม้" (one choice): ไม่แต่ง ·
+  apple · peach · orange (leaf + 3 shine dots) · lemon (side tips) · strawberry · cherry · tomato · mangosteen ·
+  blueberry · durian (even spikes behind the circle) · pineapple · watermelon (side stripes). Marks use
+  see-through white/black so they suit any color. Dragon fruit removed.
 - Still open: does the fruit buddy REPLACE the Round 20 blob buddy (I suggested replace) — she has not
   answered yet. Whether the old head add-ons stay. Then build it into the app (reuse Round 20 plumbing:
   `app/lib/buddy/`, `Buddy.tsx`, `yfd:v1:buddy`; old saved buddies must still open).
