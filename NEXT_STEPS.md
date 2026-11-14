@@ -18,27 +18,44 @@
   the link uses Yani's OpenRouter key, so their AI photo/text checks spend HER credit.
   Since Round 8 the AI needs a passcode (typed once per phone), so strangers can't spend it.
 
-## Round 21 (DESIGN in progress, 2026-11-14) — 🍑 Fruit buddy + face changes with the day
+## Round 21 (NEXT — plan APPROVED 2026-11-14, not built yet) — 🎨 Yani's Parts Studio
 
-She saw a wall of colorful doodle-face circles and asked for that style. Steps so far (all in `docs/buddy-design/`):
-- `circle-prototype.html` v2: pastel (she picked B over bright A), any-color picker (phone's own color
-  picker), choice buttons show ONLY that part, more parts (20 eyes, 11 brows, 10 noses, 16 mouths).
-- She asked "will it look like other apps?" — told her honestly: the style is common (mood-tracker apps),
-  not copying, but not unique. She chose to make it ours: FRUIT shapes + face changes with the day.
-- `fruit-prototype.html` v3 (current): 14 shapes (circle, apple, orange, strawberry, peach, lemon, pear,
-  cherry, watermelon, mangosteen, durian, dragon fruit, pineapple, blueberry), each with a natural pastel
-  default color (she can change, incl. any color); cheeks row added. "Day mood": she designs her own face;
-  the app swaps only EYES + MOUTH (+ pink cheeks): ปกติ (own) · ง่วงๆ (morning, nothing logged) ·
-  ดีใจ (water goal / all meals logged) · ใจดี (over target — NEVER sad about eating). On/off switch.
-- v4 (2026-11-14): she found some fruit SHAPES unnatural ("dragon fruit spikes look too AI"). Her idea: the
-  body is ALWAYS a circle; order = color → eyes/brows/nose/mouth/cheeks → "แต่งเป็นผลไม้" (one choice): ไม่แต่ง ·
-  apple · peach · orange (leaf + 3 shine dots) · lemon (side tips) · strawberry · cherry · tomato · mangosteen ·
-  blueberry · durian (even spikes behind the circle) · pineapple · watermelon (side stripes). Marks use
-  see-through white/black so they suit any color. Dragon fruit removed.
-- Still open: does the fruit buddy REPLACE the Round 20 blob buddy (I suggested replace) — she has not
-  answered yet. Whether the old head add-ons stay. Then build it into the app (reuse Round 20 plumbing:
-  `app/lib/buddy/`, `Buddy.tsx`, `yfd:v1:buddy`; old saved buddies must still open).
-- Preview: launch config `buddy-proto` (port 3238) serves `docs/buddy-design/`.
+**Start here in the next chat.** Decisions are made; just build it. She works on her **MacBook**.
+
+How we got here (all drafts in `docs/buddy-design/`, kept for reference only, NOT to be built):
+circle doodle faces (`circle-prototype.html`: she liked pastel + any-color picker + part-only choice buttons),
+fruit shapes / fruit decorations on a circle (`fruit-prototype.html` v3–v4) — she said "ยังไม่ใช่". Final wish:
+1. **Shapes go back to Round 20's 6** (ก้อนนุ่ม · โมจิ · ข้าวปั้น · ซาลาเปา · เมฆ · เยลลี่). Customers pick any.
+2. **A studio for HER (the app maker), not for customers**: she designs the face parts herself from basic
+   elements I provide. The customer's "แต่งตัวของฉัน" sheet shows ONLY the parts she designed and switched on.
+
+### Build plan
+- **Studio page `/studio`** — works only in dev (`npm run dev`, launch config `food-diary`, port 3218).
+  In production it shows "not available" and the API returns 404. Not linked from the app.
+- **API `app/api/studio/parts/route.ts`** (dev only): GET/PUT → reads/writes
+  `app/lib/buddy/studio-parts.json` (committed to git, shipped with the app). Validate with zod.
+- **Data:** `Part = { id, kind: "eyes"|"brows"|"nose"|"mouth", name, visible, items: El[] }`,
+  `El = { type, x, y, size, rot, thick, color, filled?, mirror }` in the 100×100 face box.
+  `mirror` = also draw a copy flipped at x → 100−x (so eyes/brows/cheeks come out even).
+- **Elements (our own simple shapes):** dot · ring · oval · oval ring · line · curve (smile) · deep curve ·
+  wave · angle (>) · cross (x) · heart · star · sparkle (4-point) · tear · half-circle (open mouth) · triangle.
+  Colors: ink #2a2622 default, white (eye shine), pinks, red, tear blue, + any color picker.
+- **Studio layout (wide Mac screen):** LEFT = tabs ตา/คิ้ว/จมูก/ปาก + "คลังของฉัน" list (edit · duplicate ·
+  delete · switch "ลูกค้าเห็น"). MIDDLE = big live buddy (pick shape + color for preview) with the other
+  categories' parts shown, the edited part highlighted, a faint guide box for that part's zone. RIGHT =
+  element buttons + selected element controls (size, rotate, thickness, color, filled, mirror, layer up/down,
+  duplicate, delete). Drag on the canvas with the mouse; arrow keys nudge. Name + Save.
+- **Seed the library** with element-built versions of the current parts using the SAME ids
+  (eyes: dot, shine, happy, calm, squint, wink · mouths: smile, cat, open, o, flat, tongue) + a few brows/noses,
+  so buddies people already saved still open the same.
+- **Customer sheet (`Buddy.tsx`):** shape · color · eyes · brows (new) · nose (new, replaces the "nose" extra) ·
+  mouth · on the head (unchanged) · extras (blush, glasses, earrings, coffee). Choice buttons show ONLY the
+  part (zoomed into its zone — she asked for this). Hidden parts never show. Unknown ids → default
+  (`cleanBuddy`). Old saved buddies + old backups must still open.
+- **"ใส่ลงแอป" flow:** she designs → says "ใส่ลงแอป" → I run tests/tsc/eslint/build, commit the JSON, push.
+- Tests: parts JSON validation, mirror math, cleanBuddy with studio ids, old configs still load.
+- Parked ideas (ask her later, do NOT build now): face changes with the day (her own face + mood swaps of
+  eyes/mouth; never sad about eating) · any-color picker for the customer body color.
 
 ## Round 20 (2026-11-13) — 🍡 "My buddy" character on Today ✅ LIVE (not yet tried on her iPhone)
 
