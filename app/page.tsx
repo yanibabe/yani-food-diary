@@ -6,9 +6,7 @@ import { MacroCards, Sheet, StoredPhoto } from "./components/ui";
 import { BackupReminder } from "./components/BackupReminder";
 import { WeekKcalChart } from "./components/WeekKcalChart";
 import { WaterCard } from "./components/WaterCard";
-import { BuddyMaker, BuddyPicture } from "./components/Buddy";
-import { useBuddy } from "./lib/buddy/store";
-import { DEFAULT_BUDDY } from "./lib/buddy/parts";
+import Image from "next/image";
 import { guessSlot, shiftDateKey, shortDayLabel, thaiDateKey, thaiDateLabel } from "./lib/date";
 import { copyMeal, recentMeals, searchMeals } from "./lib/repeat";
 import { macroTargets, proteinTargetG } from "./lib/energy";
@@ -53,8 +51,6 @@ function TodayInner() {
   const [againView, setAgainView] = useState(false);
   const [againQuery, setAgainQuery] = useState("");
   const { tr, lang } = useLang();
-  const { buddy, loaded: buddyLoaded, save: saveBuddy } = useBuddy();
-  const [buddyOpen, setBuddyOpen] = useState(false);
 
   const dayEntries = useMemo(() => entries.filter((e) => e.date === date).sort((a, b) => a.createdAt - b.createdAt), [entries, date]);
   const total = useMemo(() => sumMacros(dayEntries.flatMap((e) => e.items.map(pickMacros))), [dayEntries]);
@@ -92,14 +88,10 @@ function TodayInner() {
         <div className="text-center">
           {date === today && (
             <div className="mb-1 flex flex-col items-center gap-0.5">
-              <button
-                className="h-[52px] w-[52px] shrink-0 rounded-full"
-                onClick={() => setBuddyOpen(true)}
-                aria-label={tr("แต่งตัวของฉัน", "My buddy")}
-                data-testid="buddy-button"
-              >
-                {buddyLoaded && <BuddyPicture buddy={buddy ?? DEFAULT_BUDDY} size={52} />}
-              </button>
+              {/* Yani's own brand character. Her file, used exactly as drawn (only cut out of the sheet). */}
+              <span className="flex h-[72px] w-[72px] shrink-0 items-center justify-center overflow-hidden rounded-full bg-white" data-testid="character">
+                <Image src="/character.png" alt="" width={68} height={68} priority />
+              </span>
               {goals.profile?.name && (
                 <p className="text-[15px] text-muted" data-testid="greeting">{tr("สวัสดี", "Hi")} {goals.profile.name}</p>
               )}
@@ -202,8 +194,6 @@ function TodayInner() {
           </button>
         </div>
       )}
-
-      {buddyOpen && <BuddyMaker open start={buddy} onClose={() => setBuddyOpen(false)} onSave={saveBuddy} />}
 
       <Sheet open={addOpen} onClose={() => setAddOpen(false)} title={tr("เพิ่มอาหาร", "Add food")}>
         {againView ? (

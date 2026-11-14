@@ -6,7 +6,7 @@
 
 ---
 
-## LIVE (updated 2026-11-13, Round 20; Round 21 built locally, not pushed — "my buddy" character on Today)
+## LIVE (updated 2026-11-13, Round 20; Round 21 studio dropped; Round 22 own character, local, not pushed — "my buddy" character on Today)
 
 - **App:** https://yani-food-diary.vercel.app  (Vercel, exm-labs account, free)
 - **Code:** https://github.com/yanibabe/yani-food-diary  (private; pushes auto-deploy)
@@ -17,6 +17,19 @@
   phone (localStorage + IndexedDB). Nobody sees anyone else's data. But everyone with
   the link uses Yani's OpenRouter key, so their AI photo/text checks spend HER credit.
   Since Round 8 the AI needs a passcode (typed once per phone), so strangers can't spend it.
+
+## Round 22 (2026-11-14) — 🐥 Yani's OWN brand character replaces the dress-up buddy (local, NOT pushed)
+
+She tried the studio and said it was too complicated, and that pick-a-shape/face/color feels the same as
+everyone else's apps. Her decision: use her own stationery-brand character (eats with spoon + fork, wink,
+monocle). **Her rule: use her file exactly — never redraw, never recolor, never change the shape.**
+- Original file kept: `docs/character-original.png` (sheet with 4 sizes). `public/character.png` = the big one,
+  cut out with `sips` (crop only, pixels untouched, white background kept). Shown on Today in a 72px white circle.
+- Today no longer opens the dress-up sheet. The old buddy/studio code (Buddy.tsx, app/lib/buddy, app/studio,
+  app/api/studio, tests/buddy.test.ts) is still in the folder but UNUSED — I asked her before deleting it.
+- Idea 3 (buddy made from each person's name) she liked but couldn't picture; I showed a demo. Not decided.
+- Next: ask her (1) OK to delete the unused dress-up/studio code, (2) push live, (3) maybe use the character
+  elsewhere (app icon? empty states?) — ask, don't assume.
 
 ## Round 21 (2026-11-14) — 🎨 Yani's Parts Studio ✅ BUILT, saved in git, NOT pushed/live yet
 
