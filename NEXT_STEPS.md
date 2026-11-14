@@ -6,7 +6,7 @@
 
 ---
 
-## LIVE (updated 2026-11-13, Round 20 — "my buddy" character on Today)
+## LIVE (updated 2026-11-13, Round 20; Round 21 built locally, not pushed — "my buddy" character on Today)
 
 - **App:** https://yani-food-diary.vercel.app  (Vercel, exm-labs account, free)
 - **Code:** https://github.com/yanibabe/yani-food-diary  (private; pushes auto-deploy)
@@ -18,9 +18,27 @@
   the link uses Yani's OpenRouter key, so their AI photo/text checks spend HER credit.
   Since Round 8 the AI needs a passcode (typed once per phone), so strangers can't spend it.
 
-## Round 21 (NEXT — plan APPROVED 2026-11-14, not built yet) — 🎨 Yani's Parts Studio
+## Round 21 (2026-11-14) — 🎨 Yani's Parts Studio ✅ BUILT, saved in git, NOT pushed/live yet
 
-**Start here in the next chat.** Decisions are made; just build it. She works on her **MacBook**.
+**Start here in the next chat.** The studio is built and works on her Mac. Next = SHE designs parts.
+
+### What's done
+- `/studio` (dev only) at http://localhost:3218/studio — launch config `food-diary`. Production shows
+  "not available"; `/api/studio/parts` returns 404 outside `npm run dev` (logic checked, not tried on the live site).
+- Elements + parts-file checks + drawing: `app/lib/buddy/elements.ts`. Parts file: `app/lib/buddy/studio-parts.json`.
+- Seeded with the Round 20 eyes/mouths (same ids) + 3 brows (soft, straight, worried) + 3 noses
+  (button, tiny, heart). The seed brows/noses are MY drafts, all switched on — she may edit/hide/delete them.
+- Customer sheet: eyes · brows (new) · nose (new; old "nose" extra → `button`) · mouth as picture-only buttons
+  on the buddy's own color. Old saved buddies + old backups still open (tested).
+- Checked in the browser: studio add/drag/mirror/unsaved warning; save API round-trip + bad file refused;
+  old Round 20 buddy opens on Today with its nose; dress-up sheet rows. `npm test` 90/90 pass; tsc, eslint, build OK.
+
+### Next
+1. Yani opens the studio (I start the dev server for her) and designs parts. "บันทึกลงไฟล์" writes the JSON.
+2. She says **"ใส่ลงแอป"** → I run tests/tsc/eslint/build, commit the JSON, **push** (= goes live), check live.
+3. Then try it on her iPhone (Round 20 + 21 not yet tried on the phone).
+
+### Original plan (for reference)
 
 How we got here (all drafts in `docs/buddy-design/`, kept for reference only, NOT to be built):
 circle doodle faces (`circle-prototype.html`: she liked pastel + any-color picker + part-only choice buttons),

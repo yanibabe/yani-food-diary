@@ -2,6 +2,10 @@
 // All parts are drawn here as SVG text. No React and no browser storage, so the tests can use it.
 // Copied from the approved design: docs/buddy-design/prototype.html
 // Her rule: add-ons are flat soft color with NO dark outline. Only eyes/mouth/glasses use the dark line.
+// Round 21: eyes, brows, nose and mouth come from Yani's Parts Studio (studio-parts.json), not from here.
+
+import shipped from "./studio-parts.json" with { type: "json" };
+import { INK, KINDS, checkLibrary, partSvg, type Library, type Part, type PartKind } from "./elements.ts";
 
 export type Name = { th: string; en: string };
 
@@ -36,34 +40,18 @@ export const SHAPES = {
 
 export const COLORS = ["#F4C0D1", "#FAC775", "#9FE1CB", "#B5D4F4", "#CECBF6", "#F5C4B3", "#ffffff"] as const;
 
-const INK = "#2a2622";
-const k = `stroke="${INK}" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"`;
 
-export const EYES = {
-  dot: { th: "จุด", en: "Dots", s: `<circle cx="40" cy="52" r="3" fill="${INK}"/><circle cx="60" cy="52" r="3" fill="${INK}"/>` },
-  shine: {
-    th: "ตาวิบวับ",
-    en: "Sparkly",
-    s: `<ellipse cx="40" cy="52" rx="4.2" ry="5" fill="${INK}"/><ellipse cx="60" cy="52" rx="4.2" ry="5" fill="${INK}"/><circle cx="41.5" cy="50" r="1.6" fill="#fff"/><circle cx="61.5" cy="50" r="1.6" fill="#fff"/>`,
-  },
-  happy: { th: "ยิ้มตาปิด", en: "Happy", s: `<path d="M35 53 Q40 47 45 53 M55 53 Q60 47 65 53" ${k}/>` },
-  calm: { th: "สงบ", en: "Calm", s: `<path d="M35 50 Q40 55 45 50 M55 50 Q60 55 65 50" ${k}/>` },
-  squint: { th: "> <", en: "> <", s: `<path d="M36 48 L43 52 L36 56 M64 48 L57 52 L64 56" ${k}/>` },
-  wink: { th: "ขยิบตา", en: "Wink", s: `<circle cx="40" cy="52" r="3" fill="${INK}"/><path d="M55 53 Q60 48 65 53" ${k}/>` },
-} satisfies Record<string, Name & { s: string }>;
+/** The face parts that ship with the app. A broken file must never break the app: then there are just no parts. */
+const checked = checkLibrary(shipped);
+export const LIBRARY: Library = checked.ok ? checked.library : { parts: [] };
 
-export const MOUTHS = {
-  smile: { th: "ยิ้ม", en: "Smile", s: `<path d="M45 61 Q50 66 55 61" ${k}/>` },
-  cat: { th: "ω", en: "ω", s: `<path d="M44 61 Q47 65 50 61 Q53 65 56 61" ${k}/>` },
-  open: {
-    th: "ยิ้มกว้าง",
-    en: "Big smile",
-    s: `<path d="M44 60 Q50 70 56 60Z" fill="#D85A30" stroke="${INK}" stroke-width="1.6" stroke-linejoin="round"/>`,
-  },
-  o: { th: "o", en: "o", s: `<ellipse cx="50" cy="63" rx="2.4" ry="3" fill="${INK}"/>` },
-  flat: { th: "เฉยๆ", en: "Plain", s: `<path d="M46 62 L54 62" ${k}/>` },
-  tongue: { th: "แลบลิ้น", en: "Tongue", s: `<path d="M44 60 Q50 65 56 60" ${k}/><path d="M48 62.5 Q50 69 52 62.5Z" fill="#ED93B1"/>` },
-} satisfies Record<string, Name & { s: string }>;
+export function partsOf(lib: Library, kind: PartKind, onlyVisible = false): Part[] {
+  return lib.parts.filter((p) => p.kind === kind && (!onlyVisible || p.visible));
+}
+
+function findPart(lib: Library, kind: PartKind, id: string): Part | undefined {
+  return lib.parts.find((p) => p.kind === kind && p.id === id);
+}
 
 function flower(y: number): string {
   const cx = 33;
@@ -129,23 +117,23 @@ export const HEADS = {
 /** Other extras: pick as many as she likes. */
 export const EXTRAS = {
   blush: { th: "แก้มชมพู", en: "Pink cheeks" },
-  nose: { th: "จมูก", en: "Nose" },
   glasses: { th: "แว่น", en: "Glasses" },
   earrings: { th: "ต่างหู", en: "Earrings" },
   coffee: { th: "แก้วกาแฟ", en: "Coffee" },
 } satisfies Record<string, Name>;
 
 export type BuddyShape = keyof typeof SHAPES;
-export type BuddyEyes = keyof typeof EYES;
-export type BuddyMouth = keyof typeof MOUTHS;
 export type BuddyHead = keyof typeof HEADS;
 export type BuddyExtra = keyof typeof EXTRAS;
 
 export type BuddyConfig = {
   shape: BuddyShape;
   color: string;
-  eyes: BuddyEyes;
-  mouth: BuddyMouth;
+  /** Studio part ids. Brows and nose may be "none". */
+  eyes: string;
+  brows: string;
+  nose: string;
+  mouth: string;
   head: BuddyHead;
   extras: BuddyExtra[];
 };
@@ -155,6 +143,8 @@ export const DEFAULT_BUDDY: BuddyConfig = {
   shape: "blob",
   color: "#B5D4F4",
   eyes: "shine",
+  brows: "none",
+  nose: "none",
   mouth: "smile",
   head: "none",
   extras: ["blush"],
@@ -164,19 +154,32 @@ function pick<T extends string>(table: Record<T, unknown>, v: unknown, fallback:
   return typeof v === "string" && Object.hasOwn(table, v) ? (v as T) : fallback;
 }
 
+/** Kinds a buddy must always have (no "none"). */
+const NEEDED: PartKind[] = ["eyes", "mouth"];
+
+function pickPart(lib: Library, kind: PartKind, v: unknown, fallback: string): string {
+  if (typeof v === "string" && (v === "none" ? !NEEDED.includes(kind) : findPart(lib, kind, v))) return v;
+  if (fallback === "none" || findPart(lib, kind, fallback)) return fallback;
+  // The default part was deleted in the studio: use the first one she shows.
+  return partsOf(lib, kind, true)[0]?.id ?? partsOf(lib, kind)[0]?.id ?? "none";
+}
+
 /** Turn anything (saved text, a backup) into a safe buddy. Unknown parts fall back to the default. */
-export function cleanBuddy(v: unknown): BuddyConfig {
+export function cleanBuddy(v: unknown, lib: Library = LIBRARY): BuddyConfig {
   const o = v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : {};
   const d = DEFAULT_BUDDY;
   const color = typeof o.color === "string" ? COLORS.find((c) => c.toLowerCase() === (o.color as string).toLowerCase()) : undefined;
-  const extras = Array.isArray(o.extras)
-    ? (Object.keys(EXTRAS) as BuddyExtra[]).filter((x) => (o.extras as unknown[]).includes(x))
-    : d.extras;
+  const oldExtras = Array.isArray(o.extras) ? (o.extras as unknown[]) : null;
+  const extras = oldExtras ? (Object.keys(EXTRAS) as BuddyExtra[]).filter((x) => oldExtras.includes(x)) : d.extras;
+  // Before Round 21 the nose was an on/off extra. Keep those buddies' noses.
+  const nose = o.nose === undefined && oldExtras?.includes("nose") ? "button" : o.nose;
   return {
     shape: pick(SHAPES, o.shape, d.shape),
     color: color ?? d.color,
-    eyes: pick(EYES, o.eyes, d.eyes),
-    mouth: pick(MOUTHS, o.mouth, d.mouth),
+    eyes: pickPart(lib, "eyes", o.eyes, d.eyes),
+    brows: pickPart(lib, "brows", o.brows, d.brows),
+    nose: pickPart(lib, "nose", nose, d.nose),
+    mouth: pickPart(lib, "mouth", o.mouth, d.mouth),
     head: pick(HEADS, o.head, d.head),
     extras,
   };
@@ -196,9 +199,10 @@ export function parseBuddy(raw: string | null): BuddyConfig | null {
 /** The box to draw in: a little bigger than 100x100 so head add-ons and the coffee are not cut off. */
 export const BUDDY_VIEWBOX = "-4 -8 108 108";
 
-/** The inside of the <svg>: body, face, add-ons. Always built from our own parts (never from saved text). */
-export function buddySvg(input: BuddyConfig): string {
-  const b = cleanBuddy(input);
+/** The inside of the <svg>: body, face, add-ons. Always built from our own parts (never from saved text).
+ *  `skip` leaves one kind of face part out (the studio draws the part being edited on top by itself). */
+export function buddySvg(input: BuddyConfig, lib: Library = LIBRARY, skip?: PartKind): string {
+  const b = cleanBuddy(input, lib);
   const s: Shape = SHAPES[b.shape];
   const has = (x: BuddyExtra) => b.extras.includes(x);
   let o = `<path d="${s.d}" fill="${b.color}" stroke="${b.color === "#ffffff" ? "#e2ddd5" : "none"}" stroke-width="1.5"/>`;
@@ -207,9 +211,11 @@ export function buddySvg(input: BuddyConfig): string {
 
   let f = "";
   if (has("blush")) f += '<ellipse cx="33" cy="60" rx="5" ry="3" fill="#ED93B1" opacity=".55"/><ellipse cx="67" cy="60" rx="5" ry="3" fill="#ED93B1" opacity=".55"/>';
-  f += EYES[b.eyes].s;
-  if (has("nose")) f += '<ellipse cx="50" cy="57" rx="2.2" ry="1.6" fill="#D85A30" opacity=".7"/>';
-  f += MOUTHS[b.mouth].s;
+  for (const kind of ["brows", "eyes", "nose", "mouth"] as const) {
+    if (kind === skip) continue;
+    const part = findPart(lib, kind, b[kind]);
+    if (part) f += partSvg(part);
+  }
   if (has("glasses")) f += `<g stroke="${INK}" stroke-width="1.8" fill="none"><circle cx="40" cy="52" r="8"/><circle cx="60" cy="52" r="8"/><path d="M48 51 Q50 49 52 51"/></g>`;
   o += `<g transform="translate(0 ${s.dy})">${f}</g>`;
 
@@ -225,3 +231,5 @@ export function buddySvg(input: BuddyConfig): string {
   }
   return o;
 }
+
+export { KINDS };

@@ -11,7 +11,7 @@ export function OnboardingGate({ children }: { children: React.ReactNode }) {
   const { goals } = useStore();
   const path = usePathname();
   const router = useRouter();
-  const locked = !isOnboarded(goals) && path !== "/welcome";
+  const locked = !isOnboarded(goals) && path !== "/welcome" && path !== "/studio";
   useEffect(() => {
     if (locked) router.replace("/welcome");
   }, [locked, router]);

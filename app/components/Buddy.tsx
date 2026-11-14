@@ -9,15 +9,30 @@ import {
   COLORS,
   DEFAULT_BUDDY,
   EXTRAS,
-  EYES,
   HEADS,
-  MOUTHS,
+  LIBRARY,
   SHAPES,
   buddySvg,
+  partsOf,
   type BuddyConfig,
   type BuddyExtra,
   type Name,
 } from "../lib/buddy/parts";
+import { KIND_LABELS, ZONES, partSvg, type Part, type PartKind } from "../lib/buddy/elements";
+
+/** Just one face part, zoomed into its area (her wish: choice buttons show only the part). */
+export function PartPicture({ part, kind, size }: { part: Pick<Part, "items">; kind: PartKind; size: number }) {
+  const z = ZONES[kind];
+  return (
+    <svg
+      viewBox={`${z.x} ${z.y} ${z.w} ${z.h}`}
+      width={size}
+      height={Math.round((size * z.h) / z.w)}
+      aria-hidden
+      dangerouslySetInnerHTML={{ __html: partSvg(part) }}
+    />
+  );
+}
 
 /** The drawing. Safe to inject: buddySvg only ever uses our own parts, never saved text. */
 export function BuddyPicture({ buddy, size, className = "" }: { buddy: BuddyConfig; size: number; className?: string }) {
@@ -76,7 +91,37 @@ export function BuddyMaker({
   const toggle = (x: BuddyExtra) =>
     setDraft((d) => ({ ...d, extras: d.extras.includes(x) ? d.extras.filter((e) => e !== x) : [...d.extras, x] }));
 
-  function choices<T extends string>(table: Record<T, Name>, key: "shape" | "eyes" | "mouth" | "head") {
+  /** Only the parts Yani switched on in her studio. The buddy's own color sits behind, so it looks like her face. */
+  function partChoices(kind: PartKind) {
+    const list = partsOf(LIBRARY, kind, true);
+    const optional = kind === "brows" || kind === "nose";
+    return (
+      <>
+        {optional && (
+          <Chip on={draft[kind] === "none"} onClick={() => set(kind, "none")} testId={`buddy-${kind}-none`}>
+            {tr("ไม่มี", "None")}
+          </Chip>
+        )}
+        {list.map((p) => (
+          <button
+            key={p.id}
+            type="button"
+            onClick={() => set(kind, p.id)}
+            aria-pressed={draft[kind] === p.id}
+            aria-label={name(p.name) || p.name.th}
+            title={name(p.name) || p.name.th}
+            data-testid={`buddy-${kind}-${p.id}`}
+            className={`flex h-12 w-[68px] items-center justify-center overflow-hidden rounded-2xl border ${draft[kind] === p.id ? "border-ink outline-2 outline-offset-1 outline-ink" : "border-line"}`}
+            style={{ background: draft.color }}
+          >
+            <PartPicture part={p} kind={kind} size={60} />
+          </button>
+        ))}
+      </>
+    );
+  }
+
+  function choices<T extends string>(table: Record<T, Name>, key: "shape" | "head") {
     return (Object.keys(table) as T[]).map((v) => (
       <Chip key={v} on={draft[key] === v} onClick={() => set(key, v as never)} testId={`buddy-${key}-${v}`}>
         {name(table[v])}
@@ -109,8 +154,13 @@ export function BuddyMaker({
           ))}
         </Row>
 
-        <Row label={tr("ตา", "Eyes")}>{choices(EYES, "eyes")}</Row>
-        <Row label={tr("ปาก", "Mouth")}>{choices(MOUTHS, "mouth")}</Row>
+        {(["eyes", "brows", "nose", "mouth"] as const).map((kind) =>
+          kind !== "eyes" && kind !== "mouth" && partsOf(LIBRARY, kind, true).length === 0 ? null : (
+            <Row key={kind} label={name(KIND_LABELS[kind])}>
+              {partChoices(kind)}
+            </Row>
+          ),
+        )}
         <Row label={tr("บนหัว (เลือก 1 อย่าง)", "On the head (pick 1)")}>{choices(HEADS, "head")}</Row>
 
         <Row label={tr("ของแต่งอื่นๆ (เลือกได้หลายอัน)", "Other extras (pick any)")}>
