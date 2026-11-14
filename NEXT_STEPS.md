@@ -18,6 +18,23 @@
   the link uses Yani's OpenRouter key, so their AI photo/text checks spend HER credit.
   Since Round 8 the AI needs a passcode (typed once per phone), so strangers can't spend it.
 
+## Round 21 (DESIGN in progress, 2026-11-14) — 🍑 Fruit buddy + face changes with the day
+
+She saw a wall of colorful doodle-face circles and asked for that style. Steps so far (all in `docs/buddy-design/`):
+- `circle-prototype.html` v2: pastel (she picked B over bright A), any-color picker (phone's own color
+  picker), choice buttons show ONLY that part, more parts (20 eyes, 11 brows, 10 noses, 16 mouths).
+- She asked "will it look like other apps?" — told her honestly: the style is common (mood-tracker apps),
+  not copying, but not unique. She chose to make it ours: FRUIT shapes + face changes with the day.
+- `fruit-prototype.html` v3 (current): 14 shapes (circle, apple, orange, strawberry, peach, lemon, pear,
+  cherry, watermelon, mangosteen, durian, dragon fruit, pineapple, blueberry), each with a natural pastel
+  default color (she can change, incl. any color); cheeks row added. "Day mood": she designs her own face;
+  the app swaps only EYES + MOUTH (+ pink cheeks): ปกติ (own) · ง่วงๆ (morning, nothing logged) ·
+  ดีใจ (water goal / all meals logged) · ใจดี (over target — NEVER sad about eating). On/off switch.
+- Still open: does the fruit buddy REPLACE the Round 20 blob buddy (I suggested replace) — she has not
+  answered yet. Whether the old head add-ons stay. Then build it into the app (reuse Round 20 plumbing:
+  `app/lib/buddy/`, `Buddy.tsx`, `yfd:v1:buddy`; old saved buddies must still open).
+- Preview: launch config `buddy-proto` (port 3238) serves `docs/buddy-design/`.
+
 ## Round 20 (2026-11-13) — 🍡 "My buddy" character on Today ✅ LIVE (not yet tried on her iPhone)
 
 Built from the approved design in `docs/buddy-design/prototype.html` (her own idea: a soft blob/food buddy
