@@ -1,6 +1,5 @@
 import { AiError, suggestMeals } from "@/app/lib/server/ai";
 import { passcodeBlock } from "@/app/lib/server/passcode";
-import type { RecipeOption } from "@/app/lib/suggest";
 
 export const maxDuration = 60;
 
@@ -19,21 +18,12 @@ export async function POST(req: Request) {
   const lang = body?.lang === "en" ? "en" : "th";
   const blocked = await passcodeBlock(req, lang);
   if (blocked) return blocked;
-  const recipes: RecipeOption[] = (Array.isArray(body.recipes) ? body.recipes : []).slice(0, 30).map((r: Record<string, unknown>) => ({
-    id: String(r?.id ?? "").slice(0, 60),
-    name: String(r?.name ?? "").slice(0, 80),
-    kcal: n(r?.kcal, 5000),
-    protein: n(r?.protein, 500),
-    carbs: n(r?.carbs, 1000),
-    fat: n(r?.fat, 500),
-  })).filter((r) => r.id && r.name && r.kcal > 0);
   try {
     const result = await suggestMeals({
       kcalLeft: n(body.kcalLeft, 10000),
       proteinLeft: Math.max(0, n(body.proteinLeft, 1000)),
       slot: String(body.slot ?? "snack").slice(0, 20),
       hour: Math.round(n(body.hour, 23)),
-      recipes,
       eatenToday: (Array.isArray(body.eatenToday) ? body.eatenToday : []).slice(0, 20).map((t) => String(t).slice(0, 80)),
       avoidDairy: body.avoidDairy === true,
       lang,

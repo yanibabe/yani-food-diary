@@ -6,7 +6,7 @@
 
 ---
 
-## LIVE (updated 2026-11-15; Round 25 "what can I eat" LIVE; Round 24 weight moved to Profile, steps removed)
+## LIVE (updated 2026-11-15; Round 26 grouped "what can I eat" LIVE; Round 25 "what can I eat" LIVE; Round 24 weight moved to Profile, steps removed)
 
 - **App:** https://yani-food-diary.vercel.app  (Vercel, exm-labs account, free)
 - **Code:** https://github.com/yanibabe/yani-food-diary  (private; pushes auto-deploy)
@@ -18,12 +18,32 @@
   the link uses Yani's OpenRouter key, so their AI photo/text checks spend HER credit.
   Since Round 8 the AI needs a passcode (typed once per phone), so strangers can't spend it.
 
-## ▶ NEXT: she tries Round 25 on her iPhone (needs the real AI — not tried with it yet)
+## ▶ NEXT: she tries Round 26 (grouped ideas) on her iPhone with the real AI
 
+Watch for: does the AI name real chain shops that list kcal? Do Grab / LINE MAN buttons open the apps on iPhone
+(they are plain web links; not tried on a phone yet)? If shop ideas look made-up, tune SUGGEST_SYSTEM.
 Then pick the next idea with her (one question at a time, in Thai). Ideas not done:
 - option B "summary" tab (week of kcal + water + weight on one page)
 - use her character in more places (app icon? empty states?) — ask, don't assume
 - other clip colors for the character (the yellow clip is hard to see on pink)
+
+## Round 26 (2026-11-15) — "กินอะไรดี" split into 3 groups, fewer emojis ✅ LIVE
+
+She tried Round 25: felt hard to use, too many emoji/icons. She wanted groups. Agreed together:
+3 groups only (no "menu names only" group), delivery = well-known chains that publish kcal (so she can check
+the shop's own number), plus buttons to open Grab / LINE MAN. She picked look A (all groups stacked) over
+B (tabs) from 2 mockups.
+- `app/lib/suggest.ts` rewritten: `recipeIdeas()` = her recipes that fit (real numbers, NO AI, instant);
+  `fitAiIdeas()` = AI ideas split into `seven` / `delivery` (+15% margin, delivery must have `shop`),
+  max 3 per group, most protein first. "home" place removed.
+- `app/lib/server/ai.ts`: AI asked for 4 7-Eleven + 4 delivery-chain ideas, `shop` field, no emoji.
+  Recipes no longer sent to the AI (route no longer takes `recipes`).
+- `app/add/suggest/page.tsx`: 3 sections (pink/mint/sky dot + title), plain rows (name, amount/shop · protein,
+  kcal). No emoji anywhere (also removed from the Today button). Delivery row saves as "Name (Shop)".
+  Grab link https://food.grab.com/th/th/ , LINE MAN https://lineman.line.me/ (open in a new tab).
+- Tests: `tests/suggest.test.ts` rewritten (6 tests). 88/88 pass, tsc, eslint, build OK.
+- Checked at iPhone size with the test AI: all 3 groups, light mode, delivery idea → check page → saved
+  "Chicken Wrap (Starbucks)", recipe idea → saved as source "recipe".
 
 ## Round 25 (2026-11-15) — 🤔 "เหลือเท่านี้ กินอะไรดี" (what can I eat with what's left) ✅ LIVE
 

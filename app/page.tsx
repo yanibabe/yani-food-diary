@@ -143,7 +143,7 @@ function TodayInner() {
             className="mt-2 inline-flex min-h-[44px] items-center gap-1.5 rounded-full bg-cream px-4 text-[15px] font-medium active:scale-[0.98]"
             data-testid="suggest-button"
           >
-            🤔 {tr("เหลือเท่านี้ กินอะไรดี", "What can I eat with what's left?")}
+            {tr("เหลือเท่านี้ กินอะไรดี", "What can I eat with what's left?")}
           </Link>
         )}
         <div className="mt-4 w-full">

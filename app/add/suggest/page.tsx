@@ -1,8 +1,9 @@
 "use client";
-// "🤔 What can I eat with what's left": AI food ideas that fit today's kcal left.
+// "What can I eat with what's left": food ideas in 3 groups that fit today's kcal left.
+// 1) her own recipes (real numbers, no AI), 2) 7-Eleven, 3) delivery chain shops (AI).
 // Tap an idea → the normal check sheet opens, so she can adjust before saving.
 
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { MealReview, type MealDraft } from "../../components/MealReview";
 import { Badge, useAiStatus } from "../../components/ui";
@@ -14,15 +15,11 @@ import { useLang } from "../../lib/lang";
 import { fmtKcal, newId, pickMacros, sumMacros } from "../../lib/nutrition";
 import { totalsForRecipe } from "../../lib/recipe";
 import { useStore } from "../../lib/store";
-import type { Idea, Place, RecipeOption } from "../../lib/suggest";
+import { recipeIdeas, type Idea, type RecipeOption } from "../../lib/suggest";
 import type { Entry } from "../../lib/types";
 
-const PLACE: Record<Place, { icon: string; th: string; en: string; bg: string }> = {
-  "7-eleven": { icon: "🏪", th: "เซเว่น", en: "7-Eleven", bg: "bg-mint" },
-  delivery: { icon: "🛵", th: "สั่งเดลิเวอรี่", en: "Delivery", bg: "bg-sky" },
-  home: { icon: "🍳", th: "ทำเองที่บ้าน", en: "Cook at home", bg: "bg-yellow" },
-  recipe: { icon: "📖", th: "สูตรของฉัน", en: "My recipe", bg: "bg-pink" },
-};
+const GRAB_URL = "https://food.grab.com/th/th/";
+const LINEMAN_URL = "https://lineman.line.me/";
 
 function SuggestInner() {
   const router = useRouter();
@@ -32,8 +29,10 @@ function SuggestInner() {
   const aiReady = !!ai && (ai.configured || ai.mock);
   const today = thaiDateKey();
 
-  const [step, setStep] = useState<"loading" | "ideas" | "review">("loading");
-  const [ideas, setIdeas] = useState<Idea[]>([]);
+  const [step, setStep] = useState<"ideas" | "review">("ideas");
+  const [loading, setLoading] = useState(true);
+  const [seven, setSeven] = useState<Idea[]>([]);
+  const [delivery, setDelivery] = useState<Idea[]>([]);
   const [light, setLight] = useState(false);
   const [mock, setMock] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,10 +52,11 @@ function SuggestInner() {
       }),
     [recipes, lang],
   );
+  const mine = useMemo(() => recipeIdeas(recipeOptions, left), [recipeOptions, left]);
 
   const ask = useCallback(async () => {
     setError(null);
-    setStep("loading");
+    setLoading(true);
     try {
       const res = await aiFetch(
         "/api/suggest",
@@ -65,7 +65,6 @@ function SuggestInner() {
           proteinLeft,
           slot: guessSlot(),
           hour: thaiHour(),
-          recipes: recipeOptions,
           eatenToday: todays.map((e) => e.title),
           avoidDairy: goals.avoidDairy === true,
           lang,
@@ -75,17 +74,19 @@ function SuggestInner() {
       const data = await res.json().catch(() => null);
       if (!res.ok || !data?.result) {
         setError(data?.message ?? `${tr("เซิร์ฟเวอร์ตอบกลับ", "Server replied")} ${res.status}`);
-        setIdeas([]);
+        setSeven([]);
+        setDelivery([]);
       } else {
-        setIdeas(data.result.ideas as Idea[]);
+        setSeven((data.result.seven ?? []) as Idea[]);
+        setDelivery((data.result.delivery ?? []) as Idea[]);
         setLight(Boolean(data.result.light));
         setMock(Boolean(data.mock));
       }
     } catch (e) {
       setError(`${tr("เชื่อมต่อไม่ได้", "Couldn't connect")}: ${e instanceof Error ? e.message : String(e)}`);
     }
-    setStep("ideas");
-  }, [left, proteinLeft, recipeOptions, todays, goals.avoidDairy, lang, tr]);
+    setLoading(false);
+  }, [left, proteinLeft, todays, goals.avoidDairy, lang, tr]);
 
   // Ask once, as soon as her diary has loaded.
   const asked = useRef(false);
@@ -99,12 +100,12 @@ function SuggestInner() {
     setPicked({
       idea,
       draft: {
-        title: idea.name,
+        title: idea.shop ? `${idea.name} (${idea.shop})` : idea.name,
         slot: guessSlot(),
         items: [
           {
             id: newId("it"),
-            name: idea.name,
+            name: idea.shop ? `${idea.name} (${idea.shop})` : idea.name,
             amount: idea.amount > 0 ? idea.amount : 1,
             unit: idea.place === "recipe" ? tr("เสิร์ฟ", "serving") : idea.unit,
             kcal: idea.kcal,
@@ -178,13 +179,56 @@ function SuggestInner() {
     );
   }
 
+  const row = (i: Idea, sub: string) => (
+    <li key={`${i.shop ?? ""}|${i.name}`} className="border-t border-line first:border-t-0">
+      <button className="flex w-full items-center gap-3 px-4 py-3 text-left active:bg-cream" onClick={() => pick(i)} data-testid="suggest-idea">
+        <span className="min-w-0 flex-1">
+          <span className="block text-[16px] font-semibold leading-snug">{i.name}</span>
+          <span className="block text-[13px] text-muted">{sub}</span>
+        </span>
+        <span className="num shrink-0 text-[18px] font-semibold">
+          {fmtKcal(i.kcal)} <span className="text-[12px] font-normal text-muted">kcal</span>
+        </span>
+      </button>
+    </li>
+  );
+  const protein = (i: Idea) => `${tr("โปรตีน", "Protein")} ${Math.round(i.protein)} g`;
+  const amount = (i: Idea) => (i.amount > 0 && i.unit ? `${i.amount} ${i.unit} · ` : "");
+
+  const group = (id: string, dot: string, title: string, body: ReactNode) => (
+    <section data-testid={`suggest-group-${id}`}>
+      <h2 className="mb-1.5 flex items-center gap-2 px-1 text-[14px] font-semibold text-muted">
+        <span className={`h-2.5 w-2.5 rounded-full ${dot}`} aria-hidden />
+        {title}
+      </h2>
+      {body}
+    </section>
+  );
+  const note = (text: string) => <p className="card px-4 py-3 text-[14px] text-muted">{text}</p>;
+  const aiBody = (list: Idea[], sub: (i: Idea) => string, extra?: ReactNode) =>
+    loading ? (
+      note(tr("กำลังคิดเมนูให้…", "Thinking of ideas…"))
+    ) : error ? (
+      <p className="rounded-2xl bg-[#f6e1dc] px-4 py-3 text-[14px] text-danger" role="alert">{error}</p>
+    ) : (
+      <div className="card overflow-hidden">
+        {list.length ? (
+          <ul>{list.map((i) => row(i, sub(i)))}</ul>
+        ) : (
+          <p className="px-4 py-3 text-[14px] text-muted">{tr("ยังไม่มีเมนูที่พอดี ลองขอใหม่นะ", "Nothing fits right now. Try new ideas.")}</p>
+        )}
+        {extra}
+      </div>
+    );
+
   return (
-    <main className="page space-y-4">
+    <main className="page space-y-5">
       <header className="flex items-center gap-3">
         <button className="h-11 w-11 rounded-full bg-paper text-[20px]" onClick={() => router.push("/")} aria-label={tr("กลับ", "Back")}>
           ‹
         </button>
-        <h1 className="text-[22px] font-semibold">🤔 {tr("กินอะไรดี", "What can I eat?")}</h1>
+        <h1 className="text-[22px] font-semibold">{tr("กินอะไรดี", "What can I eat?")}</h1>
+        {mock && <Badge>{tr("AI จำลอง", "Test AI")}</Badge>}
       </header>
 
       <section className="card px-5 py-4 text-center" data-testid="suggest-left">
@@ -202,74 +246,59 @@ function SuggestInner() {
         </p>
       </section>
 
-      {step === "loading" && (
-        <div className="flex flex-col items-center gap-3 py-12 text-center" data-testid="suggest-loading">
-          <span className="animate-bounce text-[44px]" aria-hidden>🤔</span>
-          <p className="text-[18px]">{tr("กำลังคิดเมนูให้…", "Thinking of ideas…")}</p>
-          <p className="text-[14px] text-muted">{tr("รอสักครู่นะ", "Just a moment")}</p>
-        </div>
+      {light && !loading && !error && (
+        <p className="rounded-2xl bg-olive-soft px-4 py-3 text-[15px] text-olive-dark" data-testid="suggest-light">
+          {left >= 0
+            ? tr("ใกล้ถึงเป้าแล้ว เก่งมาก ถ้ายังหิว ลองของเบา ๆ ที่อิ่มท้องดูนะ", "You're almost at your target, well done. If you're still hungry, try something light and filling.")
+            : tr("ไม่เป็นไรเลยนะ บางวันก็กินเยอะได้ ถ้ายังหิว ลองของเบา ๆ ที่อิ่มท้องดู", "That's totally okay. Some days we eat more. If you're still hungry, try something light and filling.")}
+        </p>
       )}
 
-      {step === "ideas" && (
-        <>
-          {light && !error && (
-            <p className="rounded-2xl bg-olive-soft px-4 py-3 text-[15px] text-olive-dark" data-testid="suggest-light">
-              {left >= 0
-                ? tr("ใกล้ถึงเป้าแล้ว เก่งมาก 🌱 ถ้ายังหิว ลองของเบา ๆ ที่อิ่มท้องดูนะ", "You're almost at your target, well done 🌱 If you're still hungry, try something light and filling.")
-                : tr("ไม่เป็นไรเลยนะ วันนี้กินเยอะหน่อยก็ได้ 💛 ถ้ายังหิว ลองของเบา ๆ ที่อิ่มท้องดู", "That's totally okay 💛 Some days we eat more. If you're still hungry, try something light and filling.")}
-            </p>
-          )}
-
-          {error && (
-            <div className="rounded-2xl bg-[#f6e1dc] px-4 py-3 text-[15px] text-danger" role="alert">
-              {error}
-            </div>
-          )}
-
-          {!error && ideas.length === 0 && (
-            <p className="py-6 text-center text-[15px] text-muted">{tr("ยังหาเมนูที่พอดีไม่เจอ ลองขอใหม่อีกครั้งนะ", "No ideas fit right now. Try asking again.")}</p>
-          )}
-
-          {mock && <Badge>{tr("AI จำลอง", "Test AI")}</Badge>}
-
-          <ul className="space-y-3" data-testid="suggest-list">
-            {ideas.map((i) => {
-              const p = PLACE[i.place];
-              return (
-                <li key={i.name}>
-                  <button className="card flex w-full items-center gap-3 p-3 text-left active:scale-[0.99]" onClick={() => pick(i)} data-testid="suggest-idea">
-                    <span className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl ${p.bg} text-[26px]`} aria-hidden>
-                      {p.icon}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-[16px] font-semibold leading-snug">{i.name}</span>
-                      <span className="block text-[13px] text-muted">
-                        {lang === "en" ? p.en : p.th}
-                        {i.why ? ` · ${i.why}` : ""}
-                      </span>
-                      <span className="mt-0.5 block text-[13px] text-olive-dark">
-                        {tr("โปรตีน", "Protein")} <span className="num font-semibold">{Math.round(i.protein)}</span> g
-                      </span>
-                    </span>
-                    <span className="shrink-0 text-right">
-                      <span className="num block text-[20px] font-semibold">{fmtKcal(i.kcal)}</span>
-                      <span className="block text-[12px] text-muted">kcal</span>
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-
-          <p className="px-1 text-[13px] text-muted">
-            {tr("แตะเมนูเพื่อดูและแก้ก่อนบันทึก · ตัวเลขเป็นค่าประมาณ", "Tap an idea to check and adjust it before saving · numbers are estimates")}
-          </p>
-
-          <button className="btn-soft w-full" onClick={() => void ask()} data-testid="suggest-again">
-            🔄 {tr("ขอไอเดียใหม่", "New ideas")}
-          </button>
-        </>
+      {group(
+        "recipe",
+        "bg-pink",
+        tr("สูตรของฉัน", "My recipes"),
+        mine.length ? (
+          <ul className="card overflow-hidden">{mine.map((i) => row(i, `${tr("1 เสิร์ฟ", "1 serving")} · ${protein(i)}`))}</ul>
+        ) : (
+          note(
+            recipeOptions.length
+              ? tr("ยังไม่มีสูตรที่พอดีกับแคลที่เหลือ", "None of your recipes fit what's left")
+              : tr("ยังไม่มีสูตร ไปเพิ่มได้ที่แท็บ สูตรของฉัน", "No recipes yet. Add some in the My recipes tab."),
+          )
+        ),
       )}
+
+      {group("seven", "bg-mint", "7-Eleven", aiBody(seven, (i) => `${amount(i)}${protein(i)}`))}
+
+      {group(
+        "delivery",
+        "bg-sky",
+        tr("สั่ง delivery", "Delivery"),
+        aiBody(
+          delivery,
+          (i) => `${i.shop} · ${protein(i)}`,
+          <div className="flex gap-2 border-t border-line px-4 py-3">
+            <a className="rounded-full border border-line px-3 py-1.5 text-[14px] active:bg-cream" href={GRAB_URL} target="_blank" rel="noreferrer" data-testid="open-grab">
+              {tr("เปิด Grab", "Open Grab")}
+            </a>
+            <a className="rounded-full border border-line px-3 py-1.5 text-[14px] active:bg-cream" href={LINEMAN_URL} target="_blank" rel="noreferrer" data-testid="open-lineman">
+              {tr("เปิด LINE MAN", "Open LINE MAN")}
+            </a>
+          </div>,
+        ),
+      )}
+
+      <p className="px-1 text-[13px] text-muted">
+        {tr(
+          "แตะเมนูเพื่อดูและแก้ก่อนบันทึก · เลขของ 7-Eleven และร้านเป็นค่าประมาณ เช็คในแอปร้านอีกที",
+          "Tap an idea to check and adjust it before saving · 7-Eleven and shop numbers are estimates; check the shop's app",
+        )}
+      </p>
+
+      <button className="btn-soft w-full" onClick={() => void ask()} disabled={loading} data-testid="suggest-again">
+        {tr("ขอไอเดียใหม่", "New ideas")}
+      </button>
     </main>
   );
 }
