@@ -5,6 +5,7 @@
 import { z } from "zod";
 import { trFor, type Lang } from "../i18n.ts";
 import { AI_MARGIN, markMargin } from "../nutrition.ts";
+import { fitIdeas, kcalRoom, PLACES, type Idea, type Place, type RawIdea, type RecipeOption } from "../suggest.ts";
 
 const ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
 export const MODEL = "google/gemini-3.8-flash";
@@ -478,4 +479,89 @@ export async function readNutritionLabel(input: { image: string; lang: Lang }): 
     LabelSchema,
     input.lang,
   );
+}
+
+// ---------------------------------------------------------------------------
+// "What can I eat with what's left": 6 food ideas that fit the kcal left.
+// The app (app/lib/suggest.ts) checks the numbers and keeps the best 4.
+// ---------------------------------------------------------------------------
+
+export const SuggestSchema = z.object({
+  ideas: z
+    .array(
+      z.object({
+        name: z.string().describe("Food name, specific enough to buy or cook (e.g. a real 7-Eleven product type, or a dish)"),
+        amount: num.describe("How much, as a number"),
+        unit: z.string().catch("").describe("Unit word, e.g. ชิ้น กล่อง ฟอง ถ้วย จาน แก้ว"),
+        place: z.enum(PLACES as [Place, ...Place[]]).catch("home").describe("7-eleven = buy at 7-Eleven / convenience store; delivery = order on Grab / LINE MAN; home = cook at home; recipe = one of the user's own recipes"),
+        recipeId: z.string().nullish().describe("If place is recipe: the id of that recipe from the list; else null"),
+        kcal: num.describe("kcal for that amount, realistic, including cooking oil/sugar"),
+        protein: num.describe("grams"),
+        carbs: num.describe("grams"),
+        fat: num.describe("grams"),
+        why: z.string().catch("").describe("A few friendly words why it's a good pick (e.g. high protein, keeps you full)"),
+      }),
+    )
+    .catch([]),
+});
+
+export type SuggestInput = {
+  kcalLeft: number;
+  proteinLeft: number;
+  slot: string;
+  hour: number;
+  recipes: RecipeOption[];
+  eatenToday: string[];
+  avoidDairy: boolean;
+  lang: Lang;
+};
+
+const SUGGEST_SYSTEM = (lang: Lang) => `You are a friendly nutrition helper inside a Thai food diary app.
+The user asks: "I have this many kcal left today — what can I eat?" Suggest 6 different, real foods.
+Rules:
+- Each idea must be ONE thing to eat now, sized so its kcal is AT MOST the "kcal room" given. Aim for about 50–85% of the room; never above it. The app adds a +${Math.round(AI_MARGIN * 100)}% safety margin to your numbers afterwards, so be realistic, not low.
+- She gets food from: 7-Eleven / convenience stores, delivery apps (Grab, LINE MAN), and cooking at home, plus her own recipes (listed with their id and numbers per serving). Mix places: about 2 from 7-Eleven, 1–2 delivery, 1–2 cook at home, and her recipes ONLY if one fits the room (then use place "recipe" and its id; copy its numbers).
+- She wants HIGH PROTEIN ideas: prefer eggs, chicken breast, fish, tofu, soy milk, Greek yogurt, lean meat. Try to help her reach the protein left.
+- Fit the meal and time of day (breakfast / lunch / dinner / snack). Use real Thai foods and real 7-Eleven style products (e.g. onigiri, steamed buns, boiled eggs, chicken breast packs, ready meals, soy milk).
+- Don't repeat what she already ate today.
+- If "light mode" is on, she is at or over her target: only suggest very light, filling things (each at most the room), like boiled egg, unsweetened soy milk, clear soup, vegetables, fruit. Keep the "why" kind and gentle, never scolding.
+- ${lang === "en" ? "Write name, unit and why in simple English (Thai dish names may be in English)." : "Write name, unit and why in Thai."}
+- Check: kcal ≈ protein×4 + carbs×4 + fat×9.
+Return ONLY a JSON object matching this JSON Schema:
+${shapeOf(SuggestSchema)}`;
+
+export async function suggestMeals(input: SuggestInput): Promise<{ ideas: Idea[]; light: boolean }> {
+  const { room, light } = kcalRoom(input.kcalLeft);
+  const raw = process.env.AI_MOCK === "1" ? mockSuggest(input) : await callAi(SUGGEST_SYSTEM(input.lang), [{ type: "text", text: suggestPrompt(input, room, light) }], SuggestSchema, input.lang);
+  return { ideas: fitIdeas(raw.ideas, input.kcalLeft, input.recipes), light };
+}
+
+function suggestPrompt(input: SuggestInput, room: number, light: boolean): string {
+  return [
+    `kcal left today: ${Math.round(input.kcalLeft)}`,
+    `kcal room for one idea: ${room}`,
+    `light mode: ${light ? "on" : "off"}`,
+    `protein still to eat today: ${Math.round(input.proteinLeft)} g`,
+    `meal: ${input.slot}, time now in Thailand: ${input.hour}:00`,
+    input.avoidDairy ? "She avoids milk and milk products: no dairy at all." : "",
+    `Already eaten today: ${input.eatenToday.length ? input.eatenToday.join(", ") : "(nothing yet)"}`,
+    `Her recipes (per serving, JSON): ${JSON.stringify(input.recipes)}`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+// TEST MODE ONLY (AI_MOCK=1): fixed ideas. One is too big on purpose, so the filter can be seen working.
+function mockSuggest(input: SuggestInput): z.infer<typeof SuggestSchema> {
+  const ideas: RawIdea[] = [
+    { name: "ไข่ต้ม", amount: 2, unit: "ฟอง", place: "7-eleven", kcal: 140, protein: 12, carbs: 1, fat: 10, why: "โปรตีนสูง อิ่มนาน" },
+    { name: "อกไก่นุ่ม รสพริกไทยดำ", amount: 1, unit: "ซอง", place: "7-eleven", kcal: 100, protein: 22, carbs: 1, fat: 1, why: "โปรตีนสูงมาก ไขมันน้อย" },
+    { name: "นมถั่วเหลืองไม่หวาน", amount: 1, unit: "กล่อง", place: "7-eleven", kcal: 70, protein: 7, carbs: 3, fat: 3, why: "เบา ๆ มีโปรตีน" },
+    { name: "ข้าวกะเพราไก่ไข่ดาว", amount: 1, unit: "จาน", place: "delivery", kcal: 650, protein: 30, carbs: 70, fat: 26, why: "อิ่มจัด" },
+    { name: "สลัดอกไก่ย่าง", amount: 1, unit: "กล่อง", place: "delivery", kcal: 280, protein: 28, carbs: 15, fat: 12, why: "โปรตีนสูง ผักเยอะ" },
+    { name: "ไข่ตุ๋น", amount: 1, unit: "ถ้วย", place: "home", kcal: 90, protein: 7, carbs: 2, fat: 6, why: "ทำง่าย นุ่ม เบาท้อง" },
+  ];
+  const r = input.recipes[0];
+  if (r) ideas.push({ name: r.name, amount: 1, unit: "เสิร์ฟ", place: "recipe", recipeId: r.id, kcal: r.kcal, protein: r.protein, carbs: r.carbs, fat: r.fat, why: "สูตรของฉันเอง" });
+  return { ideas };
 }
