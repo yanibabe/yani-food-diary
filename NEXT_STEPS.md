@@ -18,6 +18,20 @@
   the link uses Yani's OpenRouter key, so their AI photo/text checks spend HER credit.
   Since Round 8 the AI needs a passcode (typed once per phone), so strangers can't spend it.
 
+## ▶ NEXT: Round 25 — 🤔 "เหลือเท่านี้ กินอะไรดี" (what can I eat with what's left) — she picked this 2026-11-15
+
+Not started. Draft plan (confirm with her first, one question at a time, in Thai):
+- A button on Today near the remaining kcal: "🤔 เหลือเท่านี้ กินอะไรดี".
+- Sends to a new AI route (same OpenRouter model + passcode check as the other AI routes, `lib/server/ai.ts` style + zod):
+  kcal left, protein left, time of day / which meal, her recipe names, foods she avoids.
+- AI returns 3–4 real, buyable ideas: name, kcal, protein, where (7-Eleven / food stall / her recipe / cook at home).
+  Must fit the kcal left (app double-checks the numbers, drops ones that don't fit).
+- Tap an idea → log it in one tap (or open the normal review sheet to adjust first).
+- If kcal left is 0 or less: gentle message + light low-kcal ideas, no scolding.
+- Questions to ask her first: where she usually gets food (7-11? stalls? cooks?) · should ideas lean high-protein? ·
+  log straight away on tap, or show the review sheet first?
+- Remember: AI mock mode (`AI_MOCK=1`) for tests; add tests for the "fits kcal left" filter.
+
 ## Round 24 (2026-11-15) — ⚖️ Weight moved into Profile, steps removed ✅ LIVE
 
 She said the "น้ำหนัก & ก้าว" tab felt useless; she picked option A.
