@@ -18,7 +18,7 @@
   the link uses Yani's OpenRouter key, so their AI photo/text checks spend HER credit.
   Since Round 8 the AI needs a passcode (typed once per phone), so strangers can't spend it.
 
-## Round 24 (2026-11-15) — ⚖️ Weight moved into Profile, steps removed (built, waiting to go live)
+## Round 24 (2026-11-15) — ⚖️ Weight moved into Profile, steps removed ✅ LIVE
 
 She said the "น้ำหนัก & ก้าว" tab felt useless; she picked option A.
 - New `app/components/WeightCard.tsx` on the Profile page (between the kcal target and her info):
@@ -28,6 +28,7 @@ She said the "น้ำหนัก & ก้าว" tab felt useless; she picked
   Old step numbers are NOT deleted: they stay in `yfd:v1:body` and in backups (`lib/body.ts` unchanged).
 - Bottom menu is now 3 tabs (Today, My recipes, Profile). `/body` just redirects to `/profile`.
 - Checked at iPhone size: old /body link → Profile, save weight works, old steps kept.
+- Live check: home 200, /api/steps gone (404), /body forwards to /profile, /api/status configured. Not tried on her iPhone yet.
 - Ideas not done: option B "summary" tab (week of kcal + water + weight on one page).
 
 ## Round 23 (2026-11-14) — 🎨 See-through character + body color + small decorations ✅ LIVE
