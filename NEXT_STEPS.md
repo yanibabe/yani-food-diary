@@ -6,7 +6,7 @@
 
 ---
 
-## LIVE (updated 2026-11-13, Round 20; Round 22 own character LIVE; Round 23 color+decorations LIVE; Round 24 weight moved to Profile, steps removed)
+## LIVE (updated 2026-11-15; Round 25 "what can I eat" LIVE; Round 24 weight moved to Profile, steps removed)
 
 - **App:** https://yani-food-diary.vercel.app  (Vercel, exm-labs account, free)
 - **Code:** https://github.com/yanibabe/yani-food-diary  (private; pushes auto-deploy)
@@ -18,19 +18,31 @@
   the link uses Yani's OpenRouter key, so their AI photo/text checks spend HER credit.
   Since Round 8 the AI needs a passcode (typed once per phone), so strangers can't spend it.
 
-## ▶ NEXT: Round 25 — 🤔 "เหลือเท่านี้ กินอะไรดี" (what can I eat with what's left) — she picked this 2026-11-15
+## ▶ NEXT: she tries Round 25 on her iPhone (needs the real AI — not tried with it yet)
 
-Not started. Draft plan (confirm with her first, one question at a time, in Thai):
-- A button on Today near the remaining kcal: "🤔 เหลือเท่านี้ กินอะไรดี".
-- Sends to a new AI route (same OpenRouter model + passcode check as the other AI routes, `lib/server/ai.ts` style + zod):
-  kcal left, protein left, time of day / which meal, her recipe names, foods she avoids.
-- AI returns 3–4 real, buyable ideas: name, kcal, protein, where (7-Eleven / food stall / her recipe / cook at home).
-  Must fit the kcal left (app double-checks the numbers, drops ones that don't fit).
-- Tap an idea → log it in one tap (or open the normal review sheet to adjust first).
-- If kcal left is 0 or less: gentle message + light low-kcal ideas, no scolding.
-- Questions to ask her first: where she usually gets food (7-11? stalls? cooks?) · should ideas lean high-protein? ·
-  log straight away on tap, or show the review sheet first?
-- Remember: AI mock mode (`AI_MOCK=1`) for tests; add tests for the "fits kcal left" filter.
+Then pick the next idea with her (one question at a time, in Thai). Ideas not done:
+- option B "summary" tab (week of kcal + water + weight on one page)
+- use her character in more places (app icon? empty states?) — ask, don't assume
+- other clip colors for the character (the yellow clip is hard to see on pink)
+
+## Round 25 (2026-11-15) — 🤔 "เหลือเท่านี้ กินอะไรดี" (what can I eat with what's left) ✅ LIVE
+
+Her answers: she gets food from 7-Eleven, delivery, and cooking at home (+ her recipes);
+ideas should lean HIGH PROTEIN; tapping an idea opens the normal check page first (not one-tap save).
+- Today: a small button under "เหลืออีก X kcal" (today only) → new page `app/add/suggest/page.tsx`.
+- The page asks the AI once on open (+ "ขอไอเดียใหม่" button). Sends: kcal left, protein left, meal + hour,
+  her complete recipes (per serving), titles eaten today, avoid-dairy setting.
+- New route `app/api/suggest/route.ts` (passcode check like the others) → `suggestMeals` in `app/lib/server/ai.ts`
+  (asks for 6 ideas; mock answer in AI_MOCK mode).
+- `app/lib/suggest.ts` checks the AI's numbers: +15% margin on AI guesses, recipe ideas get the recipe's
+  real numbers (unknown recipe ids dropped), ideas bigger than the kcal left dropped, duplicates dropped,
+  most protein first, max 4. Light mode when < 100 kcal left (or over target): each idea ≤ 100 kcal and a
+  kind "it's okay" message, no scolding.
+- Tap idea → MealReview (chat works) → saved as source "text" (or "recipe" with a RecipeLog for her recipes).
+- Tests: `tests/suggest.test.ts` (5 tests). 87/87 pass, tsc, eslint, build OK.
+- Checked at iPhone size with the test AI: button, list (too-big idea dropped), review, save (kcal left updated),
+  over-target gentle message. Pushed da469fa; live check: /add/suggest 200, /api/suggest asks for passcode (401).
+- NOT yet tried with the REAL AI (that needs her passcode on her phone). If ideas look odd, tune SUGGEST_SYSTEM.
 
 ## Round 24 (2026-11-15) — ⚖️ Weight moved into Profile, steps removed ✅ LIVE
 
