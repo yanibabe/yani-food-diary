@@ -6,7 +6,7 @@
 
 ---
 
-## LIVE (updated 2026-11-13, Round 20; Round 22 own character LIVE; Round 23 color+decorations LIVE — "my buddy" character on Today)
+## LIVE (updated 2026-11-13, Round 20; Round 22 own character LIVE; Round 23 color+decorations LIVE; Round 24 weight moved to Profile, steps removed)
 
 - **App:** https://yani-food-diary.vercel.app  (Vercel, exm-labs account, free)
 - **Code:** https://github.com/yanibabe/yani-food-diary  (private; pushes auto-deploy)
@@ -17,6 +17,18 @@
   phone (localStorage + IndexedDB). Nobody sees anyone else's data. But everyone with
   the link uses Yani's OpenRouter key, so their AI photo/text checks spend HER credit.
   Since Round 8 the AI needs a passcode (typed once per phone), so strangers can't spend it.
+
+## Round 24 (2026-11-15) — ⚖️ Weight moved into Profile, steps removed (built, waiting to go live)
+
+She said the "น้ำหนัก & ก้าว" tab felt useless; she picked option A.
+- New `app/components/WeightCard.tsx` on the Profile page (between the kcal target and her info):
+  log a weight for any day (date box, defaults to today), progress bar to target weight,
+  this week's average vs last week, and a 30-day / 3-month line chart.
+- Steps are gone: step card, steps chart, `/api/steps` route and `readSteps` in `lib/server/ai.ts` deleted.
+  Old step numbers are NOT deleted: they stay in `yfd:v1:body` and in backups (`lib/body.ts` unchanged).
+- Bottom menu is now 3 tabs (Today, My recipes, Profile). `/body` just redirects to `/profile`.
+- Checked at iPhone size: old /body link → Profile, save weight works, old steps kept.
+- Ideas not done: option B "summary" tab (week of kcal + water + weight on one page).
 
 ## Round 23 (2026-11-14) — 🎨 See-through character + body color + small decorations ✅ LIVE
 

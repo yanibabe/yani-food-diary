@@ -1,11 +1,12 @@
 "use client";
 import { MILK_WARNING_ON } from "../lib/dairy";
-// Profile: who she is, her plan, and the daily kcal target (tap to edit).
+// Profile: who she is, her plan, the daily kcal target (tap to edit), and her weight log.
 // "แก้ข้อมูล" edits the same answers as first-run setup; a new suggestion
 // only replaces the target after she confirms.
 
 import { useMemo, useState } from "react";
 import { BackupCard } from "../components/BackupCard";
+import { WeightCard } from "../components/WeightCard";
 import {
   ActivityFields,
   BigTarget,
@@ -66,6 +67,7 @@ export default function ProfilePage() {
       ) : (
         <>
           <TargetCard goals={goals} onSaved={() => flash(tr("บันทึกเป้าแล้ว", "Target saved"))} />
+          <WeightCard />
           <InfoCard p={p} onEdit={() => setEditing(true)} />
           {MILK_WARNING_ON && <AvoidCard />}
         </>

@@ -350,44 +350,6 @@ function mockRefine(input: RefineInput): Refine {
 }
 
 // ---------------------------------------------------------------------------
-// Steps from a screenshot (Apple Health / Fitness / any step app).
-// ---------------------------------------------------------------------------
-
-export const StepsSchema = z.object({
-  steps: z.coerce.number().nullable().catch(null).describe("The step count for ONE day, as a whole number; null if no clear step count is shown"),
-  date: z.string().nullable().catch(null).describe("That day as YYYY-MM-DD, or null if the screenshot does not show which day"),
-  note: z.string().nullish().describe("Short note if something is unclear, else null"),
-});
-export type StepsRead = z.infer<typeof StepsSchema>;
-
-const STEPS_SYSTEM = (lang: Lang, today: string) => `You read step counts from phone screenshots (Apple Health, Fitness, Google Fit, watch apps, etc.).
-Today is ${today} (Thailand time). Rules:
-- Find the step count for ONE day. Use the big, clearly labelled number for steps ("Steps", "ก้าว"). Do NOT use distance, flights climbed, calories or minutes.
-- If the screen shows a week or month chart, use only the day the screen highlights or names; if none is clear, set steps to null.
-- If the screen says "Today" / "วันนี้", the date is ${today}. "Yesterday" / "เมื่อวาน" is the day before. If only a weekday or a date without a year is shown, pick the most recent such day that is not after today. If no day is shown at all, date = null.
-- Read the number exactly, ignoring commas (e.g. "8,432" → 8432).
-- note: ${lang === "en" ? "in simple English" : "in Thai"}, only if something is unclear; else null.
-Return ONLY a JSON object matching this JSON Schema:
-${shapeOf(StepsSchema)}`;
-
-export async function readSteps(input: { image: string; today: string; lang: Lang }): Promise<StepsRead> {
-  if (!/^data:image\/(jpeg|png|webp);base64,/.test(input.image))
-    throw new AiError("bad-output", trFor(input.lang)("รูปแบบรูปไม่รองรับ", "This picture format is not supported"), 400);
-  if (process.env.AI_MOCK === "1") return { steps: 8432, date: input.today, note: null };
-  const r = await callAi(
-    STEPS_SYSTEM(input.lang, input.today),
-    [
-      { type: "text", text: "Screenshot of my step count." },
-      { type: "image_url", image_url: { url: input.image } },
-    ],
-    StepsSchema,
-    input.lang,
-  );
-  const steps = r.steps != null && Number.isFinite(r.steps) && r.steps >= 0 ? Math.round(r.steps) : null;
-  const date = r.date && /^\d{4}-\d{2}-\d{2}$/.test(r.date) && r.date <= input.today ? r.date : null;
-  return { steps, date, note: r.note ?? null };
-}
-
 // ---------------------------------------------------------------------------
 // One ingredient's nutrition per 100 g (for recipes, when there is no label).
 // No safety margin here: these are plain food-table values for a raw ingredient.

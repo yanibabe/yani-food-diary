@@ -17,13 +17,6 @@ const ICON_PATHS: Record<string, React.ReactNode> = {
       <path d="M19 5.5c-2.5-1-5-1-7 .5v13c2-1.5 4.5-1.5 7-.5z" />
     </>
   ),
-  body: (
-    <>
-      <rect x="4" y="5" width="16" height="15" rx="5" />
-      <path d="M9 10.5a3.5 3.5 0 0 1 6 0" />
-      <path d="M12 10.5l1.2-1.6" />
-    </>
-  ),
   profile: (
     <>
       <circle cx="12" cy="9" r="3.5" />
@@ -35,7 +28,6 @@ const ICON_PATHS: Record<string, React.ReactNode> = {
 const TABS = [
   { href: "/", th: "วันนี้", en: "Today", icon: "today" },
   { href: "/recipes", th: "สูตรของฉัน", en: "My recipes", icon: "recipes" },
-  { href: "/body", th: "น้ำหนัก", en: "Weight", icon: "body" },
   { href: "/profile", th: "โปรไฟล์", en: "Profile", icon: "profile" },
 ];
 
