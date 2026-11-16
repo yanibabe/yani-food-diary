@@ -34,6 +34,20 @@
 Rounds 33–35 tried on her iPhone ✓ ("okay"). Round 36 = her 2 fixes from that try.
 Round 36: she said "okay" (2026-11-16) and asked for Round 37.
 
+## ▶ Round 38 (her wish, 2026-11-16, NOT started) — recipe ingredient photo reads ANY photo, many photos
+Her words (Thai, summed up): when she picks a photo for a recipe ingredient ("รูปฉลาก" in IngredientScan),
+the AI seems to only accept a nutrition label. She wants:
+1. The AI reads ANY photo. No nutrition table? Still keep what it can see: product name, grams/size
+   (e.g. "200 g" on the front), brand, other details.
+2. More than one photo for ONE ingredient (e.g. front of pack + back + label) — she can add more photos
+   and the AI reads them all together as one product.
+3. If there are no real nutrition numbers in any photo, use general/average data for that food
+   (like /api/ingredient already does by name) — mark it as an estimate so she knows.
+Real label numbers still win over average data (keep Round 27 rule: label numbers = no +15%).
+Ask her first (one question): should the barcode page's "ไม่ตรงกับซอง? ถ่าย/เลือกรูปฉลาก" work the same way?
+Files: app/components/IngredientScan.tsx, app/api/food/label-photo, app/lib/food/toIngredient.ts,
+app/lib/server/ai.ts. Show "กำลังอ่านรูป…" in the WaitPopup (Round 37).
+
 ## Round 37 (2026-11-16) — a waiting popup every time a photo is read ✅ LIVE
 Her wish: whenever a photo is uploaded or taken and the app is reading it, show a popup saying what it's doing.
 - New `WaitPopup` in app/components/ui.tsx: dim screen + small frosted card in the middle, spinner,
