@@ -6,7 +6,7 @@
 
 ---
 
-## LIVE (updated 2026-11-16; Round 32 line-only small character + % in tiles + food tip LIVE; Round 31 whole app in Frosted Calm + richer share picture LIVE; Round 30 Frosted Calm share picture + Profile LIVE; Round 29 share my day with my trainer (picture) LIVE; Round 28 simpler "กินอะไรดี" (menu + recipe, no delivery) LIVE; Round 27 label numbers = no +15% LIVE; Round 26 grouped "what can I eat" LIVE; Round 25 "what can I eat" LIVE; Round 24 weight moved to Profile, steps removed)
+## LIVE (updated 2026-11-16; Round 33 recipes in category boxes + pot icon + 34 units LIVE; Round 32 line-only small character + % in tiles + food tip LIVE; Round 31 whole app in Frosted Calm + richer share picture LIVE; Round 30 Frosted Calm share picture + Profile LIVE; Round 29 share my day with my trainer (picture) LIVE; Round 28 simpler "กินอะไรดี" (menu + recipe, no delivery) LIVE; Round 27 label numbers = no +15% LIVE; Round 26 grouped "what can I eat" LIVE; Round 25 "what can I eat" LIVE; Round 24 weight moved to Profile, steps removed)
 
 - **App:** https://yani-food-diary.vercel.app  (Vercel, exm-labs account, free)
 - **Code:** https://github.com/yanibabe/yani-food-diary  (private; pushes auto-deploy)
@@ -30,10 +30,35 @@
    kcal, protein, fat, carbs (and totals). Easy to send (image and/or text via the iPhone share sheet).
    Ask her: picture, text, or both.
 
-## ▶ NEXT: she tries Round 32 on her iPhone (small line-only character, % inside the tiles, the tip line).
-## Then ask what she wants next. Ideas: look over the pages not checked by eye yet (กินอะไรดี, recipe
-## edit, barcode, welcome) for any leftover bright/odd bits; emoji left in a few spots (recipe 🍲 placeholder,
-## empty recipes 🍳) could become thin line icons.
+## ▶ NEXT = Round 34: scan ingredients inside a recipe (her wish, 2026-11-16)
+In the recipe form, each ingredient gets buttons to fill it WITHOUT typing: scan the barcode
+(reuse Round 13/17 barcode lookup + live camera) and/or photo of the nutrition label (reuse Round 18 label AI)
+→ fills name + label values (per 100 g or per unit). She doesn't want to type every ingredient.
+Also still open (ask her ONE at a time, after Round 34):
+- Food tip line (Round 32): she asked why no AI / how it decides. Explained: compares today's food with her
+  targets from Profile (20/50/30 split, or protein by body weight). Offered: (ก) tap the tip → show the numbers
+  behind it (free), or (ข) a "ask AI for advice" button that reads today's actual foods (costs credit per tap).
+  She hasn't picked yet.
+- Not yet tried on her iPhone: Round 32 bits she said were OK; Round 33 (below).
+
+## Round 33 (2026-11-16) — My recipes = category boxes (her pick "C") + pot icon + many units ✅ LIVE
+She saw 6 samples (A list, B chips, C open/close boxes, D shelves, E menu text, F 3-col grid) → picked C,
+and loved the thin line POT icon ("logo") → it replaces photos in the list; photos only inside a recipe.
+- Recipe.category (types.ts RECIPE_CATEGORIES: อาหารจานเดียว, กับข้าว, ต้ม·แกง, สลัด·ผัก, ของว่าง·ขนม,
+  เครื่องดื่ม, อื่น ๆ). Required when saving; old recipes without one show under อื่น ๆ until edited.
+- app/recipes/page.tsx: glass box per non-empty category, tap to open/close (open set remembered in
+  localStorage "yfd:v1:recipes-open"; first visit opens the first box). Rows: PotTile + name + kcal/serving.
+  Round glass "+" button (inline borderRadius: .glass's 24px radius beats Tailwind's rounded-full).
+- ui.tsx PotIcon / PotTile / potTone(id) (soft tone chosen from the recipe id). Detail page cover
+  placeholder = pot icon (no 🍲). Edit cover button lost its 📷.
+- Units: types.ts UNITS (34): weight g kg mg oz lb; volume ml l ช้อนชา 5 / ช้อนโต๊ะ 15 / ถ้วยตวง 240 / fl oz;
+  counted ฟอง ชิ้น ลูก/ผล กลีบ เม็ด ใบ ต้น ฝัก หัว แผ่น เส้น ก้อน ไม้ ทัพพี ถ้วย/ชาม กำมือ หยิบมือ ซอง แพ็ค ถุง
+  กล่อง กระป๋อง ขวด. Picker = <select> with 3 optgroups. recipe.ts converts by kind/factor.
+- Counted units: AI is asked for the weight of ONE of that unit (api/ingredient takes `unit`;
+  aiRef.unitFor). The AI's weight only counts for the unit it was asked for; old aiRefs (no unitFor) only fit
+  ฟอง/ชิ้น/ลูก. Changing to a new counted unit re-asks the AI automatically. Typed weight always wins.
+- Tests tests/units.test.ts (108 total pass). Checked at phone size with test recipes (mock AI): list, open/close,
+  category chips, unit change → 2nd AI call. Real AI answer for "1 กลีบ" NOT checked (mock only). NOT on her iPhone yet.
 
 ## Round 32 (2026-11-16) — character = fixed small line logo; % in tiles; one-line food tip ✅ LIVE
 Her words: split box repeats the tiles?; no more dress-up (useless), logo too big; lines only, every white
