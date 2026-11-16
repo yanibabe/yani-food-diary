@@ -6,7 +6,7 @@
 
 ---
 
-## LIVE (updated 2026-11-16; Round 34 Phosphor Light icons LIVE; Round 33 recipes in category boxes + pot icon + 34 units LIVE; Round 32 line-only small character + % in tiles + food tip LIVE; Round 31 whole app in Frosted Calm + richer share picture LIVE; Round 30 Frosted Calm share picture + Profile LIVE; Round 29 share my day with my trainer (picture) LIVE; Round 28 simpler "กินอะไรดี" (menu + recipe, no delivery) LIVE; Round 27 label numbers = no +15% LIVE; Round 26 grouped "what can I eat" LIVE; Round 25 "what can I eat" LIVE; Round 24 weight moved to Profile, steps removed)
+## LIVE (updated 2026-11-16; Round 35 scan ingredients in recipes LIVE; Round 34 Phosphor Light icons LIVE; Round 33 recipes in category boxes + pot icon + 34 units LIVE; Round 32 line-only small character + % in tiles + food tip LIVE; Round 31 whole app in Frosted Calm + richer share picture LIVE; Round 30 Frosted Calm share picture + Profile LIVE; Round 29 share my day with my trainer (picture) LIVE; Round 28 simpler "กินอะไรดี" (menu + recipe, no delivery) LIVE; Round 27 label numbers = no +15% LIVE; Round 26 grouped "what can I eat" LIVE; Round 25 "what can I eat" LIVE; Round 24 weight moved to Profile, steps removed)
 
 - **App:** https://yani-food-diary.vercel.app  (Vercel, exm-labs account, free)
 - **Code:** https://github.com/yanibabe/yani-food-diary  (private; pushes auto-deploy)
@@ -30,16 +30,26 @@
    kcal, protein, fat, carbs (and totals). Easy to send (image and/or text via the iPhone share sheet).
    Ask her: picture, text, or both.
 
-## ▶ NEXT = Round 35: scan ingredients inside a recipe (her wish, 2026-11-16)
-In the recipe form, each ingredient gets buttons to fill it WITHOUT typing: scan the barcode
-(reuse Round 13/17 barcode lookup + live camera) and/or photo of the nutrition label (reuse Round 18 label AI)
-→ fills name + label values (per 100 g or per unit). She doesn't want to type every ingredient.
-Also still open (ask her ONE at a time, after Round 35):
+## ▶ NEXT: she tries Round 35 on her iPhone, then picks what's next
+Still open (ask her ONE at a time):
 - Food tip line (Round 32): she asked why no AI / how it decides. Explained: compares today's food with her
   targets from Profile (20/50/30 split, or protein by body weight). Offered: (ก) tap the tip → show the numbers
   behind it (free), or (ข) a "ask AI for advice" button that reads today's actual foods (costs credit per tap).
   She hasn't picked yet.
-- Not yet tried on her iPhone: Round 32 bits she said were OK; Round 33 (below).
+- Not yet tried on her iPhone: Round 33, 34, 35.
+
+## Round 35 (2026-11-16) — scan ingredients inside a recipe ✅ LIVE
+Each ingredient card in the recipe form now starts with 2 pill buttons: "สแกนบาร์โค้ด" and "ถ่ายรูปฉลาก".
+- app/components/IngredientScan.tsx: barcode = live camera (LiveBarcodeScanner) → "take a photo instead"
+  fallback (free reader, then AI reads digits) → phone cache → Open Food Facts; her saved label fix for that
+  barcode wins. Label photo = /api/food/label-photo (per pack) → turned into per 100 g.
+- app/lib/food/toIngredient.ts (pure, tested in tests/toIngredient.test.ts): fills label per 100 g; keeps
+  what she typed (name/amount/unit). Empty amount → one whole pack in g (ml for drinks). Counted unit
+  (ขวด, ซอง…) → weight of 1 = pack size. Label photo has no product name → message asks her to type it.
+  Missing protein/carbs/fat on a label photo count as 0. Product with no kcal → message: photo the label.
+- Checked in practice mode at phone size: label photo filled 20 g = 70 kcal; barcode photo found Nutella
+  and filled name + per-100 g numbers. 114 tests pass (6 new), build clean. Live camera NOT tried (no camera on Mac).
+- NOT tried on her iPhone yet.
 
 ## Round 34 (2026-11-16) — whole app in Phosphor Light icons ✅ LIVE
 She didn't like the hand-drawn icons. Showed 10 free libraries side by side (Phosphor Light/Duotone, Lucide,

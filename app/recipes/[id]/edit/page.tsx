@@ -10,6 +10,7 @@ import { useLang } from "../../../lib/lang";
 import { useStore } from "../../../lib/store";
 import { PIECE_LIKE, RECIPE_CATEGORIES, UNIT_GROUPS, UNITS, unitKind, type Ingredient, type IngredientUnit, type Recipe, type RecipeCategory } from "../../../lib/types";
 import { Icon } from "../../../components/Icon";
+import { IngredientScan } from "../../../components/IngredientScan";
 
 function blankIngredient(): Ingredient {
   return { id: newId("ing"), name: "", amount: 0, unit: "g", label: null, gramsPerUnit: null, photoId: null };
@@ -83,6 +84,7 @@ function IngredientCard({
 
   return (
     <div className="card space-y-3 p-4" data-testid="ingredient-card">
+      <IngredientScan ing={ing} onPatch={onPatch} />
       <div className="flex items-start gap-3">
         <div className="flex-1 space-y-2">
           <input className="field" value={ing.name} onChange={(e) => { set({ name: e.target.value }); setAiMsg(null); }} onBlur={() => { if (!hasAi) void lookUp(); }} placeholder={tr("ชื่อวัตถุดิบ เช่น ไข่ไก่", "Ingredient, e.g. egg")} aria-label={tr("ชื่อวัตถุดิบ", "Ingredient name")} />
@@ -319,8 +321,8 @@ function RecipeForm({ initial, onSave, onCancel }: { initial: Recipe | null; onS
         <h2 className="px-1 text-[19px] font-semibold">{tr("วัตถุดิบ", "Ingredients")}</h2>
         <p className="px-1 text-[14px] text-muted">
           {tr(
-            "มีค่าจากฉลาก ใช้ค่าจากฉลากก่อน ถ้าไม่มี AI จะหาค่าสารอาหารของวัตถุดิบนั้นตามน้ำหนักที่ใส่ให้เอง",
-            "Label values are used first. Without a label, the AI looks up that ingredient's nutrition for the amount you typed.",
+            "ของที่มีซอง สแกนบาร์โค้ดหรือถ่ายรูปฉลากได้เลย ไม่ต้องพิมพ์ ถ้าไม่มีฉลาก AI จะหาค่าสารอาหารตามน้ำหนักที่ใส่ให้เอง",
+            "Packed things: scan the barcode or photo the label — no typing. Without a label, the AI looks up the nutrition for the amount you typed.",
           )}
         </p>
         {ings.map((ing) => (
