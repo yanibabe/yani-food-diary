@@ -6,6 +6,7 @@ import { MacroCards, Sheet, StoredPhoto } from "./components/ui";
 import { BackupReminder } from "./components/BackupReminder";
 import { WeekKcalChart } from "./components/WeekKcalChart";
 import { WaterCard } from "./components/WaterCard";
+import { ShareDayButton } from "./components/ShareDayButton";
 import { CharacterMaker, CharacterPicture, useCharLook } from "./components/Character";
 import { guessSlot, shiftDateKey, shortDayLabel, thaiDateKey, thaiDateLabel } from "./lib/date";
 import { copyMeal, recentMeals, searchMeals } from "./lib/repeat";
@@ -183,6 +184,10 @@ function TodayInner() {
           </section>
         );
       })}
+
+      {ready && dayEntries.length > 0 && (
+        <ShareDayButton entries={entries} date={date} target={target} name={goals.profile?.name ?? ""} />
+      )}
 
       {added && (
         <div

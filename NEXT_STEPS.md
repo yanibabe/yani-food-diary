@@ -6,7 +6,7 @@
 
 ---
 
-## LIVE (updated 2026-11-16; Round 28 simpler "กินอะไรดี" (menu + recipe, no delivery) LIVE; Round 27 label numbers = no +15% LIVE; Round 26 grouped "what can I eat" LIVE; Round 25 "what can I eat" LIVE; Round 24 weight moved to Profile, steps removed)
+## LIVE (updated 2026-11-16; Round 29 share my day with my trainer (picture) LIVE; Round 28 simpler "กินอะไรดี" (menu + recipe, no delivery) LIVE; Round 27 label numbers = no +15% LIVE; Round 26 grouped "what can I eat" LIVE; Round 25 "what can I eat" LIVE; Round 24 weight moved to Profile, steps removed)
 
 - **App:** https://yani-food-diary.vercel.app  (Vercel, exm-labs account, free)
 - **Code:** https://github.com/yanibabe/yani-food-diary  (private; pushes auto-deploy)
@@ -25,13 +25,32 @@
    (old wish text:) **Round 28 — "กินอะไรดี" simpler.** Remove the delivery group (+ Grab / LINE MAN buttons): she finds it too much.
    Instead: suggested menu names; tap one → recipe (ingredients + steps) + kcal, so people can cook it,
    or just search the name. Keep "my recipes" group. 7-Eleven group: ask her if it stays.
-3. **Round 29 — share my day with my trainer.** One-tap share of a whole day: every food eaten +
+3. ~~Round 29 — share my day with my trainer~~ ✅ DONE (see Round 29 below). All 3 wishes done.
+   (old wish text:) **Round 29 — share my day with my trainer.** One-tap share of a whole day: every food eaten +
    kcal, protein, fat, carbs (and totals). Easy to send (image and/or text via the iPhone share sheet).
    Ask her: picture, text, or both.
 
-## ▶ NEXT: Round 29 (share my day with my trainer). First question to ask her: picture, text, or both?
-## Also: she tries Rounds 27 + 28 on her iPhone with the REAL AI (label photo; open a "เมนูทำเอง" idea —
-## does the recipe look right and easy? does "ค้นหาสูตรอื่น" open Google on iPhone?).
+## ▶ NEXT: she tries Round 29 on her iPhone: Today → "ส่งสรุปวันนี้ให้เทรนเนอร์" → "ส่งรูปนี้" →
+## does the iPhone share sheet open (LINE / Messages / Save Image)? Is the picture easy for her trainer to read?
+## Also still untried with the REAL AI: Rounds 27 + 28 (label photo; a "เมนูทำเอง" recipe; "ค้นหาสูตรอื่น" link).
+## Then pick the next idea with her (one question at a time, in Thai). No new wish is agreed yet.
+
+## Round 29 (2026-11-16) — share my day with my trainer (picture) ✅ LIVE
+
+Her answer: picture (not text).
+- `app/lib/shareDay.ts`: `buildShareDay(entries, date)` → per meal slot (เช้า/กลางวัน/เย็น/ของว่าง) every meal with
+  kcal + protein/carbs/fat (whole numbers), a small "what was in it" line when a meal has 2+ items, slot totals,
+  day total. `shareFileName` → "snapcal-YYYY-MM-DD.png". Tests: `tests/shareDay.test.ts` (92/92 pass).
+- `app/components/ShareDayButton.tsx`: draws a 1080-px-wide PNG on a canvas (no new library), minimal look:
+  cream background, white card, date + her name, big kcal / target + left/over, 3 pastel macro boxes, meals,
+  empty slots say "ไม่ได้บันทึก", footer "บันทึกด้วย SnapCal". Thai or English follows the app language.
+  Waits for the app fonts first. Tap button → sheet with preview → "ส่งรูปนี้" (navigator.share with the file →
+  iPhone share sheet). Where file sharing isn't supported (desktop), the button is "บันทึกรูปนี้" (download).
+  Picture is made BEFORE the tap on "send" so iPhone allows the share (needs a fresh tap).
+- `app/page.tsx`: the button sits under the meal cards, only when the day on screen has at least one meal.
+  Works for past days too (uses the day on screen). No photos and no water on the picture (keep it simple).
+- Checked at iPhone size with the test server: button shows, sheet opens, picture correct (Thai text, long
+  names wrap to 2 lines, totals right), no console errors. Build OK. NOT yet tried on a real iPhone share sheet.
 
 ## Round 28 (2026-11-16) — "กินอะไรดี" simpler: delivery out, cook-it-yourself menus in ✅ LIVE
 
