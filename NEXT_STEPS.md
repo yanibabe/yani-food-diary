@@ -41,6 +41,9 @@
 ## Her answer to 1–6: "not quite — something cool, simple, cute, or like popular apps". So I made 6 MORE:
 ##   docs/design-round30/styles-2.html (preview copy: /styles-preview-2.html, also not in git)
 ##   7 Bento Grid · 8 Liquid Glass · 9 Color Pop · 10 Calm Minimal · 11 Cute Pills · 12 Sporty Mono
+## Her answer to 7–12: LIKES 10 Calm Minimal, 11 Cute Pills, 8 Liquid Glass — wants to see more. So 6 MORE:
+##   docs/design-round30/styles-3.html (preview: /styles-preview-3.html, not in git)
+##   13 Frosted Calm (8+10) · 14 Glass Pills (8+11) · 15 Milk Tea · 16 Cloud Pastel · 17 Dot Notebook · 18 Sorbet Glass
 ## WAITING for her pick (or a mix), then build share picture + profile in that style, then the rest of the app.
 ## Then: use them for the FEEL only (never copy), show 2–3 mockups to pick from (she likes minimal),
 ## keep her own brand character as-is, then build page by page. May need 2–3 rounds.
