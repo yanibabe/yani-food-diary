@@ -64,6 +64,13 @@ Order: accuracy first, THEN Healthy Recipe Library, personalized meal ideas, wee
   to FIX numbers, which needs a real label photo). Could be its own round later if she wants it.
 - Older open items under Round 36 (food tip ก/ข choice; Rounds 33–35 not tried on iPhone).
 
+## ▶ NEXT — Round 42 "Smart Ingredient Search & Simplified UX" is APPROVED TO START (brief saved)
+- Her full brief (2 messages) is in `docs/round42-brief.md`. Read it first. Nothing is built yet.
+- FIRST: ask her what went wrong when she tried Round 41 on her iPhone (she wrote "ลองแล้ว แต่…" and it was
+  cut off). Fix any real Round 41 problem before Round 42.
+- Do not deploy Round 42 automatically; report in Thai and ask approval first.
+- Fresh chat: she types `continue yani-food-diary`.
+
 ## ▶ NEXT — Round 41 USDA is LIVE (2026-11-16, commit ca631a5, Vercel success)
 - She approved the deploy. USDA_API_KEY added to Vercel **Production only**, type Sensitive (piped from
   .env.local, never printed). Preview has no USDA key (she asked for Production) → preview deploys show no USDA button.
