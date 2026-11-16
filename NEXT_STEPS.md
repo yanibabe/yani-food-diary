@@ -30,10 +30,13 @@
    kcal, protein, fat, carbs (and totals). Easy to send (image and/or text via the iPhone share sheet).
    Ask her: picture, text, or both.
 
-## ▶ NEXT: she tries Round 29 on her iPhone: Today → "ส่งสรุปวันนี้ให้เทรนเนอร์" → "ส่งรูปนี้" →
-## does the iPhone share sheet open (LINE / Messages / Save Image)? Is the picture easy for her trainer to read?
-## Also still untried with the REAL AI: Rounds 27 + 28 (label photo; a "เมนูทำเอง" recipe; "ค้นหาสูตรอื่น" link).
-## Then pick the next idea with her (one question at a time, in Thai). No new wish is agreed yet.
+## ▶ NEXT (2026-11-16): Round 30 — WHOLE-APP RESTYLE (every page)
+## Round 29 share tried on her iPhone ✓ ("okay to a degree" — works).
+## Her wish: every page looks more professional and easy to use; LESS text on screen, but still clear.
+## She is collecting reference pictures of the style she wants and will send them. WAIT for them.
+## Then: use them for the FEEL only (never copy), show 2–3 mockups to pick from (she likes minimal),
+## keep her own brand character as-is, then build page by page. May need 2–3 rounds.
+## Still untried with the REAL AI: Rounds 27 + 28 (label photo; a "เมนูทำเอง" recipe; "ค้นหาสูตรอื่น" link).
 
 ## Round 29 (2026-11-16) — share my day with my trainer (picture) ✅ LIVE
 
