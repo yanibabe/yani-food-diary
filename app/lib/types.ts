@@ -9,6 +9,41 @@ export type Macros = {
   fat: number; // grams
 };
 
+export type MacroKey = "protein" | "carbs" | "fat";
+
+// ---- Round 39: where a nutrition number came from, and how sure we are ----
+
+/**
+ * WHERE the numbers came from.
+ * label     = printed on the pack (read from a photo, or the AI saw a printed label)
+ * user      = typed by her (never counts as verified by itself)
+ * database  = an outside food database (Open Food Facts now)
+ * reference = the app's own small reference table (rough typical values)
+ * ai        = the AI's own estimate
+ * recipe    = worked out from a saved recipe's ingredients
+ * unknown   = saved before the app recorded this, and it can't be told for sure
+ */
+export type NutrientSource = "label" | "user" | "database" | "reference" | "ai" | "recipe" | "unknown";
+
+/**
+ * HOW sure we are.
+ * verified   = checked against a trusted source (nothing is marked verified yet — kept for later rounds)
+ * unverified = real numbers from somewhere (label, database, her typing) that nobody has checked
+ * estimated  = typical values or a guess
+ * unknown    = can't be told
+ */
+export type Verification = "verified" | "unverified" | "estimated" | "unknown";
+
+export type Provenance = {
+  source: NutrientSource;
+  verification: Verification;
+  /** Extra detail, e.g. "off", "photo", "typed", "edited", "exact-amount". */
+  via?: string | null;
+};
+
+/** The preparation state a value is for. Raw rice and cooked rice are very different per 100 g. */
+export type FoodState = "raw" | "cooked" | "dried" | "prepared";
+
 export type MealSlot = "breakfast" | "lunch" | "dinner" | "snack";
 
 export const SLOT_LABEL: Record<MealSlot, L> = {
@@ -45,6 +80,10 @@ export type FoodItem = Macros & {
   /** Where the numbers came from, when it was an outside food database (e.g. Open Food Facts).
    *  The amount/unit above is the quantity; the macros above are the snapshot. */
   ref?: FoodRef | null;
+  /** Round 39: where the numbers came from. Missing on older items (then it is worked out, or "unknown"). */
+  prov?: Provenance;
+  /** Round 39: nutrients the source did NOT give. They are stored as 0 but shown as unknown, never as a real 0. */
+  missing?: MacroKey[];
 };
 
 /** source + id in that database. "off" = Open Food Facts (id = barcode). */
@@ -129,9 +168,18 @@ export const RECIPE_CATEGORIES: { key: RecipeCategory; label: L }[] = [
   { key: "other", label: { th: "อื่น ๆ", en: "Other" } },
 ];
 
+/** How a label's numbers got onto an ingredient. Missing on labels saved before Round 39. */
+export type LabelVia = "typed" | "photo" | "off" | "fix-typed" | "fix-photo" | "fix";
+
 export type LabelInfo = Macros & {
   /** per100 = per 100 g (or 100 ml). perUnit = per 1 egg / 1 piece. */
   basis: "per100" | "perUnit";
+  /** Round 39: where these numbers came from. */
+  via?: LabelVia;
+  /** Round 39: "per 100" of grams or of ml. Missing (older labels) = the same kind as the amount. */
+  per?: "g" | "ml";
+  /** Round 39: nutrients the label / database did not give (stored as 0, shown as unknown). */
+  missing?: MacroKey[];
 };
 
 export type Ingredient = {
@@ -145,6 +193,10 @@ export type Ingredient = {
   photoId: string | null;
   /** Nutrition per 100 g the AI looked up for this name (used when there is no label). */
   aiRef?: AiRef | null;
+  /** Round 39: she picked one of the app's reference foods for this (unclear) name. Ignored if the name changes. */
+  refPick?: { name: string; key: string } | null;
+  /** Round 39: grams in 1 ml of this ingredient, typed by her (shown as "weight of 1 tbsp" etc.). */
+  gPerMl?: number | null;
 };
 
 export type AiRef = {
@@ -157,6 +209,8 @@ export type AiRef = {
   unitFor?: IngredientUnit | null;
   /** grams in 1 ml (density), for liquids */
   gPerMl: number | null;
+  /** Round 39: the state these values are for (raw / cooked / dried / prepared). Missing on older answers. */
+  state?: FoodState | null;
 };
 
 export type Recipe = {

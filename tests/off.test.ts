@@ -185,7 +185,7 @@ test("helpers: barcode cleaning, serving grams, retry delay", () => {
   assert.equal(retryDelay(null, 2), 4000);
 });
 
-test("a meal item from an OFF food: grams eaten, no margin, source kept, missing → estimated", () => {
+test("a meal item from an OFF food: grams eaten, no margin, source kept, missing fat stays unknown (Round 39)", () => {
   const food = normalizeOffProduct(NUTELLA.code, NUTELLA.product);
   const it = foodToItem(food, 15, "it1", "Product");
   assert.equal(it.kcal, 81); // 539 × 0.15 = 80.85
@@ -197,8 +197,11 @@ test("a meal item from an OFF food: grams eaten, no margin, source kept, missing
   assert.deepEqual(it.ref, { source: "off", sourceId: "3017624010701" });
   const partial = foodToItem({ ...food, name: null, fat: null }, 100, "it2", "Product");
   assert.equal(partial.name, "Product");
-  assert.equal(partial.fat, 0);
-  assert.equal(partial.estimated, true);
+  assert.equal(partial.fat, 0); // stored as 0 for old screens, but listed as unknown:
+  assert.deepEqual(partial.missing, ["fat"]);
+  assert.equal(partial.estimated, false); // calories are known → not an estimate
+  assert.deepEqual(partial.prov, { source: "database", verification: "unverified", via: "off" });
+  assert.equal(foodToItem({ ...food, kcal: null }, 100, "it3", "P").estimated, true);
 });
 
 test("barcode check digit catches a misread number", () => {

@@ -12,6 +12,7 @@ import { blankItem, cleanBox, cleanNumber, newId } from "../../lib/nutrition";
 import { compressImage, savePhoto } from "../../lib/photos";
 import { useStore } from "../../lib/store";
 import { foodToItem } from "../../lib/food/toItem";
+import { provFromAi } from "../../lib/provenance";
 import type { Food } from "../../lib/food/provider";
 import type { FoodItem } from "../../lib/types";
 import { Icon } from "../../components/Icon";
@@ -85,6 +86,8 @@ function AddInner() {
         dairySource: a.dairySource ?? null,
         margin: a.margin === true,
         fromLabel: a.fromLabel === true,
+        // Round 39: where these numbers came from (an AI guess, or a printed label the AI read).
+        prov: provFromAi({ fromLabel: a.fromLabel === true, userAmount: (a as { userAmount?: boolean }).userAmount === true }),
       }));
       setDraft({ title: r.title || tr("อาหาร", "Meal"), slot: draft.slot, items });
       setQuestion(r.question);
@@ -244,6 +247,7 @@ function AddInner() {
 
       {step === "review" && (
         <MealReview
+          entrySource={mode}
           photo={mode === "photo" ? photo : null}
           initial={draft}
           mockBadge={mock}

@@ -19,8 +19,10 @@ export async function POST(req: Request) {
   if (!name) return Response.json({ error: "bad-request", message: trFor(lang)("ยังไม่ได้ใส่ชื่อวัตถุดิบ", "No ingredient name") }, { status: 400 });
   try {
     // A counted unit (clove, can, ladle…): ask the AI for the weight of ONE of that unit.
+    // Round 39: a volume unit (spoon, cup, ml): ask for the grams in 1 ml (its density).
+    // Answer shape unchanged, plus an optional "state" (raw / cooked / dried / prepared).
     const u = typeof body.unit === "string" && body.unit in UNITS ? (body.unit as IngredientUnit) : null;
-    const unit = u && UNITS[u].kind === "count" ? u : null;
+    const unit = u && UNITS[u].kind !== "mass" ? u : null;
     const result = await lookupIngredient({ name, lang, unit });
     return Response.json({ result, mock: process.env.AI_MOCK === "1" });
   } catch (e) {

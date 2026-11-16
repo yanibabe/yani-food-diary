@@ -2,10 +2,12 @@
 import { useMemo, useRef, useState } from "react";
 import { aiFetch } from "../../../lib/aiFetch";
 import { useParams, useRouter } from "next/navigation";
-import { Badge, NumberField, StoredPhoto } from "../../../components/ui";
+import { Badge, EnergyHint, MissingNote, NumberField, ProvenanceBadge, StoredPhoto } from "../../../components/ui";
 import { fmtG, fmtKcal, newId } from "../../../lib/nutrition";
 import { compressImage, savePhoto } from "../../../lib/photos";
 import { ingredientMacros, recipeTotals } from "../../../lib/recipe";
+import { matchRef, STATE_LABEL } from "../../../lib/foodRef";
+import type { LabelInfo } from "../../../lib/types";
 import { useLang } from "../../../lib/lang";
 import { useStore } from "../../../lib/store";
 import { PIECE_LIKE, RECIPE_CATEGORIES, UNIT_GROUPS, UNITS, unitKind, type Ingredient, type IngredientUnit, type Recipe, type RecipeCategory } from "../../../lib/types";
@@ -43,6 +45,9 @@ function IngredientCard({
   const [aiMsg, setAiMsg] = useState<string | null>(null);
   const trimmed = ing.name.trim();
   const hasAi = !!ing.aiRef && ing.aiRef.name === trimmed;
+  const hasPick = !!ing.refPick && ing.refPick.name === trimmed;
+  /** Round 39: a clear reference food, or an unclear name she must choose for → no automatic AI lookup. */
+  const refKnown = () => matchRef(trimmed).kind !== "none";
 
   async function lookUp(forUnit: IngredientUnit = ing.unit) {
     const name = ing.name.trim();
@@ -50,7 +55,8 @@ function IngredientCard({
     setLooking(name);
     setAiMsg(null);
     try {
-      const unit = unitKind(forUnit) === "count" ? forUnit : undefined;
+      // Counted unit → AI gives the weight of one; volume unit → AI gives grams per ml.
+      const unit = unitKind(forUnit) !== "mass" ? forUnit : undefined;
       const r = await aiFetch("/api/ingredient", { name, lang, unit }, lang);
       const data = await r.json().catch(() => null);
       if (!r.ok) {
@@ -59,7 +65,7 @@ function IngredientCard({
         setAiMsg(tr("AI ไม่รู้จักวัตถุดิบนี้ — กรอกค่าจากฉลากได้", "The AI doesn't know this ingredient — add the label values"));
       } else {
         const x = data.result;
-        onPatch({ aiRef: { name, per100: { kcal: x.kcal, protein: x.protein, carbs: x.carbs, fat: x.fat }, unitG: x.unitG, gPerMl: x.gPerMl, unitFor: x.unitFor ?? null } });
+        onPatch({ aiRef: { name, per100: { kcal: x.kcal, protein: x.protein, carbs: x.carbs, fat: x.fat }, unitG: x.unitG, gPerMl: x.gPerMl, unitFor: x.unitFor ?? null, state: x.state ?? null }, refPick: null });
       }
     } catch {
       setAiMsg(tr("เชื่อมต่อไม่ได้ ลองอีกครั้ง", "No connection. Try again."));
@@ -74,20 +80,28 @@ function IngredientCard({
   function changeUnit(u: IngredientUnit) {
     set({ unit: u });
     // New counted unit (e.g. กลีบ, กระป๋อง): ask the AI how much ONE of it weighs.
-    if (unitKind(u) === "count" && !ing.label && !ing.gramsPerUnit && trimmed && !aiFitsUnit(u)) void lookUp(u);
+    if (unitKind(u) === "count" && !ing.label && !ing.gramsPerUnit && trimmed && !aiFitsUnit(u) && !refKnown()) void lookUp(u);
+    // Round 39: spoons/cups of an AI-looked-up food with no density yet → ask the AI for grams per ml.
+    if (unitKind(u) === "volume" && !ing.label && !ing.gPerMl && trimmed && hasAi && !ing.aiRef?.gPerMl) void lookUp(u);
   }
   const needsGpu =
     (ing.label?.basis === "per100" && isCount) ||
     (ing.label?.basis === "perUnit" && !isCount) ||
     (!ing.label && isCount);
   const unitWord = isCount ? UNITS[ing.unit][lang] : tr("ชิ้น", "piece");
+  const isVolume = unitKind(ing.unit) === "volume";
+  // Round 39: weight of 1 spoon / cup / ml, when the app can't know it (never assumes 1 g/ml).
+  const needsDensity = (!res.ok && res.reason === "need-density") || (isVolume && !!ing.gPerMl);
+  const volFactor = UNITS[ing.unit].factor;
+  /** She changed a label number → the label is her own typing now. */
+  const setLabel = (p: Partial<LabelInfo>) => set({ label: { ...ing.label!, ...p, via: "typed" } });
 
   return (
     <div className="card space-y-3 p-4" data-testid="ingredient-card">
       <IngredientScan ing={ing} onPatch={onPatch} />
       <div className="flex items-start gap-3">
         <div className="flex-1 space-y-2">
-          <input className="field" value={ing.name} onChange={(e) => { set({ name: e.target.value }); setAiMsg(null); }} onBlur={() => { if (!hasAi) void lookUp(); }} placeholder={tr("ชื่อวัตถุดิบ เช่น ไข่ไก่", "Ingredient, e.g. egg")} aria-label={tr("ชื่อวัตถุดิบ", "Ingredient name")} />
+          <input className="field" value={ing.name} onChange={(e) => { set({ name: e.target.value }); setAiMsg(null); }} onBlur={() => { if (!hasAi && !hasPick && !refKnown()) void lookUp(); }} placeholder={tr("ชื่อวัตถุดิบ เช่น ไข่ไก่", "Ingredient, e.g. egg")} aria-label={tr("ชื่อวัตถุดิบ", "Ingredient name")} />
           <div className="grid grid-cols-[1fr_auto] gap-2">
             <NumberField value={ing.amount || null} onChange={(n) => set({ amount: n ?? 0 })} placeholder={tr("ปริมาณ", "Amount")} aria-label={tr("ปริมาณ", "Amount")} />
             <select className="field !w-auto max-w-[150px]" value={ing.unit} onChange={(e) => changeUnit(e.target.value as IngredientUnit)} aria-label={tr("หน่วย", "Unit")}>
@@ -111,7 +125,7 @@ function IngredientCard({
           className="h-5 w-5 accent-[var(--olive)]"
           checked={!!ing.label}
           onChange={(e) =>
-            set({ label: e.target.checked ? { basis: "per100", kcal: 0, protein: 0, carbs: 0, fat: 0 } : null })
+            set({ label: e.target.checked ? { basis: "per100", kcal: 0, protein: 0, carbs: 0, fat: 0, via: "typed" } : null })
           }
         />
         <span>{tr("มีค่าจากฉลากโภชนาการ", "I have the nutrition label")}</span>
@@ -124,6 +138,7 @@ function IngredientCard({
               <button
                 key={b}
                 onClick={() => set({ label: { ...ing.label!, basis: b } })}
+                aria-pressed={ing.label!.basis === b}
                 className={`min-h-[44px] rounded-xl text-[15px] font-medium ${ing.label!.basis === b ? "bg-olive text-white" : "bg-paper"}`}
               >
                 {b === "per100" ? tr("ต่อ 100 กรัม/มล.", "Per 100 g/ml") : isCount ? tr(`ต่อ 1 ${unitWord}`, `Per 1 ${unitWord}`) : tr("ต่อ 1 หน่วย (ชิ้น/ซอง)", "Per 1 unit (piece/sachet)")}
@@ -143,13 +158,75 @@ function IngredientCard({
                 <span className="mb-1 block text-[12px] text-muted">{l}</span>
                 <NumberField
                   className="field num !min-h-[44px] !px-2"
-                  value={ing.label![k]}
-                  onChange={(n) => set({ label: { ...ing.label!, [k]: n ?? 0 } })}
+                  value={k !== "kcal" && ing.label!.missing?.includes(k) ? null : ing.label![k]}
+                  onChange={(n) => {
+                    const missing = (ing.label!.missing ?? []).filter((x) => x !== k);
+                    setLabel({ [k]: n ?? 0, missing: missing.length ? missing : undefined });
+                  }}
+                  placeholder={k !== "kcal" && ing.label!.missing?.includes(k) ? tr("ไม่ทราบ", "?") : undefined}
                   aria-label={`${tr("ฉลาก", "Label")} ${l}`}
                 />
               </div>
             ))}
           </div>
+          {ing.label.basis === "per100" && isVolume && (
+            // Round 39: is the label per 100 g or per 100 ml? It matters for spoons and cups.
+            <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label={tr("ฉลากเป็นค่าต่อ", "The label is per")} data-testid="label-per">
+              {(["ml", "g"] as const).map((p) => {
+                const on = (ing.label!.per ?? "ml") === p;
+                return (
+                  <button
+                    key={p}
+                    type="button"
+                    role="radio"
+                    aria-checked={on}
+                    onClick={() => set({ label: { ...ing.label!, per: p } })}
+                    className={`min-h-[40px] rounded-xl text-[14px] ${on ? "bg-ink text-white" : "bg-paper"}`}
+                  >
+                    {p === "ml" ? tr("ฉลากต่อ 100 มล.", "Label per 100 ml") : tr("ฉลากต่อ 100 กรัม", "Label per 100 g")}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          <EnergyHint m={ing.label} missing={ing.label.missing} />
+        </div>
+      )}
+
+      {!res.ok && res.reason === "ambiguous" && !looking && (
+        // Round 39: an unclear name is never picked by itself — she chooses.
+        <div className="space-y-2 rounded-2xl bg-cream p-3" data-testid="ref-choices">
+          <p className="text-[14px] text-warn-ink">{res.message}</p>
+          <div className="flex flex-wrap gap-2">
+            {res.options?.map((f) => (
+              <button
+                key={f.key}
+                type="button"
+                className="min-h-[40px] rounded-full border border-white/80 bg-white/70 px-3 text-[14px]"
+                onClick={() => onPatch({ refPick: { name: trimmed, key: f.key } })}
+                data-testid="ref-choice"
+              >
+                {f.label[lang]}
+                {f.state ? <span className="ml-1 text-muted">· {STATE_LABEL[f.state][lang]}</span> : null}
+                <span className="ml-1 num text-muted">{fmtKcal(f.per100.kcal)}/100 g</span>
+              </button>
+            ))}
+            <button type="button" className="min-h-[40px] rounded-full px-3 text-[14px] font-medium text-olive-dark" onClick={() => void lookUp()}>
+              <Icon name="sparkle" className="mr-1 inline-block h-4 w-4 align-[-3px]" />{tr("ไม่ใช่ทั้งหมด — ให้ AI หา", "None of these — ask the AI")}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {needsDensity && (
+        <div>
+          <label className="label">{tr(`น้ำหนักต่อ 1 ${UNITS[ing.unit][lang]} (กรัม)`, `Weight of 1 ${UNITS[ing.unit][lang]} (g)`)}</label>
+          <NumberField
+            value={ing.gPerMl ? Math.round(ing.gPerMl * volFactor * 100) / 100 : null}
+            onChange={(n) => set({ gPerMl: n && n > 0 ? n / volFactor : null })}
+            placeholder={tr("เช่น 13", "e.g. 13")}
+            aria-label={tr("น้ำหนักต่อหน่วยตวง", "Weight per measure")}
+          />
         </div>
       )}
 
@@ -173,26 +250,23 @@ function IngredientCard({
             <span className="flex flex-wrap items-center gap-1.5">
               <span className="num font-semibold">{fmtKcal(res.macros.kcal)} kcal</span>
               <span className="text-muted">P {fmtG(res.macros.protein)} · C {fmtG(res.macros.carbs)} · F {fmtG(res.macros.fat)}</span>
-              {res.source === "label" ? (
-                <Badge tone="olive">{tr("จากฉลาก", "From label")}</Badge>
-              ) : res.refName === "AI" ? (
-                <Badge><Icon name="sparkle" className="mr-1 inline-block h-3.5 w-3.5 align-[-2px]" />{tr("ค่าจาก AI", "AI estimate")}</Badge>
-              ) : (
-                <Badge>{tr("ค่าประมาณ", "Estimate")} ({res.refName})</Badge>
-              )}
+              <ProvenanceBadge prov={res.prov} />
+              {res.state && <Badge tone="muted">{STATE_LABEL[res.state][lang]}</Badge>}
+              {res.source === "estimate" && res.refName !== "AI" && <span className="text-[12px] text-muted">({res.refName})</span>}
             </span>
-          ) : (
+          ) : res.reason === "ambiguous" && !aiMsg ? null : (
             <span className="text-warn-ink">{aiMsg ?? res.message}</span>
           )}
-          {hasAi && !ing.label && !looking && (
+          {res.ok && <MissingNote missing={res.missing} className="mt-1" />}
+          {hasAi && !ing.label && !hasPick && !looking && (
             <span className="mt-1 block text-[12px] text-muted">
               {tr(
-                `ต่อ 100 กรัม: ${fmtKcal(ing.aiRef!.per100.kcal)} kcal · ค่าดิบทั่วไป ไม่ใช่ค่าจากฉลาก`,
-                `Per 100 g: ${fmtKcal(ing.aiRef!.per100.kcal)} kcal · typical raw values, not from a label`,
+                `ต่อ 100 กรัม: ${fmtKcal(ing.aiRef!.per100.kcal)} kcal · ${ing.aiRef!.state ? `ค่า${STATE_LABEL[ing.aiRef!.state].th}` : "ค่าทั่วไป"} ไม่ใช่ค่าจากฉลาก`,
+                `Per 100 g: ${fmtKcal(ing.aiRef!.per100.kcal)} kcal · typical ${ing.aiRef!.state ? `${STATE_LABEL[ing.aiRef!.state].en} ` : ""}values, not from a label`,
               )}
             </span>
           )}
-          {!ing.label && !hasAi && !looking && trimmed && (
+          {!ing.label && !hasAi && !looking && trimmed && !(!res.ok && res.reason === "ambiguous") && (
             <button className="mt-1 block min-h-[36px] text-[14px] font-medium text-olive-dark" onClick={() => void lookUp()}>
               <Icon name="sparkle" className="mr-1 inline-block h-4 w-4 align-[-3px]" />{tr("ให้ AI หาค่าสารอาหาร", "Let the AI look up the nutrition")}
             </button>

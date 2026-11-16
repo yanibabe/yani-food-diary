@@ -12,6 +12,7 @@ import { guessSlot, shiftDateKey, shortDayLabel, thaiDateKey, thaiDateLabel } fr
 import { copyMeal, recentMeals, searchMeals } from "./lib/repeat";
 import { macroTargets, proteinTargetG } from "./lib/energy";
 import { fmtKcal, pickMacros, sumMacros } from "./lib/nutrition";
+import { isEstimated, joinMissing } from "./lib/provenance";
 import { useLang } from "./lib/lang";
 import { useStore } from "./lib/store";
 import { glassesOn, waterGoal } from "./lib/water";
@@ -333,6 +334,10 @@ function SourceIcon({ e, small }: { e: Entry; small?: boolean }) {
 
 function EntryRow({ e }: { e: Entry }) {
   const m = sumMacros(e.items.map(pickMacros));
+  // Round 39: "~" = some numbers are estimates; "?" = a nutrient is unknown for some item.
+  const approx = e.items.some((i) => isEstimated(i, e));
+  const gap = joinMissing(...e.items.map((i) => i.missing));
+  const q = (k: "protein" | "carbs" | "fat") => (gap.includes(k) ? "?" : "");
   return (
     <li>
       <Link href={`/entry/${e.id}`} className="flex items-center gap-3 px-1 py-3" data-testid="entry-row">
@@ -346,10 +351,11 @@ function EntryRow({ e }: { e: Entry }) {
         <div className="min-w-0 flex-1">
           <div className="truncate font-medium">{e.title}</div>
           <div className="truncate text-[14px] text-muted">
-            P {Math.round(m.protein)} · C {Math.round(m.carbs)} · F {Math.round(m.fat)} g
+            P {Math.round(m.protein)}{q("protein")} · C {Math.round(m.carbs)}{q("carbs")} · F {Math.round(m.fat)}{q("fat")} g
           </div>
         </div>
-        <div className="num text-[20px]">
+        <div className="num text-[20px]" data-approx={approx ? "yes" : "no"}>
+          {approx && <span className="text-muted" aria-label="approx">~</span>}
           {fmtKcal(m.kcal)}
           <span className="ml-0.5 text-[12px] font-normal text-muted">kcal</span>
         </div>

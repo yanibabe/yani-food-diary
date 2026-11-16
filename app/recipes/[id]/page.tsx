@@ -2,7 +2,7 @@
 import { Suspense, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { Badge, KcalBig, MacroCards, NumberField, Sheet, StoredPhoto, PotIcon, potTone } from "../../components/ui";
+import { Badge, KcalBig, MacroCards, MissingNote, NumberField, ProvenanceBadge, Sheet, StoredPhoto, PotIcon, potTone } from "../../components/ui";
 import { guessSlot, thaiDateKey } from "../../lib/date";
 import { fmtAmount, fmtG, fmtKcal, newId } from "../../lib/nutrition";
 import { ingredientMacros, mealFromRecipe, totalsForRecipe } from "../../lib/recipe";
@@ -29,7 +29,7 @@ function LogSheet({ recipe, open, onClose, date }: { recipe: Recipe; open: boole
   const changed = ings.some((i, k) => i.amount !== recipe.ingredients[k]?.amount);
   const hasEstimate = ings.some((i) => {
     const r = ingredientMacros(i);
-    return r.ok && r.source === "estimate";
+    return r.ok && r.prov.verification === "estimated";
   });
 
   function confirm() {
@@ -50,6 +50,9 @@ function LogSheet({ recipe, open, onClose, date }: { recipe: Recipe; open: boole
           unit: mode === "servings" ? tr("เสิร์ฟ", "serving") : tr("กรัม", "g"),
           ...meal.macros,
           estimated: hasEstimate,
+          // Round 39: worked out from the recipe; as sure as its least sure ingredient.
+          prov: meal.prov,
+          ...(meal.missing.length ? { missing: meal.missing } : {}),
           kind: "food",
           note: changed ? tr("ปรับวัตถุดิบเฉพาะมื้อนี้", "Ingredients changed for this meal only") : null,
           box: null,
@@ -224,6 +227,7 @@ function RecipeInner() {
           {tr("ทั้งสูตร", "Whole recipe")} <span className="num font-semibold text-ink">{fmtKcal(t.total.kcal)}</span> kcal · P {fmtG(t.total.protein)} · C {fmtG(t.total.carbs)} · F {fmtG(t.total.fat)} g
         </p>
         {t.hasEstimate && <p className="text-center"><Badge>{tr("มีบางวัตถุดิบใช้ค่าประมาณ", "Some ingredients use estimates")}</Badge></p>}
+        <MissingNote missing={t.missing} className="text-center" />
         {!t.complete && (
           <p className="rounded-xl bg-warn px-3 py-2 text-center text-[14px] text-warn-ink">{tr("ข้อมูลวัตถุดิบยังไม่ครบ — กด “แก้สูตร”", "Some ingredient details are missing — tap “Edit recipe”")}</p>
         )}
@@ -251,7 +255,7 @@ function RecipeInner() {
                   <div className="truncate font-semibold">{i.name}</div>
                   <div className="text-[14px] text-muted">{fmtAmount(i.amount)} {UNIT_LABEL[i.unit][lang]}</div>
                   <div className="num mt-1 text-[15px] font-semibold">{r.ok ? `${fmtKcal(r.macros.kcal)} kcal` : "–"}</div>
-                  {r.ok && <div className="mt-1">{r.source === "label" ? <Badge tone="olive">{tr("ฉลาก", "Label")}</Badge> : <Badge>{tr("ประมาณ", "Estimate")}</Badge>}</div>}
+                  {r.ok && <div className="mt-1"><ProvenanceBadge prov={r.prov} /></div>}
                   {avoidDairy && looksDairy(i.name) && <div className="mt-1"><Badge>🥛 {tr("นม", "Milk")}</Badge></div>}
                 </div>
               </div>

@@ -56,6 +56,7 @@ export default function EntryPage() {
         </p>
       )}
       <MealReview
+        entrySource={entry.source}
         photo={photo}
         initial={{ title: entry.title, slot: entry.slot, items: entry.items }}
         chatEnabled={!!ai && (ai.configured || ai.mock)}

@@ -125,7 +125,7 @@ export function BarcodeLookup({ onPick, onManual }: { onPick: (food: Food, grams
   /** Save her label numbers for this barcode on the phone; used every time she scans it again. */
   function saveFix() {
     if (!fixForm || fixForm.servingG == null || fixForm.kcal == null) return;
-    keepFix({ ...fixForm, servingG: fixForm.servingG, kcal: fixForm.kcal, liquid: servingIsLiquid(food?.servingSize ?? original?.servingSize ?? null) });
+    keepFix({ ...fixForm, servingG: fixForm.servingG, kcal: fixForm.kcal, liquid: servingIsLiquid(food?.servingSize ?? original?.servingSize ?? null), via: "typed" });
   }
 
   /** Photo of the nutrition label → the AI reads the pack's numbers → saved as her fix for this barcode. */
@@ -154,7 +154,7 @@ export function BarcodeLookup({ onPick, onManual }: { onPick: (food: Food, grams
         return;
       }
       setFixForm(null);
-      keepFix(data.label);
+      keepFix({ ...data.label, via: "photo" });
     } catch (e) {
       setError(`${tr("อ่านรูปไม่ได้", "Couldn't read the photo")}: ${e instanceof Error ? e.message : String(e)}`);
     } finally {

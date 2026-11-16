@@ -6,7 +6,7 @@
 
 ---
 
-## LIVE (updated 2026-11-16; Round 38 recipe ingredient photos: any/many photos + average fallback LIVE; Round 37 waiting popup while a photo is read LIVE; Round 36 camera asks once per opening + album photos LIVE; Round 35 scan ingredients in recipes LIVE; Round 34 Phosphor Light icons LIVE; Round 33 recipes in category boxes + pot icon + 34 units LIVE; Round 32 line-only small character + % in tiles + food tip LIVE; Round 31 whole app in Frosted Calm + richer share picture LIVE; Round 30 Frosted Calm share picture + Profile LIVE; Round 29 share my day with my trainer (picture) LIVE; Round 28 simpler "กินอะไรดี" (menu + recipe, no delivery) LIVE; Round 27 label numbers = no +15% LIVE; Round 26 grouped "what can I eat" LIVE; Round 25 "what can I eat" LIVE; Round 24 weight moved to Profile, steps removed)
+## LIVE (updated 2026-11-16; Round 39 nutrition accuracy: careful matching + source marks + unknown nutrients + densities LIVE; Round 38 recipe ingredient photos: any/many photos + average fallback LIVE; Round 37 waiting popup while a photo is read LIVE; Round 36 camera asks once per opening + album photos LIVE; Round 35 scan ingredients in recipes LIVE; Round 34 Phosphor Light icons LIVE; Round 33 recipes in category boxes + pot icon + 34 units LIVE; Round 32 line-only small character + % in tiles + food tip LIVE; Round 31 whole app in Frosted Calm + richer share picture LIVE; Round 30 Frosted Calm share picture + Profile LIVE; Round 29 share my day with my trainer (picture) LIVE; Round 28 simpler "กินอะไรดี" (menu + recipe, no delivery) LIVE; Round 27 label numbers = no +15% LIVE; Round 26 grouped "what can I eat" LIVE; Round 25 "what can I eat" LIVE; Round 24 weight moved to Profile, steps removed)
 
 - **App:** https://yani-food-diary.vercel.app  (Vercel, exm-labs account, free)
 - **Code:** https://github.com/yanibabe/yani-food-diary  (private; pushes auto-deploy)
@@ -34,11 +34,70 @@
 Rounds 33–35 tried on her iPhone ✓ ("okay"). Round 36 = her 2 fixes from that try.
 Round 36: she said "okay" (2026-11-16) and asked for Round 37.
 
+## ▶ PHASE 1 — NUTRITION ACCURACY UPGRADE (approved by her 2026-11-16)
+She had the project reviewed outside (review zip on her Desktop) and approved this plan.
+Order: accuracy first, THEN Healthy Recipe Library, personalized meal ideas, weekly meal planner.
+- **Round 39 ✅ DONE + LIVE (details in the Round 39 section below):** nutrition data reliability, no outside services.
+  Fix ingredient name matching (oyster sauce "น้ำมันหอย" ≠ oil, raw rice ≠ cooked rice, condensed / soy /
+  coconut milk ≠ cow milk, egg white ≠ whole egg, dried ≠ fresh shrimp, chicken cuts). Never auto-pick an
+  unclear match: ask her. Record WHERE every number comes from (source) + HOW sure it is (verification).
+  User-typed values are NOT "verified". Old records with unclear origin = "unknown" (never claim verified).
+  Missing nutrients stay unknown (not 0). Raw / cooked / dried states. Real densities for ml ↔ g
+  (never assume every liquid is 1 g/ml). 4/4/9 kcal check as a hint only. Small estimate marks in the
+  existing design. Never rewrite saved diary numbers. Regression tests for every issue.
+  NOT in Round 39: USDA, Mahidol data, any change to the +15% rule, recipe library, meal planner.
+- **Round 40:** her decision on the +15% rule (plan: keep AI best guess + show a range; optional
+  "calorie buffer" on kcal only, never on protein, never on verified/label values).
+- **Round 41:** USDA FoodData Central (free, public domain CC0, source credit requested). Needs a free
+  data.gov API key that SHE signs up for; key lives on the server only. 1,000 requests/hour.
+- **Round 42:** Mahidol INMU Thai Food Composition Database — free for non-commercial use with credit,
+  but "all rights reserved"; putting values inside an app needs permission by email (I can draft it in
+  English, she sends it). No API or download file found. Do NOT use it before permission.
+- Checkpoint before Round 39: git tag `before-round-39` (also on GitHub).
+
 ## ▶ NEXT — ask her (one at a time)
-- Try Round 38 on her iPhone: recipe → ingredient → "รูปสินค้า" → pick front + back photos → "อ่าน N รูป".
+- Round 39 is live. She should try it on her iPhone (checklist in the Round 39 section). Then Round 40
+  (her decision on the +15% rule).
+- ✅ Round 38 tried on her iPhone (2026-11-16): she said "ลองแล้ว ใช้ได้" (tried it, it works). Nothing
+  more was reported (which photos / products she used is not known).
 - Barcode page "ไม่ตรงกับซอง? ถ่าย/เลือกรูปฉลาก" was NOT changed (she let me decide: that button exists
   to FIX numbers, which needs a real label photo). Could be its own round later if she wants it.
 - Older open items under Round 36 (food tip ก/ข choice; Rounds 33–35 not tried on iPhone).
+
+## Round 39 (2026-11-16) — nutrition accuracy (matching, source, unknowns, density) ✅ LIVE
+Tests: 137/137 pass (118 old, 4 old ones updated on purpose, 19 new in `tests/round39.test.ts`).
+tsc clean. Lint: 0 errors (1 old warning in LiveBarcodeScanner.tsx, not touched). Build OK.
+Browser check at phone size (fake AI): Today "~" + "?" marks, meal badges, recipe choice chips,
+"weight of 1 cup" box. NOT yet tried on her iPhone.
+- **Matching** (`app/lib/foodRef.ts`, rewritten): the longest name wins; a match counts only if nothing
+  meaningful is left over; English names must be whole words ("eggplant" ≠ egg). Unclear names
+  (ข้าว, ไก่, สะโพกไก่, หมู, ไข่, กุ้ง, นม, นมถั่วเหลือง, or a cooked dish like อกไก่ทอด) return "ask" with
+  choices — never picked by itself. New foods: egg white/yolk, uncooked rice (360), chicken cuts
+  (breast ± skin, thigh ± skin, drumstick, wing), pork tenderloin/belly, dried shrimp, soy milk
+  sweet/unsweet, condensed, evaporated, coconut milk. "น้ำมันหอย" = oyster sauce. Old values unchanged.
+- **Source + how sure** (`app/lib/provenance.ts`, new): `prov {source, verification, via}` on new items
+  and labels. Sources: label/user/database/reference/ai/recipe/unknown. Nothing is "verified" yet.
+  Old items are worked out when SHOWN, never written back; unclear ones = "unknown" (e.g. old barcode
+  items: Open Food Facts or her fix — can't tell).
+- **Unknown nutrients:** `missing` list on items and labels. Shown as "ไม่ทราบ" / "?" / a note; still 0 in
+  sums so totals and old screens keep working. OFF item is "estimated" only when kcal is missing.
+- **Density:** her number → AI's → table. No guess of 1 g/ml any more: asks "น้ำหนักต่อ 1 <หน่วย>".
+  Old labels with no `per` keep the old "per 100 ml" behavior; new labels record per g / per ml, and
+  the recipe editor has a "ฉลากต่อ 100 มล. / 100 กรัม" switch for spoon/cup amounts.
+- **4/4/9 check** (`energyCheck` in nutrition.ts): hint only ("ตัวเลขไม่ค่อยตรง"), gap must be
+  > 20 kcal AND > 20%; skipped when a nutrient is missing. Never changes numbers.
+- **Screens:** small badges only, same design. Today: "~" before kcal, "?" after a missing P/C/F.
+  Meal list: ประมาณ / ไม่ทราบที่มา / ข้อมูลไม่ครบ / ตัวเลขไม่ค่อยตรง. Recipe editor: choice chips, density
+  box, label per switch, source badge + state (ดิบ/สุก/แห้ง).
+- **Behavior changes she may notice:** plain "ข้าว"/"ไก่"/"หมู"/"ไข่"/"กุ้ง" in a recipe now ask her to pick;
+  spoons/cups of some foods ask for a weight; AI items always show "ประมาณ"; old label ingredients show
+  "ไม่ทราบที่มา"; missing nutrients show as unknown, not 0. Old recipes that already had an AI lookup
+  keep their numbers. No saved diary numbers were changed. Backups keep the new fields.
+- **iPhone checklist:** (1) recipe: type "ข้าว" → choice appears; (2) "น้ำมันหอย 1 ช้อนโต๊ะ" → oyster sauce
+  ≈ 9 kcal; (3) "อกไก่ 1 ถ้วยตวง" → asks weight of 1 cup; (4) old meals on Today still show the same
+  numbers, with "~" on AI meals; (5) barcode snack with a missing nutrient shows "?".
+- Remaining / not done: no USDA, no Mahidol, +15% rule untouched (Round 40). AI prompt now returns
+  `state` and gPerMl for spoons — real AI answers not tried (mock only).
 
 ## Round 38 (2026-11-16) — recipe ingredient photos: any photo, many photos, average fallback ✅ LIVE
 - Button "รูปฉลาก" → "รูปสินค้า". Picker allows several photos; they show as small squares (× to remove,

@@ -17,6 +17,11 @@ export type Food = {
   protein: number | null;
   carbs: number | null;
   fat: number | null;
+  /**
+   * Round 39: set when her own label fix replaced the database's numbers
+   * (photo = an AI read her label photo; typed = she typed them; unknown = a fix saved before Round 39).
+   */
+  fixedBy?: "photo" | "typed" | "unknown";
 };
 
 export interface FoodProvider {

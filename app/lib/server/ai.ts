@@ -370,7 +370,8 @@ export const IngredientRefSchema = z.object({
   carbs: num.describe("grams per 100 g"),
   fat: num.describe("grams per 100 g"),
   unitG: z.coerce.number().nullable().catch(null).describe("Typical weight in grams of ONE piece / egg / fruit, if people count it in pieces; else null"),
-  gPerMl: z.coerce.number().nullable().catch(null).describe("Grams per ml if it is a liquid or sauce (e.g. oil 0.92, milk 1.03); else null"),
+  gPerMl: z.coerce.number().nullable().catch(null).describe("Grams per ml if it is a liquid or sauce (e.g. oil 0.92, milk 1.03), or if the user measures it with spoons/cups (e.g. sugar 0.85, flour 0.53); else null"),
+  state: z.enum(["raw", "cooked", "dried", "prepared"]).nullable().catch(null).describe("The state these values are for: raw, cooked, dried, or prepared (sauces, drinks, ready-made foods)"),
 });
 export type IngredientRef = z.infer<typeof IngredientRefSchema>;
 
@@ -378,7 +379,7 @@ const INGREDIENT_SYSTEM = `You are a nutrition table inside a Thai food diary ap
 The user types ONE ingredient name (Thai or English) they use in home cooking.
 Give its nutrition per 100 g, from standard food composition tables (Thai INMU / USDA).
 Rules:
-- Use the ingredient as it is normally bought before cooking: RAW, unless the name says it is cooked, dried, fried, canned, etc.
+- Use the ingredient as it is normally bought before cooking: RAW, unless the name says it is cooked, dried, fried, canned, etc. Say which in "state".
 - Read the whole name: a brand, cut or kind changes the values (e.g. "salmon trout" ≠ "salmon", "chicken thigh with skin" ≠ "chicken breast").
 - Make sure kcal ≈ protein×4 + carbs×4 + fat×9 (roughly).
 - Numbers only, no ranges. If you do not recognise it as food, set known to false.
@@ -391,9 +392,13 @@ const round1 = (n: number) => Math.round(n * 10) / 10;
 export async function lookupIngredient(input: { name: string; lang: Lang; unit?: IngredientUnit | null }): Promise<(IngredientRef & { unitFor: IngredientUnit | null }) | null> {
   const unit = input.unit ?? null;
   // For a counted unit like "กลีบ" or "กระป๋อง", unitG must be the weight of ONE of that unit.
-  const text = unit
-    ? `${input.name}\nThe user counts it in "${UNITS[unit].th}" (${UNITS[unit].en}). Set unitG to the typical weight in grams of ONE ${UNITS[unit].en} of this ingredient (the edible amount, without the container unless it is eaten).`
-    : input.name;
+  const kind = unit ? UNITS[unit].kind : null;
+  const text =
+    unit && kind === "count"
+      ? `${input.name}\nThe user counts it in "${UNITS[unit].th}" (${UNITS[unit].en}). Set unitG to the typical weight in grams of ONE ${UNITS[unit].en} of this ingredient (the edible amount, without the container unless it is eaten).`
+      : unit && kind === "volume"
+        ? `${input.name}\nThe user measures it by volume (${UNITS[unit].en}). Set gPerMl to the grams in 1 ml of this ingredient as it is usually measured (e.g. sugar 0.85, flour 0.53, oil 0.92).`
+        : input.name;
   const r = process.env.AI_MOCK === "1" ? mockIngredient(input.name) : await callAi(INGREDIENT_SYSTEM, [{ type: "text", text }], IngredientRefSchema, input.lang);
   if (!r.known || !(r.kcal > 0)) return null;
   return {
@@ -404,16 +409,18 @@ export async function lookupIngredient(input: { name: string; lang: Lang; unit?:
     fat: round1(clamp(r.fat, 100)),
     unitG: r.unitG != null && r.unitG > 0 && r.unitG < 5000 ? (r.unitG < 10 ? Math.max(0.1, round1(r.unitG)) : Math.round(r.unitG)) : null,
     gPerMl: r.gPerMl != null && r.gPerMl > 0.3 && r.gPerMl < 3 ? Math.round(r.gPerMl * 100) / 100 : null,
-    unitFor: unit,
+    // unitG is only for counted units; a volume unit's answer is in gPerMl.
+    unitFor: kind === "count" ? unit : null,
+    state: r.state ?? null,
   };
 }
 
 // TEST MODE ONLY (AI_MOCK=1): fixed answers.
 function mockIngredient(name: string): IngredientRef {
-  if (/มันฝรั่ง|potato/i.test(name)) return { known: true, kcal: 77, protein: 2, carbs: 17, fat: 0.1, unitG: 170, gPerMl: null };
-  if (/แซลมอน|salmon/i.test(name)) return { known: true, kcal: 141, protein: 20.5, carbs: 0, fat: 6, unitG: null, gPerMl: null };
-  if (/xyz/i.test(name)) return { known: false, kcal: 0, protein: 0, carbs: 0, fat: 0, unitG: null, gPerMl: null };
-  return { known: true, kcal: 100, protein: 3, carbs: 15, fat: 2, unitG: null, gPerMl: null };
+  if (/มันฝรั่ง|potato/i.test(name)) return { known: true, kcal: 77, protein: 2, carbs: 17, fat: 0.1, unitG: 170, gPerMl: null, state: "raw" };
+  if (/แซลมอน|salmon/i.test(name)) return { known: true, kcal: 141, protein: 20.5, carbs: 0, fat: 6, unitG: null, gPerMl: null, state: "raw" };
+  if (/xyz/i.test(name)) return { known: false, kcal: 0, protein: 0, carbs: 0, fat: 0, unitG: null, gPerMl: null, state: null };
+  return { known: true, kcal: 100, protein: 3, carbs: 15, fat: 2, unitG: null, gPerMl: 0.9, state: "raw" };
 }
 
 // ---------------------------------------------------------------------------

@@ -4,8 +4,22 @@
 // What she already typed is kept: her name, her amount and her unit.
 // No React and no browser storage here, so the tests can use it.
 
-import { unitKind, type Ingredient } from "../types.ts";
+// Round 39: every label now says where it came from (`via`), whether it is per 100 g or per
+// 100 ml (`per`, when known), and which nutrients were NOT given (`missing` — never a real 0).
+
+import { missingFrom } from "../provenance.ts";
+import { unitKind, type Ingredient, type LabelInfo, type LabelVia, type MacroKey } from "../types.ts";
 import { servingGrams, servingIsLiquid, type Food } from "./provider.ts";
+
+/** How a barcode product's numbers reached the ingredient: the database, or her label fix. */
+function viaForFood(food: Food): LabelVia {
+  if (food.fixedBy === "photo") return "fix-photo";
+  if (food.fixedBy === "typed") return "fix-typed";
+  if (food.fixedBy === "unknown") return "fix";
+  return "off";
+}
+
+type LabelMeta = { via: LabelVia; per?: "g" | "ml"; missing: MacroKey[] };
 
 /** What the label-photo AI answers: numbers for ONE pack / serving as printed. */
 export type PackLabel = {
@@ -20,10 +34,11 @@ export type PackLabel = {
 const r1 = (v: number) => Math.round(v * 10) / 10;
 
 /** Shared rules: label per 100 g + the pack size fill only the empty fields. */
-function fill(ing: Ingredient, name: string | null, per100: { kcal: number; protein: number; carbs: number; fat: number }, packG: number | null, liquid: boolean): Partial<Ingredient> {
-  const patch: Partial<Ingredient> = {
-    label: { basis: "per100", kcal: r1(per100.kcal), protein: r1(per100.protein), carbs: r1(per100.carbs), fat: r1(per100.fat) },
-  };
+function fill(ing: Ingredient, name: string | null, per100: { kcal: number; protein: number; carbs: number; fat: number }, packG: number | null, liquid: boolean, meta: LabelMeta): Partial<Ingredient> {
+  const label: LabelInfo = { basis: "per100", kcal: r1(per100.kcal), protein: r1(per100.protein), carbs: r1(per100.carbs), fat: r1(per100.fat), via: meta.via };
+  if (meta.per) label.per = meta.per;
+  if (meta.missing.length) label.missing = meta.missing;
+  const patch: Partial<Ingredient> = { label };
   if (!ing.name.trim() && name) patch.name = name;
   if (!(ing.amount > 0)) {
     // Nothing typed yet → one whole pack, in g (or mL for drinks).
@@ -46,6 +61,8 @@ export function ingredientFromFood(ing: Ingredient, food: Food): Partial<Ingredi
     { kcal: food.kcal, protein: food.protein ?? 0, carbs: food.carbs ?? 0, fat: food.fat ?? 0 },
     servingGrams(food.servingSize),
     servingIsLiquid(food.servingSize),
+    // Open Food Facts doesn't say clearly whether a drink is per 100 g or per 100 ml → `per` left out (same kind as the amount).
+    { via: viaForFood(food), missing: missingFrom(food) },
   );
 }
 
@@ -54,7 +71,11 @@ export function ingredientFromLabel(ing: Ingredient, label: PackLabel): Partial<
   const s = label.servingG;
   if (!(s > 0) || !Number.isFinite(label.kcal)) return null;
   const per = (v: number | null) => ((v ?? 0) / s) * 100;
-  return fill(ing, null, { kcal: per(label.kcal), protein: per(label.protein), carbs: per(label.carbs), fat: per(label.fat) }, s, label.liquid);
+  return fill(ing, null, { kcal: per(label.kcal), protein: per(label.protein), carbs: per(label.carbs), fat: per(label.fat) }, s, label.liquid, {
+    via: "photo",
+    per: label.liquid ? "ml" : "g",
+    missing: missingFrom(label),
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -67,7 +88,7 @@ export type PackResult = {
   product: { name: string | null; netG: number | null; liquid: boolean };
   label: PackLabel | null;
   /** Typical values per 100 g for that food, only when the photos had no numbers. */
-  average: { kcal: number; protein: number; carbs: number; fat: number; unitG: number | null; gPerMl: number | null } | null;
+  average: { kcal: number; protein: number; carbs: number; fat: number; unitG: number | null; gPerMl: number | null; state?: "raw" | "cooked" | "dried" | "prepared" | null } | null;
 };
 
 /** How it filled: real label, average estimate, only the name/size, or nothing new. */
@@ -87,6 +108,7 @@ export function ingredientFromPack(ing: Ingredient, r: PackResult): PackFill {
       { kcal: per(r.label.kcal), protein: per(r.label.protein), carbs: per(r.label.carbs), fat: per(r.label.fat) },
       packG ?? s,
       r.label.liquid || r.product.liquid,
+      { via: "photo", per: r.label.liquid ? "ml" : "g", missing: missingFrom(r.label) },
     );
     return { patch, kind: "label" };
   }
@@ -103,7 +125,7 @@ export function ingredientFromPack(ing: Ingredient, r: PackResult): PackFill {
   // Her own label numbers (typed earlier) are never replaced by an average.
   if (r.average && name && !ing.label) {
     const a = r.average;
-    patch.aiRef = { name, per100: { kcal: a.kcal, protein: a.protein, carbs: a.carbs, fat: a.fat }, unitG: a.unitG, gPerMl: a.gPerMl, unitFor: null };
+    patch.aiRef = { name, per100: { kcal: a.kcal, protein: a.protein, carbs: a.carbs, fat: a.fat }, unitG: a.unitG, gPerMl: a.gPerMl, unitFor: null, state: a.state ?? null };
     return { patch, kind: "average" };
   }
   return { patch, kind: Object.keys(patch).length ? "nameOnly" : "nothing" };

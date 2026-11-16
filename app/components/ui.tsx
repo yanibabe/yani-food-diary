@@ -1,11 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
-import { fmtG, fmtKcal } from "../lib/nutrition";
+import { energyCheck, fmtG, fmtKcal } from "../lib/nutrition";
 import { useLang } from "../lib/lang";
 import { getPhoto } from "../lib/photos";
 import { macroSplit } from "../lib/macroSplit";
 import { macroTip } from "../lib/macroTip";
-import type { Macros } from "../lib/types";
+import { sourceLabel } from "../lib/provenance";
+import type { MacroKey, Macros, Provenance } from "../lib/types";
 import { Icon } from "./Icon";
 
 /** Bottom sheet that slides up over the page. */
@@ -204,6 +205,53 @@ export function Badge({ children, tone = "warn" }: { children: React.ReactNode; 
   const cls =
     tone === "warn" ? "bg-warn text-warn-ink" : tone === "olive" ? "bg-olive-soft text-olive-dark" : "bg-cream text-muted";
   return <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[12px] font-medium ${cls}`}>{children}</span>;
+}
+
+/**
+ * Round 39: one small badge that says where the numbers came from (same Badge look as before).
+ * Label → olive; estimates → the usual soft yellow; everything else → quiet grey.
+ */
+export function ProvenanceBadge({ prov }: { prov: Provenance }) {
+  const { lang } = useLang();
+  const tone = prov.source === "label" ? "olive" : prov.verification === "estimated" ? "warn" : "muted";
+  return (
+    <span data-testid="prov-badge" data-source={prov.source} data-verification={prov.verification}>
+      <Badge tone={tone}>{sourceLabel(prov)[lang]}</Badge>
+    </span>
+  );
+}
+
+/** Round 39: "no data for protein / fat" — missing values are unknown, never a real 0. */
+export function MissingNote({ missing, className = "" }: { missing: MacroKey[] | undefined; className?: string }) {
+  const { tr } = useLang();
+  if (!missing?.length) return null;
+  const names: Record<MacroKey, string> = { protein: tr("โปรตีน", "protein"), carbs: tr("คาร์บ", "carbs"), fat: tr("ไขมัน", "fat") };
+  const list = missing.map((k) => names[k]).join(tr(" / ", " / "));
+  return (
+    <p className={`text-[13px] text-muted ${className}`} data-testid="missing-note">
+      {tr(`ไม่มีข้อมูล${list}ในบางรายการ — ตัวเลขรวมของ${list}อาจต่ำกว่าจริง`, `No ${list} data for some items — the ${list} total may be too low`)}
+    </p>
+  );
+}
+
+/** Round 39: a gentle hint when kcal and protein/carbs/fat don't fit together (4/4/9). Never changes numbers. */
+export function EnergyHint({ m, missing }: { m: Macros; missing?: MacroKey[] }) {
+  const { tr } = useLang();
+  const c = energyCheck(m, missing);
+  if (c.status === "ok" || c.status === "unknown") return null;
+  return (
+    <p className="text-[12px] text-muted" data-testid="energy-hint" data-status={c.status}>
+      {c.status === "high"
+        ? tr(
+            `แคลอรี่สูงกว่าที่โปรตีน/คาร์บ/ไขมันรวมกันได้ (~${fmtKcal(c.fromMacros)} kcal) — อาจพิมพ์ผิดหรือขาดบางค่า ลองเช็กอีกครั้ง`,
+            `Calories are higher than protein/carbs/fat add up to (~${fmtKcal(c.fromMacros)} kcal) — maybe a typo or a missing value. Worth a check.`,
+          )
+        : tr(
+            `แคลอรี่ต่ำกว่าที่โปรตีน/คาร์บ/ไขมันรวมกันได้ (~${fmtKcal(c.fromMacros)} kcal) — ปกติได้ถ้ามีใยอาหารหรือสารให้ความหวานเยอะ แต่ลองเช็กอีกครั้ง`,
+            `Calories are lower than protein/carbs/fat add up to (~${fmtKcal(c.fromMacros)} kcal) — normal with lots of fibre or sweeteners, but worth a check.`,
+          )}
+    </p>
+  );
 }
 
 /** The recipe "logo": Phosphor Light cooking pot (Round 34; was a hand-drawn pot). */

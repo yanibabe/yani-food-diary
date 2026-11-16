@@ -2,12 +2,13 @@
 import { OffAttribution } from "./OffAttribution";
 import { aiFetch } from "../lib/aiFetch";
 import { useMemo, useRef, useState } from "react";
-import { AI_MARGIN, blankItem, changeAmount, cleanBox, cleanNumber, fmtAmount, fmtKcal, newId, pickMacros, sumMacros } from "../lib/nutrition";
+import { AI_MARGIN, blankItem, changeAmount, cleanBox, cleanNumber, energyCheck, fmtAmount, fmtKcal, newId, pickMacros, sumMacros } from "../lib/nutrition";
 import { aiDairy, dairyItems, isDairy, warnDairy } from "../lib/dairy";
 import { useLang } from "../lib/lang";
 import { useStore } from "../lib/store";
-import { SLOT_LABEL, SLOTS, type FoodItem, type MealSlot } from "../lib/types";
-import { Badge, KcalBig, MacroCards, NumberField, Sheet } from "./ui";
+import { isEstimated, itemProvenance, joinMissing, provFromAi, USER_TYPED } from "../lib/provenance";
+import { SLOT_LABEL, SLOTS, type Entry, type FoodItem, type MacroKey, type MealSlot } from "../lib/types";
+import { Badge, EnergyHint, KcalBig, MacroCards, MissingNote, NumberField, ProvenanceBadge, Sheet } from "./ui";
 
 export type MealDraft = {
   title: string;
@@ -43,7 +44,7 @@ export function LabeledPhoto({ src, items, onTap }: { src: string; items: FoodIt
                 }`}
               >
                 <span className="min-w-0 truncate">{i.name}</span>
-                <span className="num shrink-0">· {fmtKcal(i.kcal)}{i.estimated ? "~" : ""}</span>
+                <span className="num shrink-0">· {fmtKcal(i.kcal)}{isEstimated(i) ? "~" : ""}</span>
               </span>
             </button>
           );
@@ -66,6 +67,12 @@ export function ItemEditor({
   onDone: () => void;
 }) {
   const set = (patch: Partial<FoodItem>) => onChange({ ...item, ...patch });
+  // Round 39: typing a number = her own number now. A nutrient she types is no longer unknown.
+  const setNumber = (k: "kcal" | MacroKey, n: number | null) => {
+    const missing = (item.missing ?? []).filter((x) => x !== k);
+    onChange({ ...item, [k]: cleanNumber(n), prov: USER_TYPED, missing: missing.length ? missing : undefined });
+  };
+  const shown = (k: MacroKey) => (item.missing?.includes(k) ? null : item[k]);
   const { tr } = useLang();
   return (
     <div className="space-y-4 pb-2">
@@ -93,21 +100,22 @@ export function ItemEditor({
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="label" htmlFor="it-kcal">{tr("แคลอรี (kcal)", "Calories (kcal)")}</label>
-          <NumberField id="it-kcal" value={item.kcal} onChange={(n) => set({ kcal: cleanNumber(n) })} />
+          <NumberField id="it-kcal" value={item.kcal} onChange={(n) => setNumber("kcal", n)} />
         </div>
         <div>
           <label className="label" htmlFor="it-p">{tr("โปรตีน (g)", "Protein (g)")}</label>
-          <NumberField id="it-p" value={item.protein} onChange={(n) => set({ protein: cleanNumber(n) })} />
+          <NumberField id="it-p" value={shown("protein")} onChange={(n) => setNumber("protein", n)} placeholder={tr("ไม่ทราบ", "Unknown")} />
         </div>
         <div>
           <label className="label" htmlFor="it-c">{tr("คาร์บ (g)", "Carbs (g)")}</label>
-          <NumberField id="it-c" value={item.carbs} onChange={(n) => set({ carbs: cleanNumber(n) })} />
+          <NumberField id="it-c" value={shown("carbs")} onChange={(n) => setNumber("carbs", n)} placeholder={tr("ไม่ทราบ", "Unknown")} />
         </div>
         <div>
           <label className="label" htmlFor="it-f">{tr("ไขมัน (g)", "Fat (g)")}</label>
-          <NumberField id="it-f" value={item.fat} onChange={(n) => set({ fat: cleanNumber(n) })} />
+          <NumberField id="it-f" value={shown("fat")} onChange={(n) => setNumber("fat", n)} placeholder={tr("ไม่ทราบ", "Unknown")} />
         </div>
       </div>
+      <EnergyHint m={item} missing={item.missing} />
       <label className="flex min-h-[48px] items-center gap-3 rounded-2xl bg-cream px-4">
         <input type="checkbox" className="h-5 w-5 accent-[var(--olive)]" checked={item.estimated} onChange={(e) => set({ estimated: e.target.checked })} />
         <span>{tr("เป็นค่าประมาณ", "This is an estimate")}</span>
@@ -146,7 +154,10 @@ export function MealReview({
   onCancel,
   onDelete,
   startEditingId,
+  entrySource,
 }: {
+  /** Round 39: how the saved meal was made, to tell where older items' numbers came from. */
+  entrySource?: Entry["source"];
   photo: string | null;
   initial: MealDraft;
   mockBadge?: boolean;
@@ -245,6 +256,9 @@ export function MealReview({
               dairySource: e.item.dairySource ?? old.dairySource ?? null,
               margin: e.item.margin === false ? false : old.margin,
               fromLabel: e.item.fromLabel === true ? true : e.item.margin === false ? false : old.fromLabel,
+              // Round 39: the AI wrote new numbers for this item → they are the AI's now.
+              prov: provFromAi({ fromLabel: e.item.fromLabel === true, userAmount: (e.item as { userAmount?: boolean }).userAmount === true }),
+              missing: undefined,
             };
             changed.push(old.id);
           }
@@ -267,6 +281,7 @@ export function MealReview({
             dairySource: a.dairySource ?? null,
             margin: a.margin === true,
             fromLabel: a.fromLabel === true,
+            prov: provFromAi({ fromLabel: a.fromLabel === true, userAmount: (a as { userAmount?: boolean }).userAmount === true }),
           });
           changed.push(id);
         }
@@ -330,6 +345,7 @@ export function MealReview({
         <p className="text-center text-[14px] text-muted" data-testid="amount-summary">{amountSummary}</p>
         <KcalBig kcal={total.kcal} />
         <MacroCards m={total} />
+        <MissingNote missing={joinMissing(...items.map((i) => i.missing))} className="text-center" />
         {items.some((i) => i.ref?.source === "off") && <OffAttribution />}
         {marginNote && items.some((i) => i.margin) && (
           <p className="text-center text-[13px] text-muted" data-testid="margin-note">
@@ -347,7 +363,10 @@ export function MealReview({
           <span className="text-[13px] text-muted">{tr("แตะเพื่อแก้", "Tap to edit")}</span>
         </div>
         <ul className="divide-y divide-line">
-          {items.map((i) => (
+          {items.map((i) => {
+            const prov = itemProvenance(i, entrySource ? { source: entrySource } : null);
+            const off = energyCheck(i, i.missing).status;
+            return (
             <li key={i.id}>
               <button
                 onClick={() => setEditingId(i.id)}
@@ -360,10 +379,12 @@ export function MealReview({
                   <div className="flex flex-wrap items-center gap-1.5">
                     <span className="font-medium">{i.name || tr("ไม่มีชื่อ", "No name")}</span>
                     {i.kind === "extra" && <Badge tone="olive">{tr("เพิ่มเติม", "Extra")}</Badge>}
-                    {i.estimated && <Badge>{tr("ประมาณ", "Estimate")}</Badge>}
+                    {(i.estimated || prov.verification === "estimated") && <Badge>{tr("ประมาณ", "Estimate")}</Badge>}
                     {marginNote && i.margin && <Badge tone="muted">+{pct}%</Badge>}
-                    {marginNote && i.margin === false && i.fromLabel && <Badge tone="olive">{tr("ตามฉลาก", "From label")}</Badge>}
-                    {marginNote && i.margin === false && !i.fromLabel && <Badge tone="olive">{tr("น้ำหนักจริง", "Exact amount")}</Badge>}
+                    {marginNote && prov.source === "ai" && i.margin === false && <Badge tone="olive">{tr("น้ำหนักจริง", "Exact amount")}</Badge>}
+                    {prov.source !== "ai" && <ProvenanceBadge prov={prov} />}
+                    {i.missing?.length ? <Badge tone="muted">{tr("ข้อมูลไม่ครบ", "Incomplete")}</Badge> : null}
+                    {(off === "high" || off === "low") && <Badge tone="muted">{tr("ตัวเลขไม่ค่อยตรง", "Numbers don't add up")}</Badge>}
                     {avoidDairy && isDairy(i) && <Badge>🥛 {tr("นม", "Milk")}</Badge>}
                   </div>
                   <div className="text-[14px] text-muted">
@@ -377,7 +398,8 @@ export function MealReview({
                 </div>
               </button>
             </li>
-          ))}
+            );
+          })}
         </ul>
         <button className="btn-soft mt-2 w-full" onClick={addManual}>+ {tr("เพิ่มรายการเอง", "Add an item myself")}</button>
       </section>

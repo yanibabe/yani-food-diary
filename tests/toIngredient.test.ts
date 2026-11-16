@@ -11,7 +11,7 @@ const milk: Food = { source: "off", sourceId: "8850000000002", name: "Fresh milk
 test("barcode on a blank ingredient: name, label per 100, one whole pack in ml", () => {
   const p = ingredientFromFood(blank, milk)!;
   assert.equal(p.name, "Fresh milk · Meiji");
-  assert.deepEqual(p.label, { basis: "per100", kcal: 65, protein: 3.2, carbs: 4.8, fat: 3.6 });
+  assert.deepEqual(p.label, { basis: "per100", kcal: 65, protein: 3.2, carbs: 4.8, fat: 3.6, via: "off" });
   assert.equal(p.unit, "ml");
   assert.equal(p.amount, 200);
   const r = ingredientMacros({ ...blank, ...p });
@@ -40,9 +40,9 @@ test("barcode product without calories → nothing to fill", () => {
   assert.equal(ingredientFromFood(blank, { ...milk, kcal: null }), null);
 });
 
-test("label photo: 20 g pack = 70 kcal → 350 per 100 g, missing nutrients count as 0", () => {
+test("label photo: 20 g pack = 70 kcal → 350 per 100 g, a missing nutrient is listed as unknown (Round 39)", () => {
   const p = ingredientFromLabel(blank, { servingG: 20, liquid: false, kcal: 70, protein: 2, carbs: null, fat: 3 })!;
-  assert.deepEqual(p.label, { basis: "per100", kcal: 350, protein: 10, carbs: 0, fat: 15 });
+  assert.deepEqual(p.label, { basis: "per100", kcal: 350, protein: 10, carbs: 0, fat: 15, via: "photo", per: "g", missing: ["carbs"] });
   assert.equal(p.name, undefined); // a label has no product name
   assert.equal(p.amount, 20);
   assert.equal(p.unit, "g");
@@ -67,7 +67,7 @@ test("pack photos with label numbers: real numbers, name, whole pack size", () =
   assert.equal(kind, "label");
   assert.equal(patch.name, "อกไก่นุ่ม · เบทาโกร");
   assert.equal(patch.amount, 200);
-  assert.deepEqual(patch.label, { basis: "per100", kcal: 110, protein: 22, carbs: 1, fat: 2 });
+  assert.deepEqual(patch.label, { basis: "per100", kcal: 110, protein: 22, carbs: 1, fat: 2, via: "photo", per: "g" });
 });
 
 test("pack photos with no numbers: keeps name + size and uses the average (estimate)", () => {

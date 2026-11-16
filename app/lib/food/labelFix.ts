@@ -16,6 +16,8 @@ export type LabelFix = {
   carbs: number | null;
   fat: number | null;
   updatedAt: number;
+  /** Round 39: how she gave these numbers. Missing on fixes saved before Round 39. */
+  via?: "photo" | "typed";
 };
 
 const per100 = (v: number, servingG: number) => Math.round((v / servingG) * 1000) / 10;
@@ -30,6 +32,7 @@ export function applyLabelFix(food: Food, fix: LabelFix): Food {
     protein: fix.protein == null ? food.protein : per100(fix.protein, s),
     carbs: fix.carbs == null ? food.carbs : per100(fix.carbs, s),
     fat: fix.fat == null ? food.fat : per100(fix.fat, s),
+    fixedBy: fix.via ?? "unknown",
   };
 }
 

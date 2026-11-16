@@ -123,6 +123,8 @@ function SuggestInner() {
             dairy: aiDairy(idea.name, undefined),
             dairySource: null,
             margin: idea.margin,
+            // Round 39: her recipe → worked out from it; an AI idea → the AI's estimate.
+            prov: idea.place === "recipe" ? { source: "recipe", verification: "unknown" } : { source: "ai", verification: "estimated", via: "suggest" },
           },
         ],
       },

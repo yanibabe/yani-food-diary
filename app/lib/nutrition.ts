@@ -81,6 +81,33 @@ export function newId(prefix = "id"): string {
   return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
+// ---------------------------------------------------------------------------
+// Round 39: a 4/4/9 check. A HINT only — it never changes any number.
+// Protein and carbs give about 4 kcal per gram, fat about 9. Real labels can differ because
+// fibre gives only ~2 kcal/g, sugar alcohols less, alcohol ~7 kcal/g, and labels round their
+// numbers. So only a clear gap counts: more than 20 kcal AND more than 20%.
+// ---------------------------------------------------------------------------
+
+export type EnergyCheck = {
+  /** ok = close enough; high = more kcal than the nutrients explain; low = fewer; unknown = can't check. */
+  status: "ok" | "high" | "low" | "unknown";
+  /** kcal from protein×4 + carbs×4 + fat×9. */
+  fromMacros: number;
+};
+
+export const ENERGY_CHECK_MIN_KCAL = 20;
+export const ENERGY_CHECK_SHARE = 0.2;
+
+export function energyCheck(m: Macros, missing?: readonly string[] | null): EnergyCheck {
+  const fromMacros = Math.max(0, m.protein) * 4 + Math.max(0, m.carbs) * 4 + Math.max(0, m.fat) * 9;
+  if (missing && missing.length) return { status: "unknown", fromMacros };
+  if (!Number.isFinite(m.kcal) || !Number.isFinite(fromMacros)) return { status: "unknown", fromMacros };
+  const bigger = Math.max(m.kcal, fromMacros);
+  const allowed = Math.max(ENERGY_CHECK_MIN_KCAL, bigger * ENERGY_CHECK_SHARE);
+  const gap = m.kcal - fromMacros;
+  return { status: gap > allowed ? "high" : -gap > allowed ? "low" : "ok", fromMacros };
+}
+
 /** unit: the default unit word, in the app language (e.g. "จาน" / "plate"). */
 export function blankItem(unit = "จาน"): FoodItem {
   return {
@@ -96,6 +123,8 @@ export function blankItem(unit = "จาน"): FoodItem {
     kind: "food",
     note: null,
     box: null,
+    // Round 39: an item she adds herself = her own numbers.
+    prov: { source: "user", verification: "unverified", via: "typed" },
   };
 }
 
