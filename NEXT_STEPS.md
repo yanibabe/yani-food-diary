@@ -6,7 +6,7 @@
 
 ---
 
-## LIVE (updated 2026-11-16; Round 41 USDA BUILT + real-API tested locally, NOT deployed, key not in Vercel yet — see "NEXT — Round 41"; Round 40 Smart Calorie Buffer + final checks LIVE (commit 4526f87, Vercel success); Round 39.1 plain water = 0 kcal LIVE; Round 39 nutrition accuracy: careful matching + source marks + unknown nutrients + densities LIVE; Round 38 recipe ingredient photos: any/many photos + average fallback LIVE; Round 37 waiting popup while a photo is read LIVE; Round 36 camera asks once per opening + album photos LIVE; Round 35 scan ingredients in recipes LIVE; Round 34 Phosphor Light icons LIVE; Round 33 recipes in category boxes + pot icon + 34 units LIVE; Round 32 line-only small character + % in tiles + food tip LIVE; Round 31 whole app in Frosted Calm + richer share picture LIVE; Round 30 Frosted Calm share picture + Profile LIVE; Round 29 share my day with my trainer (picture) LIVE; Round 28 simpler "กินอะไรดี" (menu + recipe, no delivery) LIVE; Round 27 label numbers = no +15% LIVE; Round 26 grouped "what can I eat" LIVE; Round 25 "what can I eat" LIVE; Round 24 weight moved to Profile, steps removed)
+## LIVE (updated 2026-11-16; Round 41 USDA LIVE (ca631a5) — see "NEXT — Round 41"; Round 40 Smart Calorie Buffer + final checks LIVE (commit 4526f87, Vercel success); Round 39.1 plain water = 0 kcal LIVE; Round 39 nutrition accuracy: careful matching + source marks + unknown nutrients + densities LIVE; Round 38 recipe ingredient photos: any/many photos + average fallback LIVE; Round 37 waiting popup while a photo is read LIVE; Round 36 camera asks once per opening + album photos LIVE; Round 35 scan ingredients in recipes LIVE; Round 34 Phosphor Light icons LIVE; Round 33 recipes in category boxes + pot icon + 34 units LIVE; Round 32 line-only small character + % in tiles + food tip LIVE; Round 31 whole app in Frosted Calm + richer share picture LIVE; Round 30 Frosted Calm share picture + Profile LIVE; Round 29 share my day with my trainer (picture) LIVE; Round 28 simpler "กินอะไรดี" (menu + recipe, no delivery) LIVE; Round 27 label numbers = no +15% LIVE; Round 26 grouped "what can I eat" LIVE; Round 25 "what can I eat" LIVE; Round 24 weight moved to Profile, steps removed)
 
 - **App:** https://yani-food-diary.vercel.app  (Vercel, exm-labs account, free)
 - **Code:** https://github.com/yanibabe/yani-food-diary  (private; pushes auto-deploy)
@@ -64,29 +64,24 @@ Order: accuracy first, THEN Healthy Recipe Library, personalized meal ideas, wee
   to FIX numbers, which needs a real label photo). Could be its own round later if she wants it.
 - Older open items under Round 36 (food tip ก/ข choice; Rounds 33–35 not tried on iPhone).
 
-## ▶ NEXT — Round 41 USDA: BUILT + REAL-API TESTED locally, NOT DEPLOYED (2026-11-16) — read this first
-- USDA_API_KEY is now in `.env.local` (she pasted it in chat on 2026-11-16 — told her it's low-risk but she
-  may make a new one at api.data.gov; if she does, replace the line). Never committed (checked git, logs,
-  .next/static). NOT yet in Vercel.
-- Her earlier message was cut off at "Do not …" — still ask what the rest said.
-- To go live (each step needs her OK): add USDA_API_KEY to Vercel Production + Preview (encrypted,
-  she can type it herself in a terminal tab like APP_PASSCODE), then push → auto-deploy, then live checks.
-- Real API checked (our client + the app's own /api/food/usda route on the real dev server):
-  raw rice 365 vs cooked 130 kcal; raw skinless breast 112 kcal (Foundation, energy 2048), P 22.5 F 1.9;
-  fried breast 187; oyster sauce 51 (oyster mushroom flagged); tap water real 0; Branded yogurt search;
-  details with cup weight (rice 186 g/cup → 0.78 g/ml); unknown id → friendly 404; AI translation of
-  "ฟักเขียว" → "wax gourd" (all results flagged; word list now has ฟักเขียว → waxgourd).
-  Real data showed 4 matching gaps, fixed + tested: sticky/black/wild rice ≠ white rice; lunch meat,
-  rotisserie, stewed, battered/coated chicken flagged; "RACC" → "1 serving (RACC)"; "cup" → "1 cup".
-- NOT tested live: a real 429 (hourly limit), a real USDA outage (both covered by mocked tests).
-- USDA has no plain boiled chicken breast → for "อกไก่ต้ม" every result shows a warning (expected).
+## ▶ NEXT — Round 41 USDA is LIVE (2026-11-16, commit ca631a5, Vercel success)
+- She approved the deploy. USDA_API_KEY added to Vercel **Production only**, type Sensitive (piped from
+  .env.local, never printed). Preview has no USDA key (she asked for Production) → preview deploys show no USDA button.
+- Live checks done: home 200; /api/status `usda: true`; /api/food/usda without passcode → 401 (passcode lock
+  works, not bypassed); live phone JS (13 files) has the USDA picker but NO key and NO USDA address.
+- NOT done by me: a real USDA search on production — it needs HER passcode. She does it on her iPhone:
+  1) My recipes → edit → ingredient "ข้าวสวย" 150 g → "ค้นหาค่าใน USDA" → cooked white rice ~130 kcal/100 g → ใช้อันนี้ → ~195 kcal + USDA badge.
+  2) Add a meal by text → tap an item → "ใช้ค่าจาก USDA" → pick → grams → USDA badge; others still ประมาณ; undo works.
+  3) Airplane mode → open the USDA panel → friendly error + "ลองอีกครั้ง"; close it and the meal still saves.
+- Her earlier message cut off at "Do not …" — still unknown; ask once.
+- Do NOT start Round 42 (Mahidol) or the Recipe Library until she says.
 
 ## ▶ NEXT — Round 40 is LIVE (2026-11-16)
 - She tries it on her iPhone (checklist in the Round 40 section + "อกไก่ทอด 200 กรัม" → oil as its own item).
 - Real AI not tried yet with the new prompt.
 - Then Round 41 (USDA) only when she says — she must sign up for a free data.gov key herself.
 
-## Round 41 (2026-11-16) — USDA FoodData Central ✅ BUILT + TESTED (fake + real API), NOT DEPLOYED
+## Round 41 (2026-11-16) — USDA FoodData Central ✅ LIVE (ca631a5)
 Checkpoint: git tag `before-round-41` (local). Brief = her long pasted Round 41 spec (items 1–10).
 - Server client `app/lib/food/usda.ts`: key from `USDA_API_KEY` in the X-Api-Key header (never in URL,
   logs, errors or the phone bundle — checked .next/static). DEMO_KEY refused in production. 8 s timeout,
