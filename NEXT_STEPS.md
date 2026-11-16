@@ -69,6 +69,15 @@ Order: accuracy first, THEN Healthy Recipe Library, personalized meal ideas, wee
 - After deploy: she tries it on her iPhone (checklist in the Round 40 section).
 - Then Round 41 (USDA) only when she says — she must sign up for a free data.gov key herself.
 
+## Round 40 final checks (2026-11-16) — commit ba57ef0, NOT pushed yet
+Her review asked 2 checks before deploy. (1) Her weight never makes AI numbers "verified" (was already OK).
+Fixed narrowly: weighed item with a guessed recipe → via "amount-known" (badge "น้ำหนักจริง · สูตรประมาณ");
+a guessed oil/sauce "extra" stays a guess (gets her buffer) even if the AI says userAmount; AI prompt no longer
+says "plain food-table values" for weighed items (could drop cooking oil) — guessed oil/sauce go in their own
+extra item. (2) Portion edits: already correct (600 → half at 15% = 300 / 345; P/C/F scale, no buffer; no stacking).
+New `tests/round40-final.test.ts` (7 tests). Tests 162/162, tsc clean, lint 0 errors (1 old warning), build OK,
+mock-AI browser check OK. The push to GitHub was BLOCKED by the auto-mode safety check → needs her go-ahead.
+
 ## Round 40 (2026-11-16) — no automatic +15%; optional Smart Calorie Buffer (kcal only) ✅ BUILT, NOT DEPLOYED
 Checkpoint before: git tag `before-round-40` (also on GitHub).
 Tests 155/155 (142 old; 5 old +15% tests updated/retired on purpose: margin.test.ts removed, 1 in
