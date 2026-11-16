@@ -6,7 +6,7 @@
 
 ---
 
-## LIVE (updated 2026-11-16; Round 39 nutrition accuracy: careful matching + source marks + unknown nutrients + densities LIVE; Round 38 recipe ingredient photos: any/many photos + average fallback LIVE; Round 37 waiting popup while a photo is read LIVE; Round 36 camera asks once per opening + album photos LIVE; Round 35 scan ingredients in recipes LIVE; Round 34 Phosphor Light icons LIVE; Round 33 recipes in category boxes + pot icon + 34 units LIVE; Round 32 line-only small character + % in tiles + food tip LIVE; Round 31 whole app in Frosted Calm + richer share picture LIVE; Round 30 Frosted Calm share picture + Profile LIVE; Round 29 share my day with my trainer (picture) LIVE; Round 28 simpler "กินอะไรดี" (menu + recipe, no delivery) LIVE; Round 27 label numbers = no +15% LIVE; Round 26 grouped "what can I eat" LIVE; Round 25 "what can I eat" LIVE; Round 24 weight moved to Profile, steps removed)
+## LIVE (updated 2026-11-16; Round 39.1 plain water = 0 kcal LIVE; Round 39 nutrition accuracy: careful matching + source marks + unknown nutrients + densities LIVE; Round 38 recipe ingredient photos: any/many photos + average fallback LIVE; Round 37 waiting popup while a photo is read LIVE; Round 36 camera asks once per opening + album photos LIVE; Round 35 scan ingredients in recipes LIVE; Round 34 Phosphor Light icons LIVE; Round 33 recipes in category boxes + pot icon + 34 units LIVE; Round 32 line-only small character + % in tiles + food tip LIVE; Round 31 whole app in Frosted Calm + richer share picture LIVE; Round 30 Frosted Calm share picture + Profile LIVE; Round 29 share my day with my trainer (picture) LIVE; Round 28 simpler "กินอะไรดี" (menu + recipe, no delivery) LIVE; Round 27 label numbers = no +15% LIVE; Round 26 grouped "what can I eat" LIVE; Round 25 "what can I eat" LIVE; Round 24 weight moved to Profile, steps removed)
 
 - **App:** https://yani-food-diary.vercel.app  (Vercel, exm-labs account, free)
 - **Code:** https://github.com/yanibabe/yani-food-diary  (private; pushes auto-deploy)
@@ -56,7 +56,7 @@ Order: accuracy first, THEN Healthy Recipe Library, personalized meal ideas, wee
 - Checkpoint before Round 39: git tag `before-round-39` (also on GitHub).
 
 ## ▶ NEXT — ask her (one at a time)
-- Round 39 is live. She should try it on her iPhone (checklist in the Round 39 section). Then Round 40
+- Round 39 + 39.1 (water fix) are live. She should try them on her iPhone (checklist in the Round 39 section). Then Round 40
   (her decision on the +15% rule).
 - ✅ Round 38 tried on her iPhone (2026-11-16): she said "ลองแล้ว ใช้ได้" (tried it, it works). Nothing
   more was reported (which photos / products she used is not known).
@@ -99,7 +99,7 @@ Browser check at phone size (fake AI): Today "~" + "?" marks, meal badges, recip
 - Remaining / not done: no USDA, no Mahidol, +15% rule untouched (Round 40). AI prompt now returns
   `state` and gPerMl for spoons — real AI answers not tried (mock only).
 
-## Round 39 fix (2026-11-16) — plain water + real zeros ⏸ SAVED LOCALLY, NOT DEPLOYED (waiting for her OK)
+## Round 39.1 (2026-11-16) — plain water + real zeros ✅ LIVE (commit 9d85bc0, she approved the deploy)
 - Bug she found: "น้ำเปล่า" in a recipe → "no nutrition data". Causes: (1) water was not in the table, so it
   went to the AI; (2) the AI lookup threw away ANY 0-kcal answer (`!(kcal > 0)`), so water, ice, salt,
   diet drinks were all "not found".
@@ -112,7 +112,11 @@ Browser check at phone size (fake AI): Today "~" + "?" marks, meal badges, recip
 - Checked: suggest.ts / macroTip.ts / suggest page skip 0-kcal items on purpose (meal ideas, % tip) — not
   ingredient rejections, left alone.
 - Tests 145/145 (8 new in `tests/water.zero.test.ts`). tsc, build OK; lint 0 errors. Browser: น้ำเปล่า 500 มล.
-  → 0 kcal, ค่าอ้างอิง, no AI call. To go live: `git push` (auto-deploys) after her OK.
+  → 0 kcal, ค่าอ้างอิง, no AI call.
+- Deployed 2026-11-16: Vercel production "Ready". Checked on the LIVE site (test data in Claude's browser
+  only, removed after): น้ำเปล่า 1.5 ลิตร → 0 kcal, "ค่าอ้างอิง", 0 calls to /api/ingredient; an old-style recipe
+  (label with no source + saved AI lookup + egg) still 383 kcal; old AI meal on Today still "~600";
+  "ข้าว" still shows the 2 choices. NOT yet tried on her iPhone. A real AI 0-kcal answer (e.g. น้ำแข็ง) not tried.
 
 ## Round 38 (2026-11-16) — recipe ingredient photos: any photo, many photos, average fallback ✅ LIVE
 - Button "รูปฉลาก" → "รูปสินค้า". Picker allows several photos; they show as small squares (× to remove,
