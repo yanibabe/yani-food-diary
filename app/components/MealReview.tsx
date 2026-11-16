@@ -10,6 +10,9 @@ import { useStore } from "../lib/store";
 import { isEstimated, itemProvenance, joinMissing, provFromAi, USER_TYPED } from "../lib/provenance";
 import { SLOT_LABEL, SLOTS, type Entry, type FoodItem, type MacroKey, type MealSlot } from "../lib/types";
 import { Badge, EnergyHint, KcalBig, MacroCards, MissingNote, NumberField, ProvenanceBadge, Sheet } from "./ui";
+import { UsdaPicker, useUsdaReady } from "./UsdaPicker";
+import { toSnap } from "../lib/food/usdaNutrients";
+import { applyUsdaToItem } from "../lib/food/toItem";
 
 export type MealDraft = {
   title: string;
@@ -78,8 +81,47 @@ export function ItemEditor({
   };
   const shown = (k: MacroKey) => (item.missing?.includes(k) ? null : item[k]);
   const { tr, lang } = useLang();
+  // Round 41: USDA for this one item. Only when she confirms; "undo" brings back the item as it was.
+  const usdaReady = useUsdaReady();
+  const [showUsda, setShowUsda] = useState(false);
+  const [beforeUsda, setBeforeUsda] = useState<FoodItem | null>(null);
+  const unitIsGrams = /^(g|กรัม|ก\.|gram|grams|ml|มล\.?|มิลลิลิตร)$/i.test(item.unit.trim());
   return (
     <div className="space-y-4 pb-2">
+      {(usdaReady || item.usda) && !showUsda && (
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-2xl bg-cream px-4 py-2 text-[14px]" data-testid="item-usda">
+          {item.usda ? (
+            <span className="min-w-0 flex-1 text-muted">USDA: <span className="text-ink">{item.usda.description}</span></span>
+          ) : (
+            <span className="min-w-0 flex-1 text-muted">{tr("อยากได้ค่าที่แม่นขึ้น?", "Want more exact values?")}</span>
+          )}
+          {usdaReady && (
+            <button type="button" className="min-h-[40px] font-medium text-olive-dark" onClick={() => setShowUsda(true)} data-testid="usda-open">
+              {item.usda ? tr("เลือกอันอื่น", "Pick another") : tr("ใช้ค่าจาก USDA", "Use USDA values")}
+            </button>
+          )}
+          {beforeUsda && (
+            <button type="button" className="min-h-[40px] text-muted" onClick={() => { onChange(beforeUsda); setBeforeUsda(null); }} data-testid="usda-undo">
+              {tr("ยกเลิก (กลับไปค่าเดิม)", "Undo (back to before)")}
+            </button>
+          )}
+        </div>
+      )}
+      {showUsda && (
+        <UsdaPicker
+          name={item.name}
+          mode="item"
+          startAmount={unitIsGrams ? item.amount : null}
+          onClose={() => setShowUsda(false)}
+          onPick={(food, amount) => {
+            const snap = toSnap(food);
+            if (!snap || !(amount && amount > 0)) return;
+            if (!beforeUsda) setBeforeUsda(item);
+            onChange(applyUsdaToItem(item, snap, amount));
+            setShowUsda(false);
+          }}
+        />
+      )}
       <div>
         <label className="label" htmlFor="it-name">{tr("ชื่อ", "Name")}</label>
         <input id="it-name" className="field" value={item.name} onChange={(e) => set({ name: e.target.value })} placeholder={tr("เช่น ไก่ทอด", "e.g. fried chicken")} />
@@ -250,6 +292,17 @@ export function MealReview({
             next = next.filter((x) => x.id !== e.id);
           } else if (e.item) {
             const old = next[idx];
+            // Round 41: a USDA food she confirmed is never replaced by AI numbers. The AI may only change
+            // how much she ate (in g / ml) — the USDA values per 100 stay. Any other unit → kept as it was.
+            if (old.usda && old.prov?.source === "database") {
+              const amt = cleanNumber(e.item.amount);
+              const sameKind = /^(g|กรัม|ก\.|gram|grams|ml|มล\.?|มิลลิลิตร)$/i.test(String(e.item.unit ?? "").trim());
+              if (amt > 0 && sameKind && amt !== old.amount) {
+                next[idx] = applyUsdaToItem(old, old.usda, amt);
+                changed.push(old.id);
+              }
+              continue;
+            }
             const exact = e.item.userAmount === true || e.item.fromLabel === true;
             // An old +15% item scaled by the AI ("ate half") keeps its old numbers' meaning: no new buffer on top.
             const keepLegacy = hasLegacyMargin(old) && !exact;
@@ -272,6 +325,9 @@ export function MealReview({
               // Round 39: the AI wrote new numbers for this item → they are the AI's now.
               prov: provFromAi({ fromLabel: e.item.fromLabel === true, userAmount: e.item.userAmount === true, estimated: Boolean(e.item.estimated), kind: e.item.kind }),
               missing: undefined,
+              // Round 41: AI numbers now → no USDA record on this item any more.
+              usda: undefined,
+              ref: old.ref?.source === "usda" ? undefined : old.ref,
             };
             // Round 40: fresh AI numbers → the item keeps its OWN buffer %, worked out again from the AI's kcal.
             // Items that never had a buffer (labels, her numbers, older items) get 0%: nothing is added to them.

@@ -13,6 +13,8 @@ import { useStore } from "../../../lib/store";
 import { PIECE_LIKE, RECIPE_CATEGORIES, UNIT_GROUPS, UNITS, unitKind, type Ingredient, type IngredientUnit, type Recipe, type RecipeCategory } from "../../../lib/types";
 import { Icon } from "../../../components/Icon";
 import { IngredientScan } from "../../../components/IngredientScan";
+import { UsdaPicker, useUsdaReady } from "../../../components/UsdaPicker";
+import { toSnap } from "../../../lib/food/usdaNutrients";
 
 function blankIngredient(): Ingredient {
   return { id: newId("ing"), name: "", amount: 0, unit: "g", label: null, gramsPerUnit: null, photoId: null };
@@ -46,6 +48,10 @@ function IngredientCard({
   const trimmed = ing.name.trim();
   const hasAi = !!ing.aiRef && ing.aiRef.name === trimmed;
   const hasPick = !!ing.refPick && ing.refPick.name === trimmed;
+  // Round 41: a USDA food she confirmed for this name.
+  const usdaReady = useUsdaReady();
+  const usdaOn = !!ing.usda && ing.usda.name === trimmed;
+  const [showUsda, setShowUsda] = useState(false);
   /** Round 39: a clear reference food, or an unclear name she must choose for → no automatic AI lookup. */
   const refKnown = () => matchRef(trimmed).kind !== "none";
 
@@ -101,7 +107,7 @@ function IngredientCard({
       <IngredientScan ing={ing} onPatch={onPatch} />
       <div className="flex items-start gap-3">
         <div className="flex-1 space-y-2">
-          <input className="field" value={ing.name} onChange={(e) => { set({ name: e.target.value }); setAiMsg(null); }} onBlur={() => { if (!hasAi && !hasPick && !refKnown()) void lookUp(); }} placeholder={tr("ชื่อวัตถุดิบ เช่น ไข่ไก่", "Ingredient, e.g. egg")} aria-label={tr("ชื่อวัตถุดิบ", "Ingredient name")} />
+          <input className="field" value={ing.name} onChange={(e) => { set({ name: e.target.value }); setAiMsg(null); }} onBlur={() => { if (!hasAi && !hasPick && !usdaOn && !refKnown()) void lookUp(); }} placeholder={tr("ชื่อวัตถุดิบ เช่น ไข่ไก่", "Ingredient, e.g. egg")} aria-label={tr("ชื่อวัตถุดิบ", "Ingredient name")} />
           <div className="grid grid-cols-[1fr_auto] gap-2">
             <NumberField value={ing.amount || null} onChange={(n) => set({ amount: n ?? 0 })} placeholder={tr("ปริมาณ", "Amount")} aria-label={tr("ปริมาณ", "Amount")} />
             <select className="field !w-auto max-w-[150px]" value={ing.unit} onChange={(e) => changeUnit(e.target.value as IngredientUnit)} aria-label={tr("หน่วย", "Unit")}>
@@ -211,10 +217,38 @@ function IngredientCard({
                 <span className="ml-1 num text-muted">{fmtKcal(f.per100.kcal)}/100 g</span>
               </button>
             ))}
+            {usdaReady && !showUsda && (
+              <button type="button" className="min-h-[40px] rounded-full px-3 text-[14px] font-medium text-olive-dark" onClick={() => setShowUsda(true)} data-testid="usda-open">
+                {tr("ค้นหาใน USDA", "Search USDA")}
+              </button>
+            )}
             <button type="button" className="min-h-[40px] rounded-full px-3 text-[14px] font-medium text-olive-dark" onClick={() => void lookUp()}>
               <Icon name="sparkle" className="mr-1 inline-block h-4 w-4 align-[-3px]" />{tr("ไม่ใช่ทั้งหมด — ให้ AI หา", "None of these — ask the AI")}
             </button>
           </div>
+        </div>
+      )}
+
+      {showUsda && trimmed && (
+        <UsdaPicker
+          name={trimmed}
+          mode="ingredient"
+          onClose={() => setShowUsda(false)}
+          onPick={(food) => {
+            const snap = toSnap(food);
+            if (!snap) return;
+            // Only what she confirmed. Her name, amount, unit, label and earlier picks are kept as they are.
+            onPatch({ usda: { ...snap, name: trimmed, portions: food.portions, gPerMl: food.gPerMl } });
+            setShowUsda(false);
+          }}
+        />
+      )}
+
+      {usdaOn && !ing.label && !showUsda && (
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px]" data-testid="usda-chosen">
+          <span className="text-muted">USDA: <span className="text-ink">{ing.usda!.description}</span></span>
+          <button type="button" className="min-h-[36px] font-medium text-olive-dark" onClick={() => setShowUsda(true)}>{tr("เปลี่ยน", "Change")}</button>
+          <button type="button" className="min-h-[36px] text-muted" onClick={() => onPatch({ usda: null })} data-testid="usda-remove">{tr("เลิกใช้ USDA", "Stop using USDA")}</button>
         </div>
       )}
 
@@ -239,6 +273,16 @@ function IngredientCard({
             placeholder={isCount ? tr("เช่น 50", "e.g. 50") : tr("เช่น 30", "e.g. 30")}
             aria-label={tr("น้ำหนักต่อหน่วย", "Weight per unit")}
           />
+          {usdaOn && !ing.label && !!ing.usda!.portions?.length && (
+            // Round 41: USDA's own household weights, as quick choices (she still picks).
+            <div className="mt-2 flex flex-wrap gap-2">
+              {ing.usda!.portions!.map((p) => (
+                <button key={p.label} type="button" className="min-h-[36px] rounded-full border border-white/80 bg-white/70 px-3 text-[13px]" onClick={() => set({ gramsPerUnit: p.grams })}>
+                  USDA {p.label} = {fmtG(p.grams)} {tr("ก.", "g")}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -258,7 +302,7 @@ function IngredientCard({
             <span className="text-warn-ink">{aiMsg ?? res.message}</span>
           )}
           {res.ok && <MissingNote missing={res.missing} className="mt-1" />}
-          {hasAi && !ing.label && !hasPick && !looking && (
+          {hasAi && !ing.label && !hasPick && !usdaOn && !looking && (
             <span className="mt-1 block text-[12px] text-muted">
               {tr(
                 `ต่อ 100 กรัม: ${fmtKcal(ing.aiRef!.per100.kcal)} kcal · ${ing.aiRef!.state ? `ค่า${STATE_LABEL[ing.aiRef!.state].th}` : "ค่าทั่วไป"} ไม่ใช่ค่าจากฉลาก`,
@@ -266,9 +310,14 @@ function IngredientCard({
               )}
             </span>
           )}
-          {!ing.label && !hasAi && !looking && trimmed && !(!res.ok && res.reason === "ambiguous") && (
+          {!ing.label && !hasAi && !usdaOn && !looking && trimmed && !(!res.ok && res.reason === "ambiguous") && (
             <button className="mt-1 block min-h-[36px] text-[14px] font-medium text-olive-dark" onClick={() => void lookUp()}>
               <Icon name="sparkle" className="mr-1 inline-block h-4 w-4 align-[-3px]" />{tr("ให้ AI หาค่าสารอาหาร", "Let the AI look up the nutrition")}
+            </button>
+          )}
+          {usdaReady && !ing.label && !usdaOn && !showUsda && !looking && trimmed && !(!res.ok && res.reason === "ambiguous") && (
+            <button className="mt-1 block min-h-[36px] text-[14px] font-medium text-olive-dark" onClick={() => setShowUsda(true)} data-testid="usda-open">
+              {tr("ค้นหาค่าใน USDA", "Look it up in USDA")}
             </button>
           )}
         </div>

@@ -8,6 +8,7 @@ import { LEGACY_MARGIN_PCT, cleanBufferPct } from "../calorieBuffer.ts";
 import { UNITS, type IngredientUnit } from "../types.ts";
 import { IngredientRefSchema, cleanIngredientRef, type IngredientRef } from "../ingredientRef.ts";
 export { IngredientRefSchema, cleanIngredientRef, type IngredientRef };
+import { usdaConfig } from "../food/usda.ts";
 import { AI_PLACES, aiRoom, fitAiIdeas, kcalRoom, type AiGroups, type RawIdea } from "../suggest.ts";
 
 const ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
@@ -131,6 +132,8 @@ export function aiStatus() {
     mock: process.env.AI_MOCK === "1",
     model: MODEL,
     passcode: Boolean(process.env.APP_PASSCODE?.trim()),
+    // Round 41: only says whether USDA is set up — never the key itself.
+    usda: usdaConfig(process.env).ok || process.env.USDA_MOCK === "1",
   };
 }
 
@@ -369,6 +372,28 @@ export async function lookupIngredient(input: { name: string; lang: Lang; unit?:
         : input.name;
   const r = process.env.AI_MOCK === "1" ? mockIngredient(input.name) : await callAi(INGREDIENT_SYSTEM, [{ type: "text", text }], IngredientRefSchema, input.lang);
   return cleanIngredientRef(r, unit);
+}
+
+// ---------------------------------------------------------------------------
+// Round 41: translate ONE food name into USDA search words. Only the food name is sent
+// (never her profile or diary). The app's own safe word list is tried first; this is the fallback.
+// ---------------------------------------------------------------------------
+
+export const UsdaQuerySchema = z.object({
+  query: z.string().catch("").describe("2-6 English words to search the USDA FoodData Central database, in USDA style (main food first), e.g. 'chicken breast skinless raw', 'rice white cooked', 'oyster sauce'. Keep raw/cooked, the cooking method (boiled, fried, baked, grilled, steamed), the meat cut and skin on/skinless ONLY if the name says them. Never add words the name does not say."),
+  product: z.boolean().catch(false).describe("true if the name is a packaged branded product (a brand name), not a generic food or ingredient"),
+});
+
+const USDA_QUERY_SYSTEM = `You translate a food or ingredient name (often Thai) into English search words for the USDA FoodData Central database.
+Translate the meaning exactly. Do not guess the state or cooking method if the name doesn't say it.
+Return ONLY a JSON object matching this JSON Schema:
+${shapeOf(UsdaQuerySchema)}`;
+
+export async function translateForUsda(input: { name: string; lang: Lang }): Promise<{ query: string; product: boolean }> {
+  if (process.env.AI_MOCK === "1") return { query: /แซลมอน/.test(input.name) ? "salmon raw" : "chicken", product: false };
+  const r = await callAi(USDA_QUERY_SYSTEM, [{ type: "text", text: input.name.slice(0, 120) }], UsdaQuerySchema, input.lang);
+  const query = r.query.replace(/[^a-zA-Z0-9 ,%'-]/g, " ").replace(/\s+/g, " ").trim().slice(0, 80);
+  return { query, product: r.product };
 }
 
 // TEST MODE ONLY (AI_MOCK=1): fixed answers.

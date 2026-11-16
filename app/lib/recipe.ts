@@ -114,6 +114,35 @@ export function ingredientMacros(ing: Ingredient, lang: Lang = "th"): Ingredient
     return done(amount / gpu);
   }
 
+  // Round 41: a USDA food she confirmed for this name (after her label, before reference / AI values).
+  const usda = ing.usda && ing.usda.name === name ? ing.usda : null;
+  if (usda) {
+    const done = (grams100: number): IngredientResult => ({
+      ok: true,
+      macros: scaleMacros(usda.per100, grams100),
+      source: "label",
+      refName: null,
+      prov: ingredientProvenance(ing, "usda"),
+      missing: joinMissing(usda.missing),
+      state: usda.state ?? null,
+    });
+    if (isCountUnit) {
+      if (!gpu)
+        return {
+          ok: false,
+          reason: "need-weight-per-unit",
+          message: t(`ค่า USDA เป็นต่อ 100 กรัม — ช่วยใส่น้ำหนักต่อ 1 ${unitWord}`, `USDA values are per 100 g — please add the weight of 1 ${unitWord}`),
+        };
+      return done((amount * gpu) / 100);
+    }
+    const have = kind === "volume" ? "ml" : "g";
+    if (usda.per === have) return done(amount / 100);
+    // Her own density first, then USDA's own cup/spoon weight. Never 1 g/ml by itself.
+    const d = densityFor(ing, usda.gPerMl, null);
+    if (!d) return needDensity();
+    return done((have === "ml" ? amount * d : amount / d) / 100);
+  }
+
   if (!picked && !ai && match?.kind === "ask")
     return {
       ok: false,

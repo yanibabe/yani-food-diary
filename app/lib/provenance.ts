@@ -11,7 +11,7 @@
 // - Nothing here changes any number. It only describes them.
 
 import type { L } from "./i18n.ts";
-import type { Entry, FoodItem, Ingredient, LabelInfo, MacroKey, NutrientSource, Provenance } from "./types.ts";
+import type { Entry, FoodItem, Ingredient, LabelInfo, MacroKey, NutrientSource, Provenance, UsdaSnap } from "./types.ts";
 
 export const MACRO_KEYS: MacroKey[] = ["protein", "carbs", "fat"];
 
@@ -30,6 +30,8 @@ export const SOURCE_LABEL: Record<NutrientSource, L> = {
 /** A short name for the badge. Open Food Facts gets its own name. */
 export function sourceLabel(p: Provenance): L {
   if (p.source === "database" && p.via === "off") return { th: "Open Food Facts", en: "Open Food Facts" };
+  if (p.source === "database" && p.via === "usda") return { th: "USDA", en: "USDA" };
+  if (p.source === "database" && p.via === "usda-branded") return { th: "USDA · แบรนด์", en: "USDA · Branded" };
   return SOURCE_LABEL[p.source];
 }
 
@@ -90,9 +92,19 @@ export function labelProvenance(label: LabelInfo): Provenance {
   }
 }
 
+/**
+ * Round 41: a USDA food she confirmed. "database" + "unverified": USDA's numbers are real
+ * measurements, but whether this USDA food is exactly what she ate is her own match — nobody checked it.
+ * Branded products are kept apart ("usda-branded").
+ */
+export function usdaProvenance(snap: Pick<UsdaSnap, "dataType">): Provenance {
+  return { source: "database", verification: "unverified", via: snap.dataType === "branded" ? "usda-branded" : "usda" };
+}
+
 /** Where a recipe ingredient's numbers came from (same order as the recipe math). */
-export function ingredientProvenance(ing: Ingredient, used: "label" | "pick" | "ai" | "ref", exact = false): Provenance {
+export function ingredientProvenance(ing: Ingredient, used: "label" | "usda" | "pick" | "ai" | "ref", exact = false): Provenance {
   if (used === "label" && ing.label) return labelProvenance(ing.label);
+  if (used === "usda" && ing.usda) return usdaProvenance(ing.usda);
   if (used === "ai") return { source: "ai", verification: "estimated" };
   // A value fixed by definition (plain water = 0): a reference value, not an estimate, not "verified".
   if (exact) return { source: "reference", verification: "unverified", via: "defined" };

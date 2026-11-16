@@ -90,6 +90,49 @@ export type FoodItem = Macros & {
   prov?: Provenance;
   /** Round 39: nutrients the source did NOT give. They are stored as 0 but shown as unknown, never as a real 0. */
   missing?: MacroKey[];
+  /** Round 41: the USDA food she confirmed for this item (a frozen copy of its values per 100 g). */
+  usda?: UsdaSnap | null;
+};
+
+// ---- Round 41: USDA FoodData Central ----
+
+/** Which USDA data set a food is from. Branded foods are packaged products, kept apart from generic ones. */
+export type UsdaDataType = "foundation" | "sr" | "fndds" | "branded";
+
+/** Which USDA number the kcal came from. 1008 = Energy (kcal); 2048 / 2047 = Atwater specific / general; kj = 1062 ÷ 4.184. */
+export type UsdaEnergyBasis = "1008" | "2048" | "2047" | "kj";
+
+/** One USDA nutrient exactly as USDA sent it (kept so the numbers can always be traced back). */
+export type UsdaRawNutrient = { id: number; unit: string; value: number };
+
+/** A USDA food she confirmed, frozen at the moment she picked it. Values are per 100 g (or 100 ml when per = "ml"). */
+export type UsdaSnap = {
+  fdcId: number;
+  description: string;
+  dataType: UsdaDataType;
+  brand?: string | null;
+  per100: Macros;
+  per: "g" | "ml";
+  /** Nutrients USDA did not give (stored as 0, shown as unknown). */
+  missing?: MacroKey[];
+  energy: UsdaEnergyBasis;
+  state?: FoodState | null;
+  /** Other nutrients per 100, only when USDA gave them. Shown, never added to the diary totals. */
+  extra?: { fiber?: number; sugar?: number; sodiumMg?: number; satFat?: number };
+  raw?: UsdaRawNutrient[];
+  fetchedAt: number;
+};
+
+/** A household measure from USDA, e.g. "1 cup, chopped" = 160 g. */
+export type UsdaPortion = { label: string; grams: number; ml?: number | null };
+
+/** A USDA food picked for a recipe ingredient. Only used while the ingredient name stays the same. */
+export type UsdaPick = UsdaSnap & {
+  /** The ingredient name it was confirmed for. If she renames the ingredient, it is not used. */
+  name: string;
+  portions?: UsdaPortion[];
+  /** grams in 1 ml, worked out from USDA's own cup / spoon weights. null = unknown. */
+  gPerMl?: number | null;
 };
 
 /** source + id in that database. "off" = Open Food Facts (id = barcode). */
@@ -203,6 +246,8 @@ export type Ingredient = {
   refPick?: { name: string; key: string } | null;
   /** Round 39: grams in 1 ml of this ingredient, typed by her (shown as "weight of 1 tbsp" etc.). */
   gPerMl?: number | null;
+  /** Round 41: the USDA food she confirmed for this name. Ignored if the name changes. */
+  usda?: UsdaPick | null;
 };
 
 export type AiRef = {

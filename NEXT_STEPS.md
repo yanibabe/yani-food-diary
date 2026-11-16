@@ -6,7 +6,7 @@
 
 ---
 
-## LIVE (updated 2026-11-16; Round 40 Smart Calorie Buffer + final checks LIVE (commit 4526f87, Vercel success); Round 39.1 plain water = 0 kcal LIVE; Round 39 nutrition accuracy: careful matching + source marks + unknown nutrients + densities LIVE; Round 38 recipe ingredient photos: any/many photos + average fallback LIVE; Round 37 waiting popup while a photo is read LIVE; Round 36 camera asks once per opening + album photos LIVE; Round 35 scan ingredients in recipes LIVE; Round 34 Phosphor Light icons LIVE; Round 33 recipes in category boxes + pot icon + 34 units LIVE; Round 32 line-only small character + % in tiles + food tip LIVE; Round 31 whole app in Frosted Calm + richer share picture LIVE; Round 30 Frosted Calm share picture + Profile LIVE; Round 29 share my day with my trainer (picture) LIVE; Round 28 simpler "กินอะไรดี" (menu + recipe, no delivery) LIVE; Round 27 label numbers = no +15% LIVE; Round 26 grouped "what can I eat" LIVE; Round 25 "what can I eat" LIVE; Round 24 weight moved to Profile, steps removed)
+## LIVE (updated 2026-11-16; Round 41 USDA BUILT locally, NOT deployed, key missing — see "NEXT — Round 41"; Round 40 Smart Calorie Buffer + final checks LIVE (commit 4526f87, Vercel success); Round 39.1 plain water = 0 kcal LIVE; Round 39 nutrition accuracy: careful matching + source marks + unknown nutrients + densities LIVE; Round 38 recipe ingredient photos: any/many photos + average fallback LIVE; Round 37 waiting popup while a photo is read LIVE; Round 36 camera asks once per opening + album photos LIVE; Round 35 scan ingredients in recipes LIVE; Round 34 Phosphor Light icons LIVE; Round 33 recipes in category boxes + pot icon + 34 units LIVE; Round 32 line-only small character + % in tiles + food tip LIVE; Round 31 whole app in Frosted Calm + richer share picture LIVE; Round 30 Frosted Calm share picture + Profile LIVE; Round 29 share my day with my trainer (picture) LIVE; Round 28 simpler "กินอะไรดี" (menu + recipe, no delivery) LIVE; Round 27 label numbers = no +15% LIVE; Round 26 grouped "what can I eat" LIVE; Round 25 "what can I eat" LIVE; Round 24 weight moved to Profile, steps removed)
 
 - **App:** https://yani-food-diary.vercel.app  (Vercel, exm-labs account, free)
 - **Code:** https://github.com/yanibabe/yani-food-diary  (private; pushes auto-deploy)
@@ -64,10 +64,55 @@ Order: accuracy first, THEN Healthy Recipe Library, personalized meal ideas, wee
   to FIX numbers, which needs a real label photo). Could be its own round later if she wants it.
 - Older open items under Round 36 (food tip ก/ข choice; Rounds 33–35 not tried on iPhone).
 
+## ▶ NEXT — Round 41 USDA is BUILT, NOT DEPLOYED (2026-11-16) — read this first
+- Code is committed locally only (not pushed, not deployed — her rule for this round).
+- **USDA_API_KEY was NOT found** (not in .env.local, not in Vercel, not in the shell), even though she
+  said she gave it. Next chat: she puts the key into `~/apps/yani-food-diary/.env.local` as
+  `USDA_API_KEY=...` herself (never in chat). Then I run the real-API checks below.
+- Her second message was cut off at "Do not …" — ask her what the rest said.
+- After the key works locally: add it to Vercel (Production + Preview, encrypted) — ask her OK first,
+  then ask her OK to push/deploy.
+- Real-API checks still to do (only fake answers + 3 calls with USDA's public DEMO_KEY so far):
+  raw vs cooked rice + chicken search; kcal/P/C/F vs USDA website; Branded search; a 429 by the
+  real limit is NOT tested live; AI query translation for a Thai name not in the word list.
+
 ## ▶ NEXT — Round 40 is LIVE (2026-11-16)
 - She tries it on her iPhone (checklist in the Round 40 section + "อกไก่ทอด 200 กรัม" → oil as its own item).
 - Real AI not tried yet with the new prompt.
 - Then Round 41 (USDA) only when she says — she must sign up for a free data.gov key herself.
+
+## Round 41 (2026-11-16) — USDA FoodData Central ✅ BUILT + TESTED (fake answers), NOT DEPLOYED
+Checkpoint: git tag `before-round-41` (local). Brief = her long pasted Round 41 spec (items 1–10).
+- Server client `app/lib/food/usda.ts`: key from `USDA_API_KEY` in the X-Api-Key header (never in URL,
+  logs, errors or the phone bundle — checked .next/static). DEMO_KEY refused in production. 8 s timeout,
+  one retry on 5xx/network, 429 never retried (hourly limit 1,000). In-memory cache (search 1 day,
+  details 7 days). Route `app/api/food/usda/route.ts` (passcode like the AI routes); `/api/status` now says
+  `usda: true/false` only. Test mode: `USDA_MOCK=1` (in `npm run dev:mock`) uses `app/lib/food/usdaMock.ts`.
+- Nutrients `app/lib/food/usdaNutrients.ts`: ids 1008 → 2048 → 2047 → 1062 kJ÷4.184 for kcal (never 4/4/9);
+  1003 protein, 1004 fat, 1005 → 1050 carbs; fiber/sugar/sodium/sat fat kept as extras (not in totals).
+  All 3 USDA answer shapes read; units checked (G/MG/UG, kcal vs kJ); duplicates = first value; missing
+  = null (unknown), real 0 kept (water). Real Foundation chicken breast has NO 1008 → uses 2048 (112 kcal).
+  Household measures → portions + density from cup/spoon weights. Raw data kept in the snapshot.
+- Matching `app/lib/food/usdaMatch.ts`: safe Thai→English word list (longest wins: น้ำมันหอย = oyster
+  sauce), state/method/cut/skin words, AI translation of the NAME only when not in the list
+  (`translateForUsda` in server/ai.ts). Results ranked; differences shown (ดิบ/สุก ไม่ตรง, วิธีปรุงไม่ตรง,
+  ส่วนไม่ตรง, หนังไม่ตรง, ชื่อไม่ตรงทั้งหมด — mixed dishes like "Beans and white rice" count).
+  "ใกล้เคียงที่สุด" is only a hint; NOTHING is auto-picked. Branded = separate search.
+- Source priority: recipe ingredient = her label > USDA pick (`ing.usda`, only while the name is the same)
+  > her reference pick / AI / reference table. Prov = database + unverified + via "usda" / "usda-branded"
+  (badge "USDA" / "USDA · แบรนด์"). Never "verified".
+- Diary item: ItemEditor → "ใช้ค่าจาก USDA" → pick → grams (USDA portion buttons) → `applyUsdaToItem`.
+  Keeps her name/kind/dairy; drops this item's AI kcal + buffer; other AI items keep theirs; undo button.
+  "Tell the AI more" can only change a USDA item's grams (USDA values stay); other edits clear `usda`.
+- Old items/recipes/backups unchanged (no migration; new optional fields `usda` on FoodItem + Ingredient).
+- Tests: `tests/round41-usda.test.ts` (32) + fixtures from real USDA answers in tests/fixtures/.
+  194/194 pass, tsc clean, lint 0 errors (old warning), build OK, browser check in mock mode OK
+  (recipe "อกไก่ทอด" 150 g → 281 kcal USDA; meal "ข้าวสวย" 150 g → 195 kcal USDA, others still ประมาณ).
+- Limits: USDA has few Thai dishes (best for ingredients); search on the server is per instance cache;
+  not all FNDDS portions have ml; AI refine for USDA items needs g/ml units.
+- iPhone checks (after deploy): recipe ingredient → "ค้นหาค่าใน USDA"; ข้าวสวย vs ข้าวสาร; อกไก่ทอด;
+  น้ำมันหอย; a meal item → USDA → grams → USDA badge; undo; buffer 15% only on the other items;
+  airplane mode → friendly error + "ลองอีกครั้ง", the meal can still be saved.
 
 ## Round 40 final checks (2026-11-16) — commit ba57ef0 ✅ LIVE (pushed with 4526f87)
 Her review asked 2 checks before deploy. (1) Her weight never makes AI numbers "verified" (was already OK).

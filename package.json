@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "node --test tests/*.test.ts",
-    "dev:mock": "AI_MOCK=1 next dev -p 3217",
+    "dev:mock": "AI_MOCK=1 USDA_MOCK=1 next dev -p 3217",
     "postinstall": "cp node_modules/zxing-wasm/dist/reader/zxing_reader.wasm public/zxing_reader.wasm"
   },
   "dependencies": {
