@@ -389,3 +389,38 @@ test("backup: items and recipes with USDA snapshots survive a backup + restore u
   assert.deepEqual(JSON.parse(back.ok ? back.backup.data.entries! : "null"), entries);
   assert.deepEqual(JSON.parse(back.ok ? back.backup.data.recipes! : "null"), recipes);
 });
+
+// ---------------- found with the REAL USDA API (2026-11-16) ----------------
+const real = (fdcId: number, dataType: string, description: string) =>
+  normalizeUsdaFood({ fdcId, dataType, description, foodNutrients: [{ nutrientId: 1008, unitName: "KCAL", value: 100 }] })!;
+
+test("real-API lessons: sticky / black / wild rice are not plain white rice", () => {
+  for (const [id, d] of [[169711, "Rice, white, glutinous, unenriched, cooked"], [2710825, "Rice, black, unenriched, raw"], [2710821, "Wild rice, dry, raw"]] as const) {
+    const r = compare(real(id, "SR Legacy", d), id === 169711 ? "ข้าวสวย" : "ข้าวสาร", id === 169711 ? "rice white cooked" : "rice white raw");
+    assert.ok(r.differences.includes("food"), d);
+  }
+  assert.deepEqual(compare(real(168930, "SR Legacy", "Rice, white, medium-grain, cooked, unenriched"), "ข้าวสวย", "rice white cooked").differences, []);
+  // she can still ask for sticky rice on purpose
+  assert.deepEqual(compare(real(169711, "SR Legacy", "Rice, white, glutinous, unenriched, cooked"), "ข้าวเหนียว", "rice white glutinous cooked").differences, []);
+});
+
+test("real-API lessons: lunch meat, rotisserie, stewed and battered chicken are flagged", () => {
+  assert.ok(compare(real(2759004, "Foundation", "Lunchmeat, chicken breast, sliced"), "อกไก่ต้ม", "chicken breast boiled").differences.includes("food"));
+  assert.ok(compare(real(2705964, "Survey (FNDDS)", "Chicken breast, rotisserie, skin not eaten"), "อกไก่ต้ม", "chicken breast boiled").differences.includes("method"));
+  assert.ok(compare(real(2705965, "Survey (FNDDS)", "Chicken breast, stewed, skin eaten"), "อกไก่ต้ม", "chicken breast boiled").differences.includes("method"));
+  assert.ok(compare(real(171475, "SR Legacy", "Chicken, broilers or fryers, breast, meat and skin, cooked, fried, batter"), "อกไก่ทอด", "chicken breast fried").differences.includes("food"));
+  assert.ok(compare(real(1999627, "Foundation", "Mushroom, oyster"), "น้ำมันหอย", "oyster sauce").differences.includes("food"));
+});
+
+test("USDA's RACC serving is shown in plain words", () => {
+  assert.equal(readPortions({ foodPortions: [{ gramWeight: 114, amount: 1, measureUnit: { name: "RACC" } }] })[0].label, "1 serving (RACC)");
+});
+
+test("portion labels always say how many (USDA modifier 'cup' → '1 cup')", () => {
+  const p = readPortions({ foodPortions: [{ gramWeight: 186, amount: 1, measureUnit: { name: "undetermined" }, modifier: "cup" }, { gramWeight: 30, amount: 2, measureUnit: { name: "tbsp" }, modifier: "" }] });
+  assert.equal(p[0].label, "1 cup");
+  assert.equal(p[0].ml, 240);
+  assert.equal(p[1].label, "2 tbsp");
+  assert.equal(p[1].ml, 30);
+  assert.equal(englishQuery("ฟักเขียว"), "waxgourd");
+});

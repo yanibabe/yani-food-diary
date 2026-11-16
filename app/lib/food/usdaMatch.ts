@@ -95,6 +95,9 @@ export const USDA_ALIASES: [string, string][] = [
   ["มันฝรั่ง", "potato"],
   ["มันเทศ", "sweet potato"],
   ["ฟักทอง", "pumpkin"],
+  ["ฟักเขียว", "waxgourd"],
+  ["มะระ", "balsam pear bitter gourd"],
+  ["ถั่วฝักยาว", "yardlong bean"],
   ["บรอกโคลี", "broccoli"],
   ["บร็อคโคลี่", "broccoli"],
   ["แครอท", "carrot"],
@@ -134,8 +137,10 @@ const METHODS: { key: Method; th: string[]; en: string[]; label: { th: string; e
   { key: "baked", th: ["อบ"], en: ["baked", "roasted"], label: { th: "อบ", en: "baked / roasted" } },
   { key: "grilled", th: ["ย่าง", "ปิ้ง"], en: ["grilled", "broiled"], label: { th: "ย่าง", en: "grilled" } },
   { key: "stirfried", th: ["ผัด"], en: ["stir fried", "stir-fried", "sauteed", "sautéed"], label: { th: "ผัด", en: "stir-fried" } },
+  { key: "stewed", th: ["ตุ๋น", "เคี่ยว"], en: ["stewed", "braised"], label: { th: "ตุ๋น", en: "stewed" } },
+  { key: "rotisserie", th: [], en: ["rotisserie"], label: { th: "อบแบบหมุน", en: "rotisserie" } },
 ];
-export type Method = "fried" | "boiled" | "steamed" | "baked" | "grilled" | "stirfried";
+export type Method = "fried" | "boiled" | "steamed" | "baked" | "grilled" | "stirfried" | "stewed" | "rotisserie";
 
 const CUTS: { key: string; en: string[]; th: string }[] = [
   { key: "breast", en: ["breast"], th: "อก" },
@@ -228,7 +233,13 @@ export function englishQuery(name: string): string | null {
 }
 
 /** Words that never decide which food it is. */
-const STOP = new Set(["raw", "cooked", "boiled", "fried", "steamed", "baked", "roasted", "grilled", "broiled", "stir", "skinless", "meat", "and", "skin", "with", "without", "only", "fresh", "dried", "dry", "whole", "plain", "of", "the", "a", "white", "red", "yellow"]);
+const STOP = new Set(["raw", "cooked", "boiled", "fried", "steamed", "baked", "roasted", "grilled", "broiled", "stir", "skinless", "meat", "and", "skin", "with", "without", "only", "fresh", "dried", "dry", "whole", "plain", "of", "the", "a"]);
+
+/**
+ * Words in a USDA description that make it a DIFFERENT food when her search doesn't say them
+ * (sticky / brown / wild rice, lunch meat, battered, flour, juice…). Learned from real USDA answers.
+ */
+const VARIANTS = ["glutinous", "brown", "wild", "black", "red", "puffed", "flour", "noodles", "bran", "lunchmeat", "luncheon", "sliced", "deli", "coated", "breaded", "battered", "nuggets", "patty", "sausage", "canned", "smoked", "cured", "juice", "powder", "dehydrated", "sweetened", "syrup", "baby", "infant", "mushroom", "mushrooms", "soup", "salad", "sandwich", "pie", "cake"];
 
 /** The words that say WHAT the food is ("oyster sauce" → oyster, sauce). */
 export function coreWords(query: string): string[] {
@@ -269,7 +280,9 @@ export function compare(food: UsdaFood, name: string, query: string): RankedFood
   // A mixed dish ("Beans and white rice", "Chicken with vegetables") is not the single food she named.
   const head = desc.split(" ").slice(0, 6).join(" ");
   const mixed = /\b(and|with)\b/.test(lower(food.description).split(",")[0] ?? "") && !/\b(and|with)\b/.test(lower(query)) && !/meat and skin/.test(head);
-  if (coverage < 1 || mixed) differences.push("food");
+  const q = lower(query);
+  const variant = VARIANTS.some((v) => has(desc, v) && !has(q, v) && !lower(name).includes(v));
+  if (coverage < 1 || mixed || variant) differences.push("food");
   return { ...food, differences, coverage, attrs: got };
 }
 

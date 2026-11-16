@@ -166,7 +166,7 @@ export const DATA_TYPE_LABEL: Record<UsdaDataType, { th: string; en: string }> =
 /** The state a USDA description says. "baked … from raw" = cooked (from raw tells how it started). */
 export function stateFromDescription(desc: string): FoodState | null {
   const d = desc.toLowerCase().replace(/\bfrom (raw|fresh|frozen|dry|dried|canned)\b/g, " ");
-  if (/\b(cooked|boiled|steamed|fried|roasted|baked|broiled|grilled|stewed|braised|braised|poached|microwaved|sauteed|sautéed|scrambled|toasted)\b/.test(d)) return "cooked";
+  if (/\b(cooked|boiled|steamed|fried|roasted|baked|broiled|grilled|stewed|braised|rotisserie|poached|microwaved|sauteed|sautéed|scrambled|toasted)\b/.test(d)) return "cooked";
   if (/\b(dried|dehydrated)\b/.test(d)) return "dried";
   if (/\b(raw|uncooked|dry)\b/.test(d)) return "raw";
   return null;
@@ -183,8 +183,11 @@ export function readPortions(food: RawIn): UsdaPortion[] {
     const amount = typeof p.amount === "number" && p.amount > 0 ? p.amount : 1;
     const unitName = p.measureUnit && typeof p.measureUnit === "object" ? String((p.measureUnit as RawIn).name ?? "") : "";
     const desc = String(p.portionDescription ?? p.modifier ?? "").trim();
-    const unitWord = unitName && unitName !== "undetermined" ? unitName : "";
-    const label = (desc && !/^quantity not specified$/i.test(desc) ? (unitWord && !desc.toLowerCase().includes(unitWord.toLowerCase()) ? `${amount} ${unitWord} ${desc}` : desc) : `${amount} ${unitWord || "serving"}`).replace(/\s+/g, " ").trim();
+    // "RACC" = USDA's standard serving size. Shown in plain words.
+    const unitWord = unitName === "RACC" ? "serving (RACC)" : unitName && unitName !== "undetermined" ? unitName : "";
+    const named = desc && !/^quantity not specified$/i.test(desc) ? (unitWord && !desc.toLowerCase().includes(unitWord.toLowerCase()) ? `${unitWord} ${desc}` : desc) : unitWord || "serving";
+    // Always say how many: "cup" → "1 cup" (unless USDA's text already starts with a number).
+    const label = (/^\d/.test(named) ? named : `${amount} ${named}`).replace(/\s+/g, " ").trim();
     // ml of this portion, when it is a cup / spoon / fl oz measure (for grams-per-ml).
     const text = `${unitWord} ${desc}`.toLowerCase();
     const mlKey = Object.keys(mlPer).find((k) => new RegExp(`\\b${k}\\b`).test(text));
