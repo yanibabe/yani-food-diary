@@ -495,6 +495,48 @@ export async function readNutritionLabel(input: { image: string; lang: Lang }): 
 }
 
 // ---------------------------------------------------------------------------
+// Round 38: ANY photos of one product (front, back, label…) read together.
+// Keeps what it can see (name, brand, size). Label numbers only if really printed.
+// ---------------------------------------------------------------------------
+
+export const PackSchema = z.object({
+  name: z.string().nullable().catch(null).describe("Short product / food name as on the pack, in the pack's main language (e.g. 'อกไก่นุ่ม รสพริกไทยดำ'); null if not visible"),
+  brand: z.string().nullable().catch(null).describe("Brand name; null if not visible"),
+  netG: z.number().nullable().catch(null).describe("Net weight in g (or net volume in mL) of the whole pack, e.g. 200 for 'น้ำหนักสุทธิ 200 ก.'; null if not printed"),
+  liquid: z.boolean().catch(false).describe("true if the pack size / serving is in mL (a drink or liquid)"),
+  label: LabelSchema.nullable().catch(null).describe("Nutrition numbers ONLY if a nutrition table or energy box is clearly printed in a photo; else null"),
+});
+export type PackRead = z.infer<typeof PackSchema>;
+
+const PACK_SYSTEM = `You look at 1 to 4 photos of the SAME food or drink product (front, back, side, nutrition label — any of them) and read what is printed.
+Combine all photos into ONE answer for that one product.
+- name: the product name as printed (keep the pack's language, short, no marketing words). brand separately.
+- netG: the whole pack's net weight / volume (น้ำหนักสุทธิ / ปริมาตรสุทธิ / Net Wt).
+- label: only if nutrition numbers are really printed in a photo. Follow these rules for it:
+  Thai words: ข้อมูลโภชนาการ = nutrition facts; หนึ่งหน่วยบริโภค = one serving; ก. or กรัม = g; มล. = mL; พลังงาน = energy (กิโลแคลอรี = kcal);
+  โปรตีน = protein; คาร์โบไฮเดรตทั้งหมด = total carbs; ไขมันทั้งหมด = total fat.
+  Prefer ONE SERVING numbers (servingG = that serving's grams/mL). A front energy box for the whole pack → servingG = net weight.
+  Only per-100 g numbers → servingG = 100. Energy only in kJ → kcal = kJ / 4.184.
+  Copy numbers exactly. Do NOT guess or use typical values. No nutrition printed → label = null.
+- Anything not visible = null. Never invent.
+Return ONLY a JSON object matching this JSON Schema:
+${shapeOf(PackSchema)}`;
+
+export async function readPackPhotos(input: { images: string[]; lang: Lang }): Promise<PackRead> {
+  const t = trFor(input.lang);
+  if (!input.images.length || input.images.some((i) => !/^data:image\/(jpeg|png|webp);base64,/.test(i)))
+    throw new AiError("bad-output", t("รูปแบบรูปไม่รองรับ", "This picture format is not supported"), 400);
+  if (process.env.AI_MOCK === "1") {
+    // Test mode: 1 photo = only the front (no numbers); 2+ photos = the label is in there too.
+    const label = input.images.length > 1 ? { servingG: 20, liquid: false, kcal: 70, protein: 1, carbs: 12, fat: 2 } : null;
+    return { name: "อกไก่นุ่ม", brand: "เบทาโกร", netG: 200, liquid: false, label };
+  }
+  const parts: Part[] = [{ type: "text", text: `${input.images.length} photo(s) of one product.` }];
+  for (const url of input.images) parts.push({ type: "image_url", image_url: { url } });
+  return callAi(PACK_SYSTEM, parts, PackSchema, input.lang);
+}
+
+// ---------------------------------------------------------------------------
 // "What can I eat with what's left": food ideas from 7-Eleven, and menu ideas
 // she can cook (each with a short recipe). Her own recipes are picked by the app, not the AI.
 // The app (app/lib/suggest.ts) checks the numbers and keeps the best 3 per group.

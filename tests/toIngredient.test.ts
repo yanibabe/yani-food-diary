@@ -53,3 +53,50 @@ test("label photo: 20 g pack = 70 kcal → 350 per 100 g, missing nutrients coun
 test("label photo with a bad pack size → nothing to fill", () => {
   assert.equal(ingredientFromLabel(blank, { servingG: 0, liquid: false, kcal: 70, protein: null, carbs: null, fat: null }), null);
 });
+
+// ---- Round 38: any photos of one product ----
+import { ingredientFromPack } from "../app/lib/food/toIngredient.ts";
+const avg = { kcal: 120, protein: 23, carbs: 0, fat: 2.5, unitG: null, gPerMl: null };
+
+test("pack photos with label numbers: real numbers, name, whole pack size", () => {
+  const { patch, kind } = ingredientFromPack(blank, {
+    product: { name: "อกไก่นุ่ม · เบทาโกร", netG: 200, liquid: false },
+    label: { servingG: 100, liquid: false, kcal: 110, protein: 22, carbs: 1, fat: 2 },
+    average: null,
+  });
+  assert.equal(kind, "label");
+  assert.equal(patch.name, "อกไก่นุ่ม · เบทาโกร");
+  assert.equal(patch.amount, 200);
+  assert.deepEqual(patch.label, { basis: "per100", kcal: 110, protein: 22, carbs: 1, fat: 2 });
+});
+
+test("pack photos with no numbers: keeps name + size and uses the average (estimate)", () => {
+  const { patch, kind } = ingredientFromPack(blank, { product: { name: "อกไก่นุ่ม", netG: 200, liquid: false }, label: null, average: avg });
+  assert.equal(kind, "average");
+  assert.equal(patch.name, "อกไก่นุ่ม");
+  assert.equal(patch.amount, 200);
+  assert.equal(patch.label, undefined);
+  assert.equal(patch.aiRef?.name, "อกไก่นุ่ม");
+  const r = ingredientMacros({ ...blank, ...patch });
+  assert.ok(r.ok && r.macros.kcal === 240 && r.source !== "label");
+});
+
+test("average is stored under the name she typed, and never replaces her label", () => {
+  const typed: Ingredient = { ...blank, name: "ไก่", amount: 150, unit: "g" };
+  const a = ingredientFromPack(typed, { product: { name: "อกไก่นุ่ม", netG: 200, liquid: false }, label: null, average: avg });
+  assert.equal(a.patch.name, undefined);
+  assert.equal(a.patch.amount, undefined);
+  assert.equal(a.patch.aiRef?.name, "ไก่");
+  const withLabel: Ingredient = { ...typed, label: { basis: "per100", kcal: 99, protein: 1, carbs: 1, fat: 1 } };
+  const b = ingredientFromPack(withLabel, { product: { name: "อกไก่นุ่ม", netG: 200, liquid: false }, label: null, average: avg });
+  assert.equal(b.patch.aiRef, undefined);
+  assert.equal(b.kind, "nothing");
+});
+
+test("no numbers and no average: name + size only; nothing readable → nothing", () => {
+  const a = ingredientFromPack(blank, { product: { name: "ซอสพิเศษ", netG: 300, liquid: true }, label: null, average: null });
+  assert.equal(a.kind, "nameOnly");
+  assert.equal(a.patch.unit, "ml");
+  const b = ingredientFromPack(blank, { product: { name: null, netG: null, liquid: false }, label: null, average: null });
+  assert.equal(b.kind, "nothing");
+});

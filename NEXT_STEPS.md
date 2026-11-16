@@ -6,7 +6,7 @@
 
 ---
 
-## LIVE (updated 2026-11-16; Round 37 waiting popup while a photo is read LIVE; Round 36 camera asks once per opening + album photos LIVE; Round 35 scan ingredients in recipes LIVE; Round 34 Phosphor Light icons LIVE; Round 33 recipes in category boxes + pot icon + 34 units LIVE; Round 32 line-only small character + % in tiles + food tip LIVE; Round 31 whole app in Frosted Calm + richer share picture LIVE; Round 30 Frosted Calm share picture + Profile LIVE; Round 29 share my day with my trainer (picture) LIVE; Round 28 simpler "กินอะไรดี" (menu + recipe, no delivery) LIVE; Round 27 label numbers = no +15% LIVE; Round 26 grouped "what can I eat" LIVE; Round 25 "what can I eat" LIVE; Round 24 weight moved to Profile, steps removed)
+## LIVE (updated 2026-11-16; Round 38 recipe ingredient photos: any/many photos + average fallback LIVE; Round 37 waiting popup while a photo is read LIVE; Round 36 camera asks once per opening + album photos LIVE; Round 35 scan ingredients in recipes LIVE; Round 34 Phosphor Light icons LIVE; Round 33 recipes in category boxes + pot icon + 34 units LIVE; Round 32 line-only small character + % in tiles + food tip LIVE; Round 31 whole app in Frosted Calm + richer share picture LIVE; Round 30 Frosted Calm share picture + Profile LIVE; Round 29 share my day with my trainer (picture) LIVE; Round 28 simpler "กินอะไรดี" (menu + recipe, no delivery) LIVE; Round 27 label numbers = no +15% LIVE; Round 26 grouped "what can I eat" LIVE; Round 25 "what can I eat" LIVE; Round 24 weight moved to Profile, steps removed)
 
 - **App:** https://yani-food-diary.vercel.app  (Vercel, exm-labs account, free)
 - **Code:** https://github.com/yanibabe/yani-food-diary  (private; pushes auto-deploy)
@@ -34,19 +34,25 @@
 Rounds 33–35 tried on her iPhone ✓ ("okay"). Round 36 = her 2 fixes from that try.
 Round 36: she said "okay" (2026-11-16) and asked for Round 37.
 
-## ▶ Round 38 (her wish, 2026-11-16, NOT started) — recipe ingredient photo reads ANY photo, many photos
-Her words (Thai, summed up): when she picks a photo for a recipe ingredient ("รูปฉลาก" in IngredientScan),
-the AI seems to only accept a nutrition label. She wants:
-1. The AI reads ANY photo. No nutrition table? Still keep what it can see: product name, grams/size
-   (e.g. "200 g" on the front), brand, other details.
-2. More than one photo for ONE ingredient (e.g. front of pack + back + label) — she can add more photos
-   and the AI reads them all together as one product.
-3. If there are no real nutrition numbers in any photo, use general/average data for that food
-   (like /api/ingredient already does by name) — mark it as an estimate so she knows.
-Real label numbers still win over average data (keep Round 27 rule: label numbers = no +15%).
-Ask her first (one question): should the barcode page's "ไม่ตรงกับซอง? ถ่าย/เลือกรูปฉลาก" work the same way?
-Files: app/components/IngredientScan.tsx, app/api/food/label-photo, app/lib/food/toIngredient.ts,
-app/lib/server/ai.ts. Show "กำลังอ่านรูป…" in the WaitPopup (Round 37).
+## ▶ NEXT — ask her (one at a time)
+- Try Round 38 on her iPhone: recipe → ingredient → "รูปสินค้า" → pick front + back photos → "อ่าน N รูป".
+- Barcode page "ไม่ตรงกับซอง? ถ่าย/เลือกรูปฉลาก" was NOT changed (she let me decide: that button exists
+  to FIX numbers, which needs a real label photo). Could be its own round later if she wants it.
+- Older open items under Round 36 (food tip ก/ข choice; Rounds 33–35 not tried on iPhone).
+
+## Round 38 (2026-11-16) — recipe ingredient photos: any photo, many photos, average fallback ✅ LIVE
+- Button "รูปฉลาก" → "รูปสินค้า". Picker allows several photos; they show as small squares (× to remove,
+  + to add more, max 4), then "อ่าน N รูป" / ยกเลิก. WaitPopup "กำลังอ่านรูป N รูป…".
+- New `/api/food/pack-photos` (images[] ≤4) → `readPackPhotos` in ai.ts (PackSchema: name, brand, netG,
+  liquid, label|null). Label needs size + kcal (front energy box with no size → uses net weight).
+  No label numbers → server calls `lookupIngredient(name)` = average per 100 g.
+- `ingredientFromPack` in toIngredient.ts (tested): label → real numbers per 100 g (Round 27: no +15%),
+  amount = whole pack (netG). No numbers → keeps name + pack size, sets aiRef (shows "ค่าจาก AI" +
+  "ไม่ใช่ค่าจากฉลาก" = estimate). Never replaces label numbers she typed. Kept her typed name/amount/unit.
+- Old /api/food/label-photo still used by the barcode page (unchanged).
+- Bug found + fixed while testing: 2nd photo got lost (file list was read after the input was cleared).
+- 118 tests pass (4 new), build clean. Checked at phone size in practice mode: 2 photos → label numbers,
+  1 photo → average estimate. Real AI with real photos NOT tried yet. NOT tried on her iPhone yet.
 
 ## Round 37 (2026-11-16) — a waiting popup every time a photo is read ✅ LIVE
 Her wish: whenever a photo is uploaded or taken and the app is reading it, show a popup saying what it's doing.

@@ -321,8 +321,8 @@ function RecipeForm({ initial, onSave, onCancel }: { initial: Recipe | null; onS
         <h2 className="px-1 text-[19px] font-semibold">{tr("วัตถุดิบ", "Ingredients")}</h2>
         <p className="px-1 text-[14px] text-muted">
           {tr(
-            "ของที่มีซอง สแกนบาร์โค้ดหรือถ่ายรูปฉลากได้เลย ไม่ต้องพิมพ์ ถ้าไม่มีฉลาก AI จะหาค่าสารอาหารตามน้ำหนักที่ใส่ให้เอง",
-            "Packed things: scan the barcode or photo the label — no typing. Without a label, the AI looks up the nutrition for the amount you typed.",
+            "ของที่มีซอง สแกนบาร์โค้ดหรือถ่ายรูปสินค้าได้เลย (หลายรูปก็ได้) ไม่ต้องพิมพ์ ถ้าไม่มีฉลาก AI จะใช้ค่าเฉลี่ยของอาหารนั้นให้เอง",
+            "Packed things: scan the barcode or photo the product (several photos are fine) — no typing. Without a label, the AI uses typical values for that food.",
           )}
         </p>
         {ings.map((ing) => (
