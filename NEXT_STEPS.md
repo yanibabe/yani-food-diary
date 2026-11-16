@@ -6,7 +6,7 @@
 
 ---
 
-## LIVE (updated 2026-11-16; Round 33 recipes in category boxes + pot icon + 34 units LIVE; Round 32 line-only small character + % in tiles + food tip LIVE; Round 31 whole app in Frosted Calm + richer share picture LIVE; Round 30 Frosted Calm share picture + Profile LIVE; Round 29 share my day with my trainer (picture) LIVE; Round 28 simpler "กินอะไรดี" (menu + recipe, no delivery) LIVE; Round 27 label numbers = no +15% LIVE; Round 26 grouped "what can I eat" LIVE; Round 25 "what can I eat" LIVE; Round 24 weight moved to Profile, steps removed)
+## LIVE (updated 2026-11-16; Round 34 Phosphor Light icons LIVE; Round 33 recipes in category boxes + pot icon + 34 units LIVE; Round 32 line-only small character + % in tiles + food tip LIVE; Round 31 whole app in Frosted Calm + richer share picture LIVE; Round 30 Frosted Calm share picture + Profile LIVE; Round 29 share my day with my trainer (picture) LIVE; Round 28 simpler "กินอะไรดี" (menu + recipe, no delivery) LIVE; Round 27 label numbers = no +15% LIVE; Round 26 grouped "what can I eat" LIVE; Round 25 "what can I eat" LIVE; Round 24 weight moved to Profile, steps removed)
 
 - **App:** https://yani-food-diary.vercel.app  (Vercel, exm-labs account, free)
 - **Code:** https://github.com/yanibabe/yani-food-diary  (private; pushes auto-deploy)
@@ -30,16 +30,29 @@
    kcal, protein, fat, carbs (and totals). Easy to send (image and/or text via the iPhone share sheet).
    Ask her: picture, text, or both.
 
-## ▶ NEXT = Round 34: scan ingredients inside a recipe (her wish, 2026-11-16)
+## ▶ NEXT = Round 35: scan ingredients inside a recipe (her wish, 2026-11-16)
 In the recipe form, each ingredient gets buttons to fill it WITHOUT typing: scan the barcode
 (reuse Round 13/17 barcode lookup + live camera) and/or photo of the nutrition label (reuse Round 18 label AI)
 → fills name + label values (per 100 g or per unit). She doesn't want to type every ingredient.
-Also still open (ask her ONE at a time, after Round 34):
+Also still open (ask her ONE at a time, after Round 35):
 - Food tip line (Round 32): she asked why no AI / how it decides. Explained: compares today's food with her
   targets from Profile (20/50/30 split, or protein by body weight). Offered: (ก) tap the tip → show the numbers
   behind it (free), or (ข) a "ask AI for advice" button that reads today's actual foods (costs credit per tap).
   She hasn't picked yet.
 - Not yet tried on her iPhone: Round 32 bits she said were OK; Round 33 (below).
+
+## Round 34 (2026-11-16) — whole app in Phosphor Light icons ✅ LIVE
+She didn't like the hand-drawn icons. Showed 10 free libraries side by side (Phosphor Light/Duotone, Lucide,
+Tabler, Iconoir, Solar Linear/Duotone, Hugeicons, Fluent, MingCute) → she picked "1 · Phosphor Light".
+- app/components/Icon.tsx: `<Icon name=... className=.../>` with 18 Phosphor Light shapes COPIED in (MIT
+  notice in the file; nothing installed). To add one: fetch https://api.iconify.design/ph.json?icons=<name>-light
+  and paste its body into P.
+- Swapped: tab bar (house / book-open / user), add-food sheet + entry source icons (camera, chat-text,
+  book-open, pencil-simple, barcode, arrows-clockwise), share (export), recipe pot (cooking-pot, PotIcon now
+  wraps it), recipes list plus/caret-down/caret-right, every ‹ › × text symbol → caret-left/right / x,
+  📷 → camera, ✨ → sparkle, ⚖️ → scales. Round buttons are `grid place-items-center`.
+- NOT changed: water glasses (fill meter), calorie ring, weight chart, "+ เพิ่มอาหาร" text plus.
+- Checked at phone size: Today, add sheet, recipes list + detail, Profile. NOT on her iPhone yet.
 
 ## Round 33 (2026-11-16) — My recipes = category boxes (her pick "C") + pot icon + many units ✅ LIVE
 She saw 6 samples (A list, B chips, C open/close boxes, D shelves, E menu text, F 3-col grid) → picked C,
