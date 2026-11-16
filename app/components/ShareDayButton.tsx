@@ -7,8 +7,6 @@ import { useLang } from "../lib/lang";
 import { thaiDateLabel } from "../lib/date";
 import { fmtKcal } from "../lib/nutrition";
 import { buildShareDay, shareFileName, type ShareDay } from "../lib/shareDay";
-import { BACKUP_KEYS } from "../lib/backup";
-import { BLUSH, CHAR_BOX, DECOS, cleanLook, parseLook, type CharLook } from "../lib/character";
 import { getPhoto } from "../lib/photos";
 import { GLASS_ML } from "../lib/water";
 import { SLOT_LABEL, type Entry } from "../lib/types";
@@ -97,25 +95,11 @@ function loadImg(src: string): Promise<HTMLImageElement> {
     i.src = src;
   });
 }
-const svgUrl = (inner: string) =>
-  "data:image/svg+xml;charset=utf-8," +
-  encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${CHAR_BOX} ${CHAR_BOX}">${inner}</svg>`);
-
-/** Her character, same layers as on Today: color (through the body mask) → cheeks → her lines → decoration. */
-async function drawCharacter(look: CharLook, size: number): Promise<HTMLCanvasElement> {
-  const l = cleanLook(look);
+/** Her character: her black lines only, see-through everywhere else. */
+async function drawCharacter(size: number): Promise<HTMLCanvasElement> {
   const c = document.createElement("canvas");
   c.width = c.height = size;
-  const ctx = c.getContext("2d")!;
-  const [body, lines] = await Promise.all([loadImg("/character-body.png"), loadImg("/character-lines.png")]);
-  ctx.fillStyle = l.color;
-  ctx.fillRect(0, 0, size, size);
-  ctx.globalCompositeOperation = "destination-in";
-  ctx.drawImage(body, 0, 0, size, size);
-  ctx.globalCompositeOperation = "source-over";
-  if (l.blush) ctx.drawImage(await loadImg(svgUrl(BLUSH)), 0, 0, size, size);
-  ctx.drawImage(lines, 0, 0, size, size);
-  if (l.deco !== "none") ctx.drawImage(await loadImg(svgUrl(DECOS[l.deco].s)), 0, 0, size, size);
+  c.getContext("2d")!.drawImage(await loadImg("/character-lines.png"), 0, 0, size, size);
   return c;
 }
 
@@ -369,14 +353,14 @@ function paint(ctx: CanvasRenderingContext2D, info: Info, fam: string, draw: boo
   return { h: y + PAD - 8, boxes };
 }
 
-async function makePicture(info: Omit<Info, "char" | "photos">, look: CharLook): Promise<Blob> {
+async function makePicture(info: Omit<Info, "char" | "photos">): Promise<Blob> {
   const fam = calmFont();
   // Make sure the thin Thai + number font is ready, or the canvas uses a plain font.
   await Promise.all(
     [200, 300, 400].map((w) => document.fonts.load(`${w} 32px ${fam}`, "กขค 0123 kcal").catch(() => [])),
   );
   // The character and the meal photos are nice to have: if one fails to load, the picture still works.
-  const char = await drawCharacter(look, CHAR * 2).catch(() => null);
+  const char = await drawCharacter(CHAR * 2).catch(() => null);
   const photos = new Map<string, HTMLImageElement>();
   const ids = info.day.slots.flatMap((s) => s.meals.map((m) => m.photoId)).filter((x): x is string => !!x);
   await Promise.all(
@@ -421,14 +405,6 @@ async function makePicture(info: Omit<Info, "char" | "photos">, look: CharLook):
   return new Promise((ok, bad) => canvas.toBlob((b) => (b ? ok(b) : bad(new Error("toBlob"))), "image/png"));
 }
 
-function savedLook(): CharLook {
-  try {
-    return parseLook(localStorage.getItem(BACKUP_KEYS.buddy));
-  } catch {
-    return parseLook(null);
-  }
-}
-
 export function ShareDayButton({
   entries,
   date,
@@ -457,7 +433,6 @@ export function ShareDayButton({
     let stop = false;
     makePicture(
       { day: buildShareDay(entries, date), date, dateLabel: thaiDateLabel(date, lang), name, target, macroTargets: mt, water: wt, lang },
-      savedLook(),
     )
       .then((blob) => {
         if (stop) return;

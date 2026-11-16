@@ -6,7 +6,7 @@ import { MILK_WARNING_ON } from "../lib/dairy";
 // only replaces the target after she confirms.
 
 import { useEffect, useMemo, useState } from "react";
-import { CharacterMaker, CharacterPicture, useCharLook } from "../components/Character";
+import { CharacterPicture } from "../components/Character";
 import { BackupCard } from "../components/BackupCard";
 import { WeightCard } from "../components/WeightCard";
 import {
@@ -46,8 +46,6 @@ export default function ProfilePage() {
   const { tr, lang } = useLang();
   const [editing, setEditing] = useState(false);
   const [open, setOpen] = useState<Panel | null>(null);
-  const [charOpen, setCharOpen] = useState(false);
-  const { look, save: saveLook } = useCharLook();
   const [saved, setSaved] = useState<string | null>(null);
   const flash = (t: string) => {
     setSaved(t);
@@ -86,14 +84,9 @@ export default function ProfilePage() {
       ) : (
         <>
           <header className="pb-3 pt-4 text-center" data-testid="profile-head">
-            <button
-              type="button"
-              className="mx-auto block active:scale-[0.97]"
-              onClick={() => setCharOpen(true)}
-              aria-label={tr("แต่งตัวน้อง", "Dress up")}
-            >
-              <CharacterPicture look={look} size={124} />
-            </button>
+            <div className="mx-auto w-fit">
+              <CharacterPicture size={124} />
+            </div>
             <h1 className="mt-1.5 text-[26px] font-light">{p.name || tr("โปรไฟล์", "Profile")}</h1>
             {facts.length > 0 && <p className="text-[14px] text-muted">{facts.join(" · ")}</p>}
           </header>
@@ -147,7 +140,6 @@ export default function ProfilePage() {
           </section>
         </>
       )}
-      {charOpen && <CharacterMaker start={look} onClose={() => setCharOpen(false)} onSave={saveLook} />}
     </main>
   );
 }

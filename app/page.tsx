@@ -2,12 +2,12 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { MacroCards, MacroSplitBar, Sheet, StoredPhoto } from "./components/ui";
+import { MacroCards, MacroTipLine, Sheet, StoredPhoto } from "./components/ui";
 import { BackupReminder } from "./components/BackupReminder";
 import { WeekKcalChart } from "./components/WeekKcalChart";
 import { WaterCard } from "./components/WaterCard";
 import { ShareDayButton } from "./components/ShareDayButton";
-import { CharacterMaker, CharacterPicture, useCharLook } from "./components/Character";
+import { CharacterPicture } from "./components/Character";
 import { guessSlot, shiftDateKey, shortDayLabel, thaiDateKey, thaiDateLabel } from "./lib/date";
 import { copyMeal, recentMeals, searchMeals } from "./lib/repeat";
 import { macroTargets, proteinTargetG } from "./lib/energy";
@@ -103,12 +103,11 @@ function TodayInner() {
   const [againView, setAgainView] = useState(false);
   const [againQuery, setAgainQuery] = useState("");
   const { tr, lang } = useLang();
-  const { look, save: saveLook } = useCharLook();
-  const [charOpen, setCharOpen] = useState(false);
 
   const dayEntries = useMemo(() => entries.filter((e) => e.date === date).sort((a, b) => a.createdAt - b.createdAt), [entries, date]);
   const total = useMemo(() => sumMacros(dayEntries.flatMap((e) => e.items.map(pickMacros))), [dayEntries]);
   const target = goals.targetKcal;
+  const mTargets = macroTargets(target, proteinTargetG(goals.profile));
   const left = target - total.kcal;
   const go = (d: string) => router.replace(d === today ? "/" : `/?date=${d}`);
   const q = date === today ? "" : `?date=${date}`;
@@ -135,22 +134,17 @@ function TodayInner() {
 
   return (
     <main className="page space-y-5">
+      {date === today && (
+        // Yani's own brand character: small, fixed, her black lines only (her pick "A").
+        <div className="-mb-2 flex justify-center" data-testid="character">
+          <CharacterPicture size={44} />
+        </div>
+      )}
       <header className="flex items-center justify-between">
         <button className="glass h-11 w-11 !rounded-full text-[20px]" onClick={() => go(shiftDateKey(date, -1))} aria-label={tr("วันก่อนหน้า", "Previous day")}>
           ‹
         </button>
         <div className="text-center">
-          {date === today && (
-            <div className="mb-1 flex flex-col items-center gap-0.5">
-              {/* Yani's own brand character. Her lines exactly as drawn; tap to dress up. */}
-              <button type="button" onClick={() => setCharOpen(true)} aria-label={tr("แต่งตัวน้อง", "Dress up")} data-testid="character">
-                <CharacterPicture look={look} size={84} />
-              </button>
-              {goals.profile?.name && (
-                <p className="text-[15px] text-muted" data-testid="greeting">{tr("สวัสดี", "Hi")} {goals.profile.name}</p>
-              )}
-            </div>
-          )}
           <h1 className="text-[26px] font-medium">{date === today ? tr("วันนี้", "Today") : tr("ย้อนดู", "Looking back")}</h1>
           <p className="text-[14px] text-muted">{thaiDateLabel(date, lang)}</p>
         </div>
@@ -199,11 +193,13 @@ function TodayInner() {
           </Link>
         )}
         <div className="mt-4 w-full">
-          <MacroCards m={total} targets={macroTargets(target, proteinTargetG(goals.profile))} />
+          <MacroCards m={total} targets={mTargets} showSplit />
         </div>
-        <div className="mt-2.5 w-full">
-          <MacroSplitBar m={total} />
-        </div>
+        {ready && (
+          <div className="mt-2.5 w-full">
+            <MacroTipLine m={total} targets={mTargets} kcalTarget={target} />
+          </div>
+        )}
       </section>
 
       <button className="btn-primary w-full !min-h-[58px] text-[19px]" onClick={openAdd}>
@@ -272,7 +268,6 @@ function TodayInner() {
         </div>
       )}
 
-      {charOpen && <CharacterMaker start={look} onClose={() => setCharOpen(false)} onSave={saveLook} />}
 
       <Sheet open={addOpen} onClose={() => setAddOpen(false)} title={tr("เพิ่มอาหาร", "Add food")}>
         {againView ? (
