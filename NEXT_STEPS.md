@@ -44,7 +44,24 @@
 ## Her answer to 7–12: LIKES 10 Calm Minimal, 11 Cute Pills, 8 Liquid Glass — wants to see more. So 6 MORE:
 ##   docs/design-round30/styles-3.html (preview: /styles-preview-3.html, not in git)
 ##   13 Frosted Calm (8+10) · 14 Glass Pills (8+11) · 15 Milk Tea · 16 Cloud Pastel · 17 Dot Notebook · 18 Sorbet Glass
-## WAITING for her pick (or a mix), then build share picture + profile in that style, then the rest of the app.
+## ✅ HER PICK (2026-11-16): **13 Frosted Calm** (in docs/design-round30/styles-3.html — the first style there).
+## BUILD PLAN:
+##   Round 30 (next chat) = trainer share picture (ShareDayButton.tsx canvas) + Profile page in Frosted Calm.
+##   Round 31+ = the rest of the app (Today, add, recipes, etc.) in the same look, a few pages per round.
+## Frosted Calm look (copy values from styles-3.html, style 13):
+##   - Background #F4EFE7 (soft beige) + 3 soft color clouds behind: peach #F3D9C8 (top-left),
+##     lilac #E3E0F2 (right), sage #E6EEDD (bottom). Text #2B2724, muted #9C948A.
+##   - Frosted glass cards: white 50% see-through + blur 18px + thin white border, big round corners (18–26px).
+##   - Font IBM Plex Sans Thai, THIN weights (200–300) for big numbers; little text; lots of empty space.
+##   - Big kcal number (thin), thin 2px progress line, macros in 3 small glass tiles (number + "โปรตีน g").
+##   - Meals: one line each (slot in small muted text, name, kcal), thin dividers.
+##   - Share picture: character small on top center, date with wide letter spacing, footer "SNAPCAL".
+##   - Profile: character BIG (~124px) top center, name thin 24px, "28 · 160 ซม. · 55 กก." under it,
+##     glass box with 2 numbers (kcal per day | goal kg) split by a thin line, then a glass list of settings rows.
+##   - Character: her file exactly (character-lines.png + body color layer as now). Never redraw.
+##   - Canvas (share picture) can't use CSS blur: draw the clouds as soft radial gradients and the glass
+##     cards as white ~55% fill + thin white border — it looks the same in a still picture.
+## Keep everything the profile page does today (edit forms, BMI, plan, avoid foods, backup) — only the look changes. share picture + profile in that style, then the rest of the app.
 ## Then: use them for the FEEL only (never copy), show 2–3 mockups to pick from (she likes minimal),
 ## keep her own brand character as-is, then build page by page. May need 2–3 rounds.
 ## Still untried with the REAL AI: Rounds 27 + 28 (label photo; a "เมนูทำเอง" recipe; "ค้นหาสูตรอื่น" link).
