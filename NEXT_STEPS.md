@@ -35,6 +35,14 @@
 ## edit, barcode, welcome) for any leftover bright/odd bits; emoji left in a few spots (recipe 🍲 placeholder,
 ## empty recipes 🍳) could become thin line icons.
 
+## Round 31b (2026-11-16) — calorie split on Today ✅ LIVE
+- Her wish: show how protein / carbs / fat share the calories, in %, always 100%, as a nice diagram.
+- `app/lib/macroSplit.ts` `macroSplit(g)` → whole percents BY CALORIES (P×4, C×4, F×9), largest-remainder
+  rounding so they always total 100; null when nothing eaten. Tests: tests/macroSplit.test.ts (95 pass).
+- `MacroSplitBar` (ui.tsx), under the 3 macro tiles on Today: glass box "สัดส่วนแคลอรี · 100%", one thin
+  3-color bar (peach/lilac/sage, width = percent), legend "● โปรตีน 27% ● คาร์บ 35% ● ไขมัน 38%".
+  Empty day: gray bar + "–". Checked at phone size. NOT yet tried on her iPhone.
+
 ## Round 31 (2026-11-16) — WHOLE APP in "Frosted Calm" + share picture polish ✅ LIVE
 Her words: Round 30 okay; (1) don't say "trainer" on share — she may send it to anyone; (2) share picture
 "still missing something, not well-rounded"; (3) "can't the whole app be one theme? it looks odd mixed".

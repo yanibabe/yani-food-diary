@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { fmtG, fmtKcal } from "../lib/nutrition";
 import { useLang } from "../lib/lang";
 import { getPhoto } from "../lib/photos";
+import { macroSplit } from "../lib/macroSplit";
 import type { Macros } from "../lib/types";
 
 /** Bottom sheet that slides up over the page. */
@@ -75,6 +76,49 @@ export function MacroCards({ m, targets }: { m: Macros; targets?: { protein: num
           )}
         </div>
       ))}
+    </div>
+  );
+}
+
+/** How the calories split between protein / carbs / fat: one thin 3-color bar + the percents (always 100%). */
+export function MacroSplitBar({ m }: { m: Macros }) {
+  const { tr } = useLang();
+  const split = macroSplit(m);
+  const parts = [
+    { key: "protein", label: tr("โปรตีน", "Protein"), dot: "bg-protein-dot" },
+    { key: "carbs", label: tr("คาร์บ", "Carbs"), dot: "bg-carbs-dot" },
+    { key: "fat", label: tr("ไขมัน", "Fat"), dot: "bg-fat-dot" },
+  ] as const;
+  return (
+    <div className="rounded-[20px] border border-white/90 bg-white/55 px-4 py-3" data-testid="macro-split">
+      <div className="mb-2 flex items-baseline justify-between">
+        <span className="text-[13px] text-muted">{tr("สัดส่วนแคลอรี", "Calorie split")}</span>
+        <span className="text-[12px] text-muted">{split ? "100%" : ""}</span>
+      </div>
+      <div className="flex h-2.5 gap-[3px] overflow-hidden rounded-full" aria-hidden>
+        {split ? (
+          parts.map((p) =>
+            split[p.key] > 0 ? (
+              <span key={p.key} className={`h-full rounded-full ${p.dot}`} style={{ flexGrow: split[p.key], flexBasis: 0 }} />
+            ) : null,
+          )
+        ) : (
+          <span className="h-full w-full rounded-full bg-ink/10" />
+        )}
+      </div>
+      <div className="mt-2 grid grid-cols-3 text-[13px]">
+        {parts.map((p, i) => (
+          <span
+            key={p.key}
+            className={`flex items-center gap-1.5 ${i === 1 ? "justify-center" : i === 2 ? "justify-end" : ""}`}
+            data-testid={`split-${p.key}`}
+          >
+            <span className={`h-2 w-2 rounded-full ${p.dot}`} aria-hidden />
+            <span className="text-muted">{p.label}</span>
+            <span className="num text-[15px]">{split ? `${split[p.key]}%` : "–"}</span>
+          </span>
+        ))}
+      </div>
     </div>
   );
 }

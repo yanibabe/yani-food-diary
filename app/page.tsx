@@ -2,7 +2,7 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { MacroCards, Sheet, StoredPhoto } from "./components/ui";
+import { MacroCards, MacroSplitBar, Sheet, StoredPhoto } from "./components/ui";
 import { BackupReminder } from "./components/BackupReminder";
 import { WeekKcalChart } from "./components/WeekKcalChart";
 import { WaterCard } from "./components/WaterCard";
@@ -200,6 +200,9 @@ function TodayInner() {
         )}
         <div className="mt-4 w-full">
           <MacroCards m={total} targets={macroTargets(target, proteinTargetG(goals.profile))} />
+        </div>
+        <div className="mt-2.5 w-full">
+          <MacroSplitBar m={total} />
         </div>
       </section>
 
