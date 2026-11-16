@@ -18,6 +18,18 @@
   the link uses Yani's OpenRouter key, so their AI photo/text checks spend HER credit.
   Since Round 8 the AI needs a passcode (typed once per phone), so strangers can't spend it.
 
+## ▶ HER 3 NEW WISHES (2026-11-16) — one round each, in this order unless she picks another
+
+1. **Round 27 — real label numbers, no +15%.** In normal AI photo/typed checks, if the photo shows a printed
+   nutrition label or kcal on the pack, use those numbers exactly (margin=false). +15% stays ONLY for food
+   with no label. Today the analyze prompt only skips the margin when she types an exact weight (userAmount).
+2. **Round 28 — "กินอะไรดี" simpler.** Remove the delivery group (+ Grab / LINE MAN buttons): she finds it too much.
+   Instead: suggested menu names; tap one → recipe (ingredients + steps) + kcal, so people can cook it,
+   or just search the name. Keep "my recipes" group. 7-Eleven group: ask her if it stays.
+3. **Round 29 — share my day with my trainer.** One-tap share of a whole day: every food eaten +
+   kcal, protein, fat, carbs (and totals). Easy to send (image and/or text via the iPhone share sheet).
+   Ask her: picture, text, or both.
+
 ## ▶ NEXT: she tries Round 26 (grouped ideas) on her iPhone with the real AI
 
 Watch for: does the AI name real chain shops that list kcal? Do Grab / LINE MAN buttons open the apps on iPhone
