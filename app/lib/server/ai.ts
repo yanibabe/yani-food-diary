@@ -36,6 +36,7 @@ const ItemSchema = z.object({
   dairySource: z.string().nullish().describe("If dairy is true: the likely milk product in a few words (e.g. sweetened condensed milk); else null"),
   box: BoxSchema.nullish().describe("Where this food is in the photo (fractions 0..1); null if not locatable or no photo"),
   userAmount: z.boolean().optional().catch(false).describe("true ONLY if the user told you this item's exact weight or volume (e.g. 120 g, 250 ml, 1 kg) or an exact count of a fixed-size thing (e.g. 2 eggs, 1 can), so you did not guess the amount; else false"),
+  fromLabel: z.boolean().optional().catch(false).describe("true ONLY if this item's kcal (and macros) come from numbers PRINTED on its own package, nutrition facts table (ข้อมูลโภชนาการ) or energy label (e.g. 'พลังงาน 150 กิโลแคลอรี'), clearly readable in the photo, or typed by the user as the numbers on the pack; else false"),
 });
 
 export const AnalysisSchema = z.object({
@@ -85,6 +86,7 @@ Rules:
 - Photo estimates usually come out TOO LOW, because portions look smaller in photos and hidden oil is missed. When you are unsure between two sizes, pick the larger, typical restaurant portion.
 - Check your numbers: kcal should be close to protein×4 + carbs×4 + fat×9.
 - Set estimated=true whenever portion size or recipe is a guess.
+- PRINTED LABELS: if the photo clearly shows a nutrition facts table (ข้อมูลโภชนาการ / Nutrition Facts) or printed energy (พลังงาน ... กิโลแคลอรี / kcal) for an item, or the user types the numbers printed on the pack, use THOSE numbers exactly — do not enlarge them, add no oil — and set fromLabel=true. Labels are usually per serving (หนึ่งหน่วยบริโภค): multiply by the servings actually eaten (if they ate the whole pack, use servings per pack, จำนวนหน่วยบริโภคต่อ...). If a macro is not printed, estimate only that one and say so in note. If the numbers are blurry or cut off, do NOT guess them: set fromLabel=false and estimate normally. Food with no label in the photo always has fromLabel=false.
 - When the user gives an item's exact weight or volume, use it EXACTLY (do not enlarge it) and set userAmount=true. If they say how it was cooked (e.g. grilled with no oil, air-fried, steamed), follow that: do not add oil they said they did not use. Use plain food-table values for those items; the app adds no margin to them.
 - dairy: think about how the dish is usually made in Thailand (e.g. Thai iced tea, coffee drinks, bakery, creamy soups, some curries and desserts use milk, butter or condensed milk). Set dairy=true when it likely contains ANY milk product, and name it in dairySource.
 - box: when there is a photo and you can locate the food, give its bounding box as fractions (0..1) of the image. Otherwise null.
@@ -101,6 +103,7 @@ Rules:
 - "Ate it all" / "finished it" means no change for that item.
 - Items with margin=true already include the app's +${Math.round(AI_MARGIN * 100)}% safety margin; items with margin=false do not. When you update an item by scaling (e.g. "ate half"), scale from its current numbers and set userAmount=false. If you must re-estimate an item from scratch without an exact amount, add ${Math.round(AI_MARGIN * 100)}% to your best guess (userAmount=false).
 - If the user now gives an item's exact weight or volume (e.g. "salmon was 120 g"), recalculate that item with plain food-table values for exactly that amount, with NO margin, and set userAmount=true. Same for new items in adds: userAmount=true only if they gave the exact amount. Do NOT add the margin yourself to adds — the app adds it when userAmount is false.
+- If the user now gives the numbers printed on an item's pack or nutrition label (e.g. "the label says 180 kcal, protein 10 g"), use those numbers exactly for the amount eaten, with NO margin, and set fromLabel=true. Same for adds.
 - If they mention oil, sauce or add-ons that are not in the list, add them in adds (kind "extra"); if the amount is unclear, give a typical amount, set estimated=true, and say so in note.
 - For every item you return, set dairy=true (and dairySource) when it likely contains ANY milk product.
 - If a change is ambiguous, make no edit for it and ask one short question.
@@ -219,7 +222,7 @@ export type RefineOut = Omit<Refine, "edits" | "adds"> & {
   adds: MarkedItem[];
 };
 
-/** The margin is only for amounts the AI had to guess. Exact amounts from the user stay as they are. */
+/** The margin is only for amounts the AI had to guess. Exact amounts and label numbers stay as they are. */
 const marked = (i: AiItem): MarkedItem => markMargin(i);
 
 export async function analyzeMeal(input: { image: string | null; text: string; lang: Lang }): Promise<AnalysisOut> {
@@ -276,7 +279,7 @@ export async function refineMeal(input: RefineInput): Promise<RefineOut> {
 function marginOnAdds(r: Refine): RefineOut {
   return {
     ...r,
-    edits: r.edits.map((e) => (e.item?.userAmount ? { ...e, item: { ...e.item, margin: false } } : e)),
+    edits: r.edits.map((e) => (e.item?.userAmount || e.item?.fromLabel ? { ...e, item: { ...e.item, margin: false } } : e)),
     adds: r.adds.map(marked),
   };
 }
@@ -304,6 +307,9 @@ function mockAnalyze(input: { image: string | null; text: string; lang: Lang }):
   if (riceG) {
     const g = Number(riceG[1]);
     Object.assign(items[0], { amount: g, unit: "กรัม", kcal: g * 1.3, protein: g * 0.027, carbs: g * 0.28, fat: g * 0.003, userAmount: true });
+  }
+  if (/ฉลาก|label/i.test(t)) {
+    items.push({ name: "นมถั่วเหลือง", amount: 1, unit: "กล่อง", kcal: 120, protein: 7, carbs: 12, fat: 5, estimated: false, kind: "food", note: null, box: null, fromLabel: true });
   }
   if (/น้ำมัน/.test(t)) {
     items.push({ name: "น้ำมันพืช", amount: 1, unit: "ช้อนชา", kcal: 40, protein: 0, carbs: 0, fat: 4.5, estimated: true, kind: "extra", note: "ไม่ได้ระบุปริมาณ ใช้ค่าประมาณ 1 ช้อนชา", box: null });

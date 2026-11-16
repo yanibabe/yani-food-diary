@@ -244,6 +244,7 @@ export function MealReview({
               dairy: aiDairy(e.item.name || old.name, e.item.dairy) || old.dairy === true,
               dairySource: e.item.dairySource ?? old.dairySource ?? null,
               margin: e.item.margin === false ? false : old.margin,
+              fromLabel: e.item.fromLabel === true ? true : e.item.margin === false ? false : old.fromLabel,
             };
             changed.push(old.id);
           }
@@ -265,6 +266,7 @@ export function MealReview({
             dairy: aiDairy(a.name, a.dairy),
             dairySource: a.dairySource ?? null,
             margin: a.margin === true,
+            fromLabel: a.fromLabel === true,
           });
           changed.push(id);
         }
@@ -332,8 +334,8 @@ export function MealReview({
         {marginNote && items.some((i) => i.margin) && (
           <p className="text-center text-[13px] text-muted" data-testid="margin-note">
             {tr(
-              `รายการที่มีป้าย +${pct}% คือ AI กะปริมาณเอง จึงบวกเผื่อไว้ · ถ้าบอกน้ำหนักจริง (เช่น "แซลมอน 120 กรัม") จะไม่บวกเพิ่ม`,
-              `Items marked +${pct}% are the AI's own guess, so a safety margin is added · Tell it the real weight (e.g. "salmon 120 g") and no margin is added`,
+              `รายการที่มีป้าย +${pct}% คือ AI กะปริมาณเอง จึงบวกเผื่อไว้ · ถ้าบอกน้ำหนักจริง (เช่น "แซลมอน 120 กรัม") หรือถ่ายให้เห็นฉลากโภชนาการ จะใช้ค่าจริง ไม่บวกเพิ่ม`,
+              `Items marked +${pct}% are the AI's own guess, so a safety margin is added · Tell it the real weight (e.g. "salmon 120 g") or show the nutrition label in the photo, and the real numbers are used with no margin`,
             )}
           </p>
         )}
@@ -360,7 +362,8 @@ export function MealReview({
                     {i.kind === "extra" && <Badge tone="olive">{tr("เพิ่มเติม", "Extra")}</Badge>}
                     {i.estimated && <Badge>{tr("ประมาณ", "Estimate")}</Badge>}
                     {marginNote && i.margin && <Badge tone="muted">+{pct}%</Badge>}
-                    {marginNote && i.margin === false && <Badge tone="olive">{tr("น้ำหนักจริง", "Exact amount")}</Badge>}
+                    {marginNote && i.margin === false && i.fromLabel && <Badge tone="olive">{tr("ตามฉลาก", "From label")}</Badge>}
+                    {marginNote && i.margin === false && !i.fromLabel && <Badge tone="olive">{tr("น้ำหนักจริง", "Exact amount")}</Badge>}
                     {avoidDairy && isDairy(i) && <Badge>🥛 {tr("นม", "Milk")}</Badge>}
                   </div>
                   <div className="text-[14px] text-muted">

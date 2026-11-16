@@ -40,6 +40,8 @@ export type FoodItem = Macros & {
   dairySource?: string | null;
   /** true = the AI guessed the amount, so +15% was added. false = exact amount, no margin. Missing on old items. */
   margin?: boolean;
+  /** true = numbers read from a printed nutrition label / kcal on the pack (no margin). */
+  fromLabel?: boolean;
   /** Where the numbers came from, when it was an outside food database (e.g. Open Food Facts).
    *  The amount/unit above is the quantity; the macros above are the snapshot. */
   ref?: FoodRef | null;

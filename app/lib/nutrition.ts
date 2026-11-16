@@ -42,10 +42,11 @@ export function withMargin<T extends Macros>(m: T, margin = AI_MARGIN): T {
 
 /**
  * The margin is only for amounts the AI guessed. When the user gave the exact
- * amount (userAmount), the numbers stay as they are. margin says which.
+ * amount (userAmount), or the numbers were read from a printed nutrition label
+ * or kcal on the pack (fromLabel), the numbers stay as they are. margin says which.
  */
-export function markMargin<T extends Macros & { userAmount?: boolean }>(i: T): T & { margin: boolean } {
-  return i.userAmount ? { ...i, margin: false } : { ...withMargin(i), margin: true };
+export function markMargin<T extends Macros & { userAmount?: boolean; fromLabel?: boolean }>(i: T): T & { margin: boolean } {
+  return i.userAmount || i.fromLabel ? { ...i, margin: false } : { ...withMargin(i), margin: true };
 }
 
 /** Change an item's amount and scale its numbers in proportion. */

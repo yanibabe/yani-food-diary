@@ -83,6 +83,7 @@ function AddInner() {
         dairy: aiDairy(a.name, a.dairy),
         dairySource: a.dairySource ?? null,
         margin: a.margin === true,
+        fromLabel: a.fromLabel === true,
       }));
       setDraft({ title: r.title || tr("อาหาร", "Meal"), slot: draft.slot, items });
       setQuestion(r.question);

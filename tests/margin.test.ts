@@ -18,3 +18,17 @@ test("guessed amount: +15%", () => {
   const old = marked(base); // AI left the flag out → treated as a guess
   assert.equal(old.margin, true);
 });
+
+// Round 27: numbers read from a printed nutrition label are real, so no margin.
+test("numbers from a printed label: no margin", () => {
+  const r = marked({ ...base, fromLabel: true });
+  assert.equal(r.margin, false);
+  assert.equal(r.kcal, 200);
+  assert.equal(r.fromLabel, true);
+});
+
+test("no label and no exact amount: still +15%", () => {
+  const r = marked({ ...base, fromLabel: false, userAmount: false });
+  assert.equal(r.margin, true);
+  assert.ok(Math.abs(r.kcal - 230) < 1e-9);
+});

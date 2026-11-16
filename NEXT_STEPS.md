@@ -6,7 +6,7 @@
 
 ---
 
-## LIVE (updated 2026-11-15; Round 26 grouped "what can I eat" LIVE; Round 25 "what can I eat" LIVE; Round 24 weight moved to Profile, steps removed)
+## LIVE (updated 2026-11-16; Round 27 label numbers = no +15% LIVE; Round 26 grouped "what can I eat" LIVE; Round 25 "what can I eat" LIVE; Round 24 weight moved to Profile, steps removed)
 
 - **App:** https://yani-food-diary.vercel.app  (Vercel, exm-labs account, free)
 - **Code:** https://github.com/yanibabe/yani-food-diary  (private; pushes auto-deploy)
@@ -20,9 +20,7 @@
 
 ## ▶ HER 3 NEW WISHES (2026-11-16) — one round each, in this order unless she picks another
 
-1. **Round 27 — real label numbers, no +15%.** In normal AI photo/typed checks, if the photo shows a printed
-   nutrition label or kcal on the pack, use those numbers exactly (margin=false). +15% stays ONLY for food
-   with no label. Today the analyze prompt only skips the margin when she types an exact weight (userAmount).
+1. ~~Round 27 — real label numbers, no +15%~~ ✅ DONE (see Round 27 below). Next = Round 28.
 2. **Round 28 — "กินอะไรดี" simpler.** Remove the delivery group (+ Grab / LINE MAN buttons): she finds it too much.
    Instead: suggested menu names; tap one → recipe (ingredients + steps) + kcal, so people can cook it,
    or just search the name. Keep "my recipes" group. 7-Eleven group: ask her if it stays.
@@ -30,7 +28,10 @@
    kcal, protein, fat, carbs (and totals). Easy to send (image and/or text via the iPhone share sheet).
    Ask her: picture, text, or both.
 
-## ▶ NEXT: she tries Round 26 (grouped ideas) on her iPhone with the real AI
+## ▶ NEXT: Round 28 (simpler "กินอะไรดี", see wishes above). Also: she tries Round 27 on her iPhone — photo a snack pack
+## with its nutrition label visible → item should show "ตามฉลาก" and no +15%.
+
+## (older) she tries Round 26 (grouped ideas) on her iPhone with the real AI
 
 Watch for: does the AI name real chain shops that list kcal? Do Grab / LINE MAN buttons open the apps on iPhone
 (they are plain web links; not tried on a phone yet)? If shop ideas look made-up, tune SUGGEST_SYSTEM.
@@ -38,6 +39,19 @@ Then pick the next idea with her (one question at a time, in Thai). Ideas not do
 - option B "summary" tab (week of kcal + water + weight on one page)
 - use her character in more places (app icon? empty states?) — ask, don't assume
 - other clip colors for the character (the yellow clip is hard to see on pink)
+
+## Round 27 (2026-11-16) — label numbers are real: no +15% ✅ LIVE
+
+Her rule: +15% is ONLY for food with no nutrition info. If the photo (or her typed words) has printed numbers
+from the pack (nutrition facts / kcal on the label), use them exactly.
+- `ItemSchema` in `app/lib/server/ai.ts` got `fromLabel`. ANALYZE + REFINE prompts: read printed label numbers,
+  multiply by servings eaten, blurry label → don't guess (fromLabel=false, normal estimate + margin).
+- `markMargin` (`app/lib/nutrition.ts`): no margin when `userAmount` OR `fromLabel`. Refine edits too.
+- `FoodItem.fromLabel` saved on the item. MealReview badge "ตามฉลาก / From label" (else "น้ำหนักจริง"); note text mentions labels.
+- Mock AI: typing "ฉลาก"/"label" adds a soy-milk item with fromLabel (for screen tests).
+- Tests: 2 new in `tests/margin.test.ts`. 90/90 pass, tsc, eslint, build OK.
+- Checked at iPhone size with the test AI: label item 120 kcal + "ตามฉลาก", other items +15%.
+- NOT yet tried with the REAL AI on a real label photo.
 
 ## Round 26 (2026-11-15) — "กินอะไรดี" split into 3 groups, fewer emojis ✅ LIVE
 
