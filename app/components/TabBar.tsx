@@ -31,13 +31,13 @@ const TABS = [
   { href: "/profile", th: "โปรไฟล์", en: "Profile", icon: "profile" },
 ];
 
-/** Bottom tabs: a plain white bar with a thin top line, the open tab in a soft yellow pill. Hidden on full-screen flows. */
+/** Bottom tabs: a plain white bar with a thin top line, frosted glass; the open tab in a soft white pill. Hidden on full-screen flows. */
 export function TabBar() {
   const path = usePathname();
   const { tr, lang } = useLang();
   if (path === "/welcome" || path.startsWith("/add") || path.startsWith("/entry") || /^\/recipes\/.+/.test(path)) return null;
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-paper/95 backdrop-blur safe-bottom" aria-label={tr("เมนูหลัก", "Main menu")}>
+    <nav className="tabbar fixed inset-x-0 bottom-0 z-30 safe-bottom" aria-label={tr("เมนูหลัก", "Main menu")}>
       <div className="mx-auto flex max-w-[560px] justify-around px-2 pt-1.5">
         {TABS.map((t) => {
           const active = t.href === "/" ? path === "/" : path.startsWith(t.href);
@@ -46,8 +46,8 @@ export function TabBar() {
               key={t.href}
               href={t.href}
               aria-current={active ? "page" : undefined}
-              className={`flex min-w-[72px] flex-1 flex-col items-center gap-0.5 rounded-2xl px-2 py-1.5 text-[12.5px] font-medium ${
-                active ? "bg-yellow text-ink" : "text-muted"
+              className={`flex min-w-[72px] flex-1 flex-col items-center gap-0.5 rounded-2xl px-2 py-1.5 text-[12.5px] ${
+                active ? "bg-white/80 font-medium text-ink" : "text-muted"
               }`}
             >
               <svg
@@ -55,7 +55,7 @@ export function TabBar() {
                 className="h-[24px] w-[24px]"
                 fill="none"
                 stroke="currentColor"
-                strokeWidth={1.7}
+                strokeWidth={1.5}
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 aria-hidden

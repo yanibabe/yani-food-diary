@@ -69,8 +69,7 @@ export default function ProfilePage() {
   ].filter(Boolean);
 
   return (
-    <main className="page calm relative z-0 space-y-3">
-      <div className="calm-backdrop" aria-hidden />
+    <main className="page space-y-3">
       {saved && (
         <p className="glass px-3 py-2 text-center text-[15px]" role="status">{saved}</p>
       )}

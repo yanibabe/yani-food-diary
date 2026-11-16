@@ -1,4 +1,4 @@
-// "Share my day with my trainer": what goes on the picture.
+// "Share this day": what goes on the picture.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { buildShareDay, shareFileName } from "../app/lib/shareDay.ts";

@@ -1,5 +1,5 @@
 "use client";
-// "Share my day with my trainer": draws the whole day as one picture,
+// "Share this day": draws the whole day as one picture,
 // then sends it through the iPhone share sheet (LINE, Messages, save to Photos…).
 import { useEffect, useState } from "react";
 import { Sheet } from "./ui";
@@ -9,6 +9,8 @@ import { fmtKcal } from "../lib/nutrition";
 import { buildShareDay, shareFileName, type ShareDay } from "../lib/shareDay";
 import { BACKUP_KEYS } from "../lib/backup";
 import { BLUSH, CHAR_BOX, DECOS, cleanLook, parseLook, type CharLook } from "../lib/character";
+import { getPhoto } from "../lib/photos";
+import { GLASS_ML } from "../lib/water";
 import { SLOT_LABEL, type Entry } from "../lib/types";
 import type { Lang } from "../lib/i18n";
 
@@ -32,9 +34,25 @@ const C = {
   line: "rgba(43,39,36,0.09)",
   track: "rgba(43,39,36,0.12)",
   over: "#B0603A",
+  // Soft colors that match the clouds (a little deeper, so they show on glass)
+  protein: "#E0A88C", // peach
+  carbs: "#B3AAD8", // lilac
+  fat: "#A3BD90", // sage
+  water: "#9DBBDD", // soft blue
 };
 
-type Info = { day: ShareDay; date: string; dateLabel: string; name: string; target: number; lang: Lang; char: HTMLCanvasElement | null };
+type Info = {
+  day: ShareDay;
+  date: string;
+  dateLabel: string;
+  name: string;
+  target: number;
+  macroTargets: { protein: number; carbs: number; fat: number };
+  water: { glasses: number; goal: number };
+  lang: Lang;
+  char: HTMLCanvasElement | null;
+  photos: Map<string, HTMLImageElement>;
+};
 type Box = { x: number; y: number; w: number; h: number; r: number };
 
 function calmFont(): string {
@@ -101,6 +119,17 @@ async function drawCharacter(look: CharLook, size: number): Promise<HTMLCanvasEl
   return c;
 }
 
+/** Draw a photo cut to a rounded square (fills the square, like "cover"). */
+function drawThumb(ctx: CanvasRenderingContext2D, img: HTMLImageElement, x: number, y: number, size: number, r: number) {
+  const s = Math.min(img.width, img.height);
+  ctx.save();
+  ctx.beginPath();
+  ctx.roundRect(x, y, size, size, r);
+  ctx.clip();
+  ctx.drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, x, y, size, size);
+  ctx.restore();
+}
+
 /** Lays out (and, when draw is true, writes) everything. Runs twice: measure, then draw.
  *  Returns the page height and where the glass cards go. */
 function paint(ctx: CanvasRenderingContext2D, info: Info, fam: string, draw: boolean): { h: number; boxes: Box[] } {
@@ -111,6 +140,27 @@ function paint(ctx: CanvasRenderingContext2D, info: Info, fam: string, draw: boo
     ctx.fillStyle = color;
     ctx.textAlign = align;
     ctx.fillText(t, x, y);
+  };
+  const dot = (x: number, y: number, r: number, color: string) => {
+    if (!draw) return;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+  };
+  const bar = (x: number, y: number, w: number, part: number, color: string) => {
+    if (!draw) return;
+    ctx.fillStyle = C.track;
+    ctx.beginPath();
+    ctx.roundRect(x, y, w, 6, 3);
+    ctx.fill();
+    const pw = w * Math.max(0, Math.min(1, part));
+    if (pw > 0) {
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.roundRect(x, y, Math.max(6, pw), 6, 3);
+      ctx.fill();
+    }
   };
   /** Wide letter spacing, drawn one letter at a time (works on every iPhone). */
   const spaced = (t: string, cx: number, y: number, gap: number, color: string) => {
@@ -160,112 +210,183 @@ function paint(ctx: CanvasRenderingContext2D, info: Info, fam: string, draw: boo
   y += 44;
   const barX = L + IN + 40;
   const barW = R - L - (IN + 40) * 2;
-  if (draw) {
-    ctx.fillStyle = C.track;
-    ctx.fillRect(barX, y, barW, 4);
-    ctx.fillStyle = left >= 0 ? C.ink : C.over;
-    ctx.fillRect(barX, y, barW * Math.min(1, target > 0 ? day.total.kcal / target : 0), 4);
-  }
-  y += 4 + 52;
+  bar(barX, y, barW, target > 0 ? day.total.kcal / target : 0, left >= 0 ? C.ink : C.over);
+  y += 6 + 52;
   boxes.push({ x: L, y: kTop, w: R - L, h: y - kTop, r: 72 });
 
-  // Protein / carbs / fat: 3 small glass tiles
+  // Protein / carbs / fat: 3 small glass tiles, each with its own soft color + a thin line toward its target
   y += 26;
   const gap = 24;
   const tw = (R - L - gap * 2) / 3;
+  const TH = 236;
   const macros = [
-    { label: tr("โปรตีน", "Protein"), g: day.total.protein },
-    { label: tr("คาร์บ", "Carbs"), g: day.total.carbs },
-    { label: tr("ไขมัน", "Fat"), g: day.total.fat },
+    { label: tr("โปรตีน", "Protein"), g: day.total.protein, of: info.macroTargets.protein, color: C.protein },
+    { label: tr("คาร์บ", "Carbs"), g: day.total.carbs, of: info.macroTargets.carbs, color: C.carbs },
+    { label: tr("ไขมัน", "Fat"), g: day.total.fat, of: info.macroTargets.fat, color: C.fat },
   ];
   macros.forEach((mc, i) => {
     const x = L + i * (tw + gap);
-    boxes.push({ x, y, w: tw, h: 170, r: 52 });
-    font(68, 300);
-    text(`${mc.g}`, x + tw / 2, y + 92, C.ink, "center");
-    font(28, 300);
-    text(`${mc.label} g`, x + tw / 2, y + 138, C.muted, "center");
+    boxes.push({ x, y, w: tw, h: TH, r: 52 });
+    font(27, 400);
+    const lw = ctx.measureText(mc.label).width;
+    dot(x + tw / 2 - lw / 2 - 18, y + 56, 8, mc.color);
+    text(mc.label, x + tw / 2 + 9, y + 66, C.muted, "center");
+    font(72, 200);
+    text(`${mc.g}`, x + tw / 2, y + 150, C.ink, "center");
+    font(25, 300);
+    text(`${tr("จาก", "of")} ${Math.round(mc.of)} g`, x + tw / 2, y + 190, C.muted, "center");
+    bar(x + 40, y + 208, tw - 80, mc.of > 0 ? mc.g / mc.of : 0, mc.color);
   });
-  y += 170;
+  y += TH;
 
-  // Meals: one glass card, one line per meal, thin lines between
-  y += 26;
-  const mTop = y;
-  y += 16;
-  const slotW = 170;
-  const nameX = L + IN + slotW;
-  const R2 = R - IN;
-  let first = true;
-  const divider = () => {
-    if (!first && draw) {
-      ctx.fillStyle = C.line;
-      ctx.fillRect(L + IN, y, R - L - IN * 2, 2);
+  // Water (only when some was logged)
+  if (info.water.glasses > 0) {
+    y += 26;
+    const top = y;
+    const h = 120;
+    boxes.push({ x: L, y: top, w: R - L, h, r: 48 });
+    font(30, 400);
+    text(tr("น้ำ", "Water"), L + IN, top + 72, C.ink);
+    font(30, 300);
+    const ml = (info.water.glasses * GLASS_ML).toLocaleString("en-US");
+    text(
+      tr(`${info.water.glasses} / ${info.water.goal} แก้ว · ${ml} มล.`, `${info.water.glasses} / ${info.water.goal} glasses · ${ml} ml`),
+      R - IN,
+      top + 72,
+      C.muted,
+      "right",
+    );
+    // A row of small dots, one per glass of the goal
+    const n = Math.min(20, Math.max(info.water.goal, info.water.glasses));
+    const dx = 26;
+    const startX = L + IN + 110;
+    for (let k = 0; k < n; k++) {
+      const filled = k < info.water.glasses;
+      if (draw) {
+        ctx.beginPath();
+        ctx.arc(startX + k * dx, top + 62, 8, 0, Math.PI * 2);
+        if (filled) {
+          ctx.fillStyle = C.water;
+          ctx.fill();
+        } else {
+          ctx.lineWidth = 2;
+          ctx.strokeStyle = C.track;
+          ctx.stroke();
+        }
+      }
     }
-    first = false;
-  };
+    y = top + h;
+  }
+
+  // Meals: a small header per meal time (name + its kcal), then one glass card with a row per meal
+  const THUMB = 116;
+  const nameX = L + IN + THUMB + 32;
+  const R2 = R - IN;
+  const empty: string[] = [];
   day.slots.forEach((s) => {
     if (s.meals.length === 0) {
-      divider();
-      y += 76;
-      font(28, 300);
-      text(SLOT_LABEL[s.slot][info.lang], L + IN, y, C.muted);
-      font(34, 300);
-      text("—", nameX, y, C.muted);
-      y += 34;
+      empty.push(SLOT_LABEL[s.slot][info.lang]);
       return;
     }
+    y += 64;
+    font(28, 400);
+    text(SLOT_LABEL[s.slot][info.lang], L + 28, y, C.muted);
+    font(28, 300);
+    text(`${fmtKcal(s.m.kcal)} kcal`, R - 28, y, C.muted, "right");
+    y += 22;
+    const cardTop = y;
     s.meals.forEach((m, j) => {
-      divider();
-      y += 76;
-      if (j === 0) {
-        font(28, 300);
-        text(SLOT_LABEL[s.slot][info.lang], L + IN, y, C.muted);
+      const rowTop = y;
+      if (j > 0 && draw) {
+        ctx.fillStyle = C.line;
+        ctx.fillRect(L + IN, rowTop, R - L - IN * 2, 2);
       }
+      // Text first (to know how tall the row is)
+      let ty = rowTop + 40 + 36;
       font(36, 400);
       const kcal = fmtKcal(m.m.kcal);
       const kw = ctx.measureText(kcal).width;
-      text(kcal, R2, y, C.ink, "right");
+      text(kcal, R2, ty, C.ink, "right");
       font(36, 300);
       wrap(ctx, m.title, R2 - nameX - kw - 32, 2).forEach((t, k) => {
-        if (k > 0) y += 48;
-        text(t, nameX, y, C.ink);
+        if (k > 0) ty += 48;
+        text(t, nameX, ty, C.ink);
       });
       font(26, 300);
       if (m.detail) {
         wrap(ctx, m.detail, R2 - nameX, 3).forEach((t) => {
-          y += 40;
-          text(t, nameX, y, C.muted);
+          ty += 40;
+          text(t, nameX, ty, C.muted);
         });
       }
-      y += 40;
-      text(
-        tr(`โปรตีน ${m.m.protein} · คาร์บ ${m.m.carbs} · ไขมัน ${m.m.fat} g`, `Protein ${m.m.protein} · Carbs ${m.m.carbs} · Fat ${m.m.fat} g`),
-        nameX,
-        y,
-        C.muted,
-      );
-      y += 34;
+      ty += 42;
+      font(26, 300);
+      const pcf: [string, number, string][] = [
+        [tr("โปรตีน", "P"), m.m.protein, C.protein],
+        [tr("คาร์บ", "C"), m.m.carbs, C.carbs],
+        [tr("ไขมัน", "F"), m.m.fat, C.fat],
+      ];
+      let px = nameX;
+      pcf.forEach(([lab, g, col]) => {
+        dot(px + 7, ty - 9, 7, col);
+        const t = `${lab} ${g} g`;
+        text(t, px + 22, ty, C.muted);
+        px += 22 + ctx.measureText(t).width + 28;
+      });
+      const textBottom = ty + 18;
+      // Photo, or a soft round tile with the first letter when there is no photo
+      const img = m.photoId ? info.photos.get(m.photoId) : undefined;
+      const thumbY = rowTop + 40;
+      if (draw) {
+        if (img) drawThumb(ctx, img, L + IN, thumbY, THUMB, 32);
+        else {
+          ctx.beginPath();
+          ctx.roundRect(L + IN, thumbY, THUMB, THUMB, 32);
+          ctx.fillStyle = "rgba(255,255,255,0.7)";
+          ctx.fill();
+          font(44, 300);
+          ctx.textBaseline = "middle";
+          text(Array.from(m.title.trim())[0] ?? "•", L + IN + THUMB / 2, thumbY + THUMB / 2 + 2, C.muted, "center");
+          ctx.textBaseline = "alphabetic";
+        }
+      }
+      y = Math.max(textBottom, thumbY + THUMB) + 40;
     });
+    boxes.push({ x: L, y: cardTop, w: R - L, h: y - cardTop, r: 56 });
   });
-  y += 24;
-  boxes.push({ x: L, y: mTop, w: R - L, h: y - mTop, r: 64 });
+
+  // Meal times with nothing logged: one quiet line
+  if (empty.length > 0) {
+    y += 60;
+    font(27, 300);
+    text(fit(ctx, `${tr("ไม่ได้บันทึก", "Not logged")} · ${empty.join(" · ")}`, R - L), W / 2, y, C.muted, "center");
+  }
 
   // Footer
-  y += 64;
+  y += 84;
   font(24, 400);
   spaced("SNAPCAL", W / 2, y, 10, C.muted);
   return { h: y + PAD - 8, boxes };
 }
 
-async function makePicture(info: Omit<Info, "char">, look: CharLook): Promise<Blob> {
+async function makePicture(info: Omit<Info, "char" | "photos">, look: CharLook): Promise<Blob> {
   const fam = calmFont();
   // Make sure the thin Thai + number font is ready, or the canvas uses a plain font.
   await Promise.all(
     [200, 300, 400].map((w) => document.fonts.load(`${w} 32px ${fam}`, "กขค 0123 kcal").catch(() => [])),
   );
-  // The character is nice to have: if it fails to load, the picture still works.
+  // The character and the meal photos are nice to have: if one fails to load, the picture still works.
   const char = await drawCharacter(look, CHAR * 2).catch(() => null);
-  const full: Info = { ...info, char };
+  const photos = new Map<string, HTMLImageElement>();
+  const ids = info.day.slots.flatMap((s) => s.meals.map((m) => m.photoId)).filter((x): x is string => !!x);
+  await Promise.all(
+    ids.map(async (id) => {
+      const src = await getPhoto(id);
+      if (src) photos.set(id, await loadImg(src).catch(() => null as unknown as HTMLImageElement));
+    }),
+  );
+  for (const [k, v] of photos) if (!v) photos.delete(k);
+  const full: Info = { ...info, char, photos };
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("canvas");
@@ -308,17 +429,36 @@ function savedLook(): CharLook {
   }
 }
 
-export function ShareDayButton({ entries, date, target, name }: { entries: Entry[]; date: string; target: number; name: string }) {
+export function ShareDayButton({
+  entries,
+  date,
+  target,
+  name,
+  macroTargets,
+  water,
+}: {
+  entries: Entry[];
+  date: string;
+  target: number;
+  name: string;
+  macroTargets: { protein: number; carbs: number; fat: number };
+  water: { glasses: number; goal: number };
+}) {
   const { tr, lang } = useLang();
   const [open, setOpen] = useState(false);
   const [pic, setPic] = useState<{ blob: Blob; url: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const mt = macroTargets;
+  const wt = water;
 
   useEffect(() => {
     if (!open) return;
     let url = "";
     let stop = false;
-    makePicture({ day: buildShareDay(entries, date), date, dateLabel: thaiDateLabel(date, lang), name, target, lang }, savedLook())
+    makePicture(
+      { day: buildShareDay(entries, date), date, dateLabel: thaiDateLabel(date, lang), name, target, macroTargets: mt, water: wt, lang },
+      savedLook(),
+    )
       .then((blob) => {
         if (stop) return;
         url = URL.createObjectURL(blob);
@@ -329,7 +469,9 @@ export function ShareDayButton({ entries, date, target, name }: { entries: Entry
       stop = true;
       if (url) URL.revokeObjectURL(url);
     };
-  }, [open, entries, date, target, name, lang]);
+    // mt / wt are rebuilt from these numbers, so list the numbers (not the objects).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, entries, date, target, name, lang, mt.protein, mt.carbs, mt.fat, wt.glasses, wt.goal]);
 
   const file = pic ? new File([pic.blob], shareFileName(date), { type: "image/png" }) : null;
   const canShare = !!file && typeof navigator !== "undefined" && !!navigator.canShare?.({ files: [file] });
@@ -347,7 +489,7 @@ export function ShareDayButton({ entries, date, target, name }: { entries: Entry
   return (
     <>
       <button
-        className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full bg-paper text-[16px] font-medium active:scale-[0.98]"
+        className="glass flex min-h-[52px] w-full items-center justify-center gap-2 !rounded-full text-[16px] active:scale-[0.98]"
         onClick={() => {
           setPic(null);
           setError(null);
@@ -355,7 +497,12 @@ export function ShareDayButton({ entries, date, target, name }: { entries: Entry
         }}
         data-testid="share-day-button"
       >
-        {tr("ส่งสรุปวันนี้ให้เทรนเนอร์", "Send this day to my trainer")}
+        <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <path d="M12 15V4" />
+          <path d="m8 8 4-4 4 4" />
+          <path d="M6 12v6.5A1.5 1.5 0 0 0 7.5 20h9a1.5 1.5 0 0 0 1.5-1.5V12" />
+        </svg>
+        {tr("แชร์สรุปวันนี้", "Share this day")}
       </button>
       <Sheet open={open} onClose={() => setOpen(false)} title={tr("สรุปวันนี้", "This day")}>
         <div className="space-y-3 pb-4" data-testid="share-day-sheet">
@@ -371,7 +518,7 @@ export function ShareDayButton({ entries, date, target, name }: { entries: Entry
               <img src={pic.url} alt={tr("รูปสรุปวันนี้", "Picture of this day")} className="w-full rounded-[22px] border border-line" data-testid="share-day-image" />
               {canShare ? (
                 <button className="btn-primary w-full !min-h-[56px] text-[18px]" onClick={share} data-testid="share-day-send">
-                  {tr("ส่งรูปนี้", "Send this picture")}
+                  {tr("แชร์รูปนี้", "Share this picture")}
                 </button>
               ) : (
                 <a

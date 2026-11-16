@@ -4,32 +4,39 @@
    black pill buttons, small pastel touches (yellow · pink · mint · sky).
    Old "olive" names now mean the black/yellow pair. */
 :root {
-  --cream: #f8f6f3;
-  --paper: #ffffff;
-  --line: #ebe6e0;
-  --ink: #1a1a1a;
-  --muted: #8b857e;
-  --olive: #1a1a1a;
-  --olive-dark: #111111;
-  --olive-soft: #fff1bf;
-  --yellow: #ffe59a;
-  --yellow-deep: #ffd84d;
-  --pink: #ffb5c1;
-  --mint: #b7e1d1;
-  --sky: #a9d3ff;
-  --protein: #ffe1e6;
-  --protein-ink: #a03a50;
-  --carbs: #fff1bf;
-  --carbs-ink: #7a5b00;
-  --fat: #dcebff;
-  --fat-ink: #2e5c8f;
-  --water: #5ea4e8;
-  --water-soft: #e3f0ff;
-  --water-ink: #2e5c8f;
-  --kcal: #fff1bf;
-  --warn: #ffe9c7;
-  --warn-ink: #8a5212;
+  /* Round 31: the whole app wears "Frosted Calm" — beige page, soft clouds, frosted glass,
+     thin text. The old names stay, but now hold the calm colors:
+     peach = protein, lilac = carbs, sage = fat, soft blue = water. */
+  --cream: rgba(255, 255, 255, 0.55); /* soft fill inside glass (chips, empty tiles) */
+  --paper: #fbf8f4;
+  --line: rgba(43, 39, 36, 0.09);
+  --ink: #2b2724;
+  --muted: #9c948a;
+  --olive: #2b2724;
+  --olive-dark: #2b2724;
+  --olive-soft: #efe6da;
+  --yellow: #f6e3d6;
+  --yellow-deep: #2b2724;
+  --pink: #f3ddd5;
+  --mint: #e2eadb;
+  --sky: #e4e2f2;
+  --protein: #f7e6dc;
+  --protein-ink: #9a5a3e;
+  --protein-dot: #e0a88c;
+  --carbs: #e9e6f5;
+  --carbs-ink: #5d5590;
+  --carbs-dot: #b3aad8;
+  --fat: #e5ecdc;
+  --fat-ink: #56704a;
+  --fat-dot: #a3bd90;
+  --water: #8fb0d6;
+  --water-soft: #e6eef7;
+  --water-ink: #4f6f94;
+  --kcal: #f6e3d6;
+  --warn: #f6e7d6;
+  --warn-ink: #9a5a3e;
   --danger: #b24a3a;
+  --over: #d0906f;
 }
 
 @theme inline {
@@ -59,19 +66,23 @@
   --color-warn: var(--warn);
   --color-warn-ink: var(--warn-ink);
   --color-danger: var(--danger);
+  --color-over: var(--over);
+  --color-protein-dot: var(--protein-dot);
+  --color-carbs-dot: var(--carbs-dot);
+  --color-fat-dot: var(--fat-dot);
   --font-sans: var(--font-thai), ui-sans-serif, system-ui, sans-serif;
 }
 
 html {
-  background: var(--cream);
+  background: #f4efe7;
   color-scheme: light;
   -webkit-tap-highlight-color: transparent;
 }
 
 body {
-  background: var(--cream);
+  background: #f4efe7;
   color: var(--ink);
-  font-family: var(--font-thai), ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-calm), var(--font-thai), ui-sans-serif, system-ui, sans-serif;
   font-size: 17px;
 }
 
@@ -136,7 +147,7 @@ select {
 }
 .field {
   width: 100%;
-  background: #fff;
+  background: rgba(255, 255, 255, 0.7);
   border: 1px solid var(--line);
   border-radius: 14px;
   min-height: 48px;
@@ -144,8 +155,8 @@ select {
   outline: none;
 }
 .field:focus {
-  border-color: var(--ink);
-  box-shadow: 0 0 0 3px var(--yellow);
+  border-color: rgba(43, 39, 36, 0.35);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.8);
 }
 .label {
   font-size: 14px;
@@ -177,7 +188,7 @@ select {
   padding: calc(env(safe-area-inset-top, 0px) + 16px) 16px calc(env(safe-area-inset-bottom, 0px) + 110px);
 }
 
-/* ---------- "Frosted Calm" look (Round 30: Profile first, rest of the app later) ---------- */
+/* ---------- "Frosted Calm" look — on <body>, so every page wears it (Round 31) ---------- */
 .calm {
   /* Own layer, so the backdrop (z-index -1) sits above the body's cream but below the page. */
   position: relative;
@@ -247,4 +258,20 @@ select {
 /* The big "tap to edit" target number: thin, like the rest of the look. */
 .calm input.num {
   font-weight: 200;
+}
+
+/* Bottom sheets: frosted, a little more solid so text stays easy to read. */
+.sheet {
+  background: rgba(250, 246, 240, 0.9);
+  -webkit-backdrop-filter: blur(28px);
+  backdrop-filter: blur(28px);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  border-bottom: 0;
+}
+/* Bottom tab bar: frosted glass. */
+.tabbar {
+  background: rgba(250, 246, 240, 0.72);
+  -webkit-backdrop-filter: blur(22px);
+  backdrop-filter: blur(22px);
+  border-top: 1px solid rgba(255, 255, 255, 0.9);
 }

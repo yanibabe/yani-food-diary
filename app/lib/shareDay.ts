@@ -1,4 +1,4 @@
-// "Share my day with my trainer": the plain facts that go on the picture.
+// "Share this day": the plain facts that go on the picture.
 // Pure data (no drawing), so it can be tested.
 
 import { fmtAmount, pickMacros, sumMacros } from "./nutrition.ts";
@@ -9,6 +9,8 @@ export type ShareMeal = {
   m: Macros;
   /** Small list of what was in it, e.g. "ข้าวสวย 150 กรัม · ไข่ดาว 1 ฟอง". Empty for a single item. */
   detail: string;
+  /** The meal's photo (in IndexedDB), if it has one. */
+  photoId: string | null;
 };
 
 export type ShareSlot = { slot: MealSlot; m: Macros; meals: ShareMeal[] };
@@ -29,6 +31,7 @@ export function buildShareDay(entries: Entry[], date: string): ShareDay {
         title: e.title,
         m: roundM(sumMacros(e.items.map(pickMacros))),
         detail: e.items.length > 1 ? e.items.map((i) => `${i.name} ${fmtAmount(i.amount)} ${i.unit}`.trim()).join(" · ") : "",
+        photoId: e.photoId ?? null,
       }));
     return { slot, meals, m: roundM(sumMacros(meals.map((x) => x.m))) };
   });

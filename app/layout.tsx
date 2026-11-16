@@ -55,13 +55,15 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#f8f6f3",
+  themeColor: "#f4efe7",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="th" className={`${thai.variable} ${roundLatin.variable} ${calm.variable} h-full antialiased`}>
-      <body className="min-h-full">
+      <body className="calm min-h-full">
+        {/* Beige page + 3 soft color clouds behind every page. */}
+        <div className="calm-backdrop" aria-hidden />
         <LangProvider>
           <DataProvider>
             <Suspense>

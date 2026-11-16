@@ -14,9 +14,60 @@ import { macroTargets, proteinTargetG } from "./lib/energy";
 import { fmtKcal, pickMacros, sumMacros } from "./lib/nutrition";
 import { useLang } from "./lib/lang";
 import { useStore } from "./lib/store";
+import { glassesOn, waterGoal } from "./lib/water";
 import { SLOT_LABEL, SLOTS, type Entry } from "./lib/types";
 
-const SLOT_COLORS = ["var(--yellow-deep)", "#8cc9b2", "#7fb2ea", "#f09aab"];
+const SLOT_COLORS = ["var(--protein-dot)", "var(--fat-dot)", "var(--carbs-dot)", "var(--water)"];
+
+/** Thin line icons for the "Add food" choices (calm look, no emoji). */
+const ADD_ICONS: Record<string, React.ReactNode> = {
+  photo: (
+    <>
+      <path d="M4 8.5A1.5 1.5 0 0 1 5.5 7H8l1.5-2h5L16 7h2.5A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5z" />
+      <circle cx="12" cy="13" r="3.2" />
+    </>
+  ),
+  text: (
+    <>
+      <path d="M5 6.5A1.5 1.5 0 0 1 6.5 5h11A1.5 1.5 0 0 1 19 6.5v8a1.5 1.5 0 0 1-1.5 1.5H11l-4 3v-3h-.5A1.5 1.5 0 0 1 5 14.5z" />
+      <path d="M9 9.5h6M9 12.5h4" />
+    </>
+  ),
+  recipes: (
+    <>
+      <path d="M5 5.5c2.5-1 5-1 7 .5v13c-2-1.5-4.5-1.5-7-.5z" />
+      <path d="M19 5.5c-2.5-1-5-1-7 .5v13c2-1.5 4.5-1.5 7-.5z" />
+    </>
+  ),
+  manual: (
+    <>
+      <path d="M15.5 5.5 18.5 8.5 9 18l-4 1 1-4z" />
+      <path d="M13.5 7.5l3 3" />
+    </>
+  ),
+  barcode: (
+    <>
+      <path d="M5 6v12M8 6v12M11 6v12M15 6v12M19 6v12" />
+      <path d="M13 6v12M17 6v12" strokeWidth={0.8} />
+    </>
+  ),
+  again: (
+    <>
+      <path d="M5 11a7 7 0 0 1 12-4.9L19 8" />
+      <path d="M19 4v4h-4" />
+      <path d="M19 13a7 7 0 0 1-12 4.9L5 16" />
+      <path d="M5 20v-4h4" />
+    </>
+  ),
+};
+
+function AddIcon({ name }: { name: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className="h-8 w-8" fill="none" stroke="currentColor" strokeWidth={1.4} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      {ADD_ICONS[name]}
+    </svg>
+  );
+}
 
 function Ring({ eaten, target }: { eaten: number; target: number }) {
   const r = 86;
@@ -25,14 +76,14 @@ function Ring({ eaten, target }: { eaten: number; target: number }) {
   const over = eaten > target;
   return (
     <svg viewBox="0 0 200 200" className="h-[210px] w-[210px]" aria-hidden>
-      <circle cx="100" cy="100" r={r} fill="none" stroke="var(--cream)" strokeWidth="16" />
+      <circle cx="100" cy="100" r={r} fill="none" stroke="rgba(43,39,36,0.08)" strokeWidth="5" />
       {p > 0 && <circle
         cx="100"
         cy="100"
         r={r}
         fill="none"
-        stroke={over ? "var(--pink)" : "var(--yellow-deep)"}
-        strokeWidth="16"
+        stroke={over ? "var(--over)" : "var(--ink)"}
+        strokeWidth="5"
         strokeLinecap="round"
         strokeDasharray={`${c * p} ${c}`}
         transform="rotate(-90 100 100)"
@@ -42,7 +93,7 @@ function Ring({ eaten, target }: { eaten: number; target: number }) {
 }
 
 function TodayInner() {
-  const { ready, entries, goals, saveError, upsertEntry, deleteEntry } = useStore();
+  const { ready, entries, goals, saveError, upsertEntry, deleteEntry, waterLogs } = useStore();
   const search = useSearchParams();
   const router = useRouter();
   const today = thaiDateKey();
@@ -85,7 +136,7 @@ function TodayInner() {
   return (
     <main className="page space-y-5">
       <header className="flex items-center justify-between">
-        <button className="h-11 w-11 rounded-full bg-paper text-[20px]" onClick={() => go(shiftDateKey(date, -1))} aria-label={tr("วันก่อนหน้า", "Previous day")}>
+        <button className="glass h-11 w-11 !rounded-full text-[20px]" onClick={() => go(shiftDateKey(date, -1))} aria-label={tr("วันก่อนหน้า", "Previous day")}>
           ‹
         </button>
         <div className="text-center">
@@ -100,11 +151,11 @@ function TodayInner() {
               )}
             </div>
           )}
-          <h1 className="text-[26px] font-bold">{date === today ? tr("วันนี้", "Today") : tr("ย้อนดู", "Looking back")}</h1>
+          <h1 className="text-[26px] font-medium">{date === today ? tr("วันนี้", "Today") : tr("ย้อนดู", "Looking back")}</h1>
           <p className="text-[14px] text-muted">{thaiDateLabel(date, lang)}</p>
         </div>
         <button
-          className="h-11 w-11 rounded-full bg-paper text-[20px] disabled:opacity-30"
+          className="glass h-11 w-11 !rounded-full text-[20px] disabled:opacity-30"
           onClick={() => go(shiftDateKey(date, 1))}
           disabled={date >= today}
           aria-label={tr("วันถัดไป", "Next day")}
@@ -125,15 +176,15 @@ function TodayInner() {
         <div className="relative">
           <Ring eaten={ready ? total.kcal : 0} target={target} />
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="num text-[54px] leading-none" data-testid="eaten-kcal">
+            <span className="num text-[58px] leading-none" data-testid="eaten-kcal">
               {ready ? fmtKcal(total.kcal) : "–"}
             </span>
             <span className="mt-1 text-[15px] text-muted">
-              {tr("จาก", "of")} <span className="num font-semibold text-ink" data-testid="target-kcal">{fmtKcal(target)}</span> kcal
+              {tr("จาก", "of")} <span className="num text-ink" data-testid="target-kcal">{fmtKcal(target)}</span> kcal
             </span>
           </div>
         </div>
-        <p className={`mt-2 text-[17px] font-medium ${left < 0 ? "text-warn-ink" : "text-olive-dark"}`}>
+        <p className={`mt-2 text-[16px] ${left < 0 ? "text-warn-ink" : "text-muted"}`}>
           {left >= 0
             ? tr(`เหลืออีก ${fmtKcal(left)} kcal`, `${fmtKcal(left)} kcal left`)
             : tr(`เกินเป้า ${fmtKcal(-left)} kcal`, `${fmtKcal(-left)} kcal over target`)}
@@ -141,7 +192,7 @@ function TodayInner() {
         {ready && date === today && (
           <Link
             href="/add/suggest"
-            className="mt-2 inline-flex min-h-[44px] items-center gap-1.5 rounded-full bg-cream px-4 text-[15px] font-medium active:scale-[0.98]"
+            className="mt-2 inline-flex min-h-[44px] items-center gap-1.5 rounded-full border border-white/90 bg-white/60 px-4 text-[15px] active:scale-[0.98]"
             data-testid="suggest-button"
           >
             {tr("เหลือเท่านี้ กินอะไรดี", "What can I eat with what's left?")}
@@ -166,7 +217,7 @@ function TodayInner() {
         return (
           <section key={slot} className="card p-4" data-testid={`slot-${slot}`}>
             <div className="mb-1 flex items-baseline justify-between px-1">
-              <h2 className="flex items-center gap-2 text-[19px] font-semibold">
+              <h2 className="flex items-center gap-2 text-[18px] font-medium">
                 <span className="h-2.5 w-2.5 rounded-full" style={{ background: SLOT_COLORS[i % SLOT_COLORS.length] }} aria-hidden />
                 {SLOT_LABEL[slot][lang]}
               </h2>
@@ -186,7 +237,14 @@ function TodayInner() {
       })}
 
       {ready && dayEntries.length > 0 && (
-        <ShareDayButton entries={entries} date={date} target={target} name={goals.profile?.name ?? ""} />
+        <ShareDayButton
+          entries={entries}
+          date={date}
+          target={target}
+          name={goals.profile?.name ?? ""}
+          macroTargets={macroTargets(target, proteinTargetG(goals.profile))}
+          water={{ glasses: glassesOn(waterLogs, date), goal: waterGoal(goals.waterGoal) }}
+        />
       )}
 
       {added && (
@@ -219,14 +277,14 @@ function TodayInner() {
             <button className="mb-3 flex items-center gap-1 px-1 text-[16px] font-medium text-olive-dark" onClick={() => setAgainView(false)} data-testid="eat-again-back">
               ‹ {tr("กลับ", "Back")}
             </button>
-            <h3 className="px-1 pb-1 text-[18px] font-semibold">🔁 {tr("กินซ้ำ", "Eat again")}</h3>
+            <h3 className="px-1 pb-1 text-[18px] font-medium">{tr("กินซ้ำ", "Eat again")}</h3>
             <p className="px-1 pb-3 text-[13px] text-muted">
               {tr("แตะครั้งเดียว บันทึกเลย · ไม่ต้องใช้ AI", "One tap to log it · no AI needed")}
             </p>
             <input
               type="search"
-              className="mb-3 w-full rounded-full bg-cream px-5 py-3 text-[16px] outline-none placeholder:text-muted"
-              placeholder={tr("🔍 ค้นหาชื่ออาหาร", "🔍 Search food name")}
+              className="mb-3 w-full rounded-full border border-white/90 bg-white/70 px-5 py-3 text-[16px] outline-none placeholder:text-muted"
+              placeholder={tr("ค้นหาชื่ออาหาร", "Search food name")}
               value={againQuery}
               onChange={(ev) => setAgainQuery(ev.target.value)}
               data-testid="eat-again-search"
@@ -234,7 +292,7 @@ function TodayInner() {
             {found.length === 0 ? (
               <p className="px-1 py-6 text-center text-[15px] text-muted">{tr("ไม่เจอเมนูนี้", "No meal found")}</p>
             ) : (
-              <ul className="divide-y divide-line rounded-[22px] bg-cream px-3">
+              <ul className="divide-y divide-line rounded-[22px] border border-white/90 bg-white/55 px-3">
                 {found.map((e) => (
                   <li key={e.id}>
                     <button
@@ -245,8 +303,8 @@ function TodayInner() {
                       {e.photoId ? (
                         <StoredPhoto id={e.photoId} className="h-11 w-11 shrink-0 rounded-xl object-cover" />
                       ) : (
-                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-paper text-[20px]" aria-hidden>
-                          {sourceIcon(e)}
+                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/80 text-muted" aria-hidden>
+                          <SourceIcon e={e} small />
                         </span>
                       )}
                       <span className="min-w-0 flex-1">
@@ -255,7 +313,7 @@ function TodayInner() {
                           {tr("กินล่าสุด", "Last eaten")} {shortDayLabel(e.date, today, lang)} · <span className="num">{fmtKcal(sumMacros(e.items.map(pickMacros)).kcal)}</span> kcal
                         </span>
                       </span>
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-olive text-[20px] leading-none text-paper" aria-hidden>
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-ink text-[20px] font-light leading-none text-paper" aria-hidden>
                         +
                       </span>
                     </button>
@@ -267,28 +325,30 @@ function TodayInner() {
         ) : (
         <div className="grid grid-cols-2 gap-3 pb-3">
           {[
-            { href: `/add/photo${q}`, bg: "bg-yellow", icon: "📷", label: tr("ถ่ายรูป", "Take a photo") },
-            { href: `/add/text${q}`, bg: "bg-sky", icon: "💬", label: tr("พิมพ์ให้ AI ช่วย", "Type it, AI helps") },
-            { href: `/recipes${q}`, bg: "bg-mint", icon: "📖", label: tr("เลือกสูตรของฉัน", "From my recipes") },
-            { href: `/add/manual${q}`, bg: "bg-pink", icon: "✏️", label: tr("กรอกเอง", "Enter it myself") },
-            { href: `/add/barcode${q}`, bg: "bg-cream", icon: "🏷️", label: tr("บาร์โค้ด", "Barcode") },
+            { href: `/add/photo${q}`, icon: "photo", dot: "bg-protein-dot", label: tr("ถ่ายรูป", "Take a photo") },
+            { href: `/add/text${q}`, icon: "text", dot: "bg-carbs-dot", label: tr("พิมพ์ให้ AI ช่วย", "Type it, AI helps") },
+            { href: `/recipes${q}`, icon: "recipes", dot: "bg-fat-dot", label: tr("เลือกสูตรของฉัน", "From my recipes") },
+            { href: `/add/manual${q}`, icon: "manual", dot: "bg-water", label: tr("กรอกเอง", "Enter it myself") },
+            { href: `/add/barcode${q}`, icon: "barcode", dot: "bg-protein-dot", label: tr("บาร์โค้ด", "Barcode") },
           ].map((o) => (
             <Link
               key={o.href}
               href={o.href}
-              className={`flex min-h-[112px] flex-col items-center justify-center gap-2 rounded-[22px] ${o.bg} text-[17px] font-medium active:scale-[0.98]`}
+              className="relative flex min-h-[112px] flex-col items-center justify-center gap-2 rounded-[22px] border border-white/90 bg-white/60 text-[16px] active:scale-[0.98]"
             >
-              <span className="text-[34px]" aria-hidden>{o.icon}</span>
+              <span className={`absolute right-4 top-4 h-2 w-2 rounded-full ${o.dot}`} aria-hidden />
+              <AddIcon name={o.icon} />
               {o.label}
             </Link>
           ))}
           {recent.length > 0 && (
             <button
-              className="flex min-h-[112px] flex-col items-center justify-center gap-2 rounded-[22px] bg-cream text-[17px] font-medium active:scale-[0.98]"
+              className="relative flex min-h-[112px] flex-col items-center justify-center gap-2 rounded-[22px] border border-white/90 bg-white/60 text-[16px] active:scale-[0.98]"
               onClick={() => setAgainView(true)}
               data-testid="eat-again-tile"
             >
-              <span className="text-[34px]" aria-hidden>🔁</span>
+              <span className="absolute right-4 top-4 h-2 w-2 rounded-full bg-carbs-dot" aria-hidden />
+              <AddIcon name="again" />
               {tr("กินซ้ำ", "Eat again")}
             </button>
           )}
@@ -299,8 +359,13 @@ function TodayInner() {
   );
 }
 
-function sourceIcon(e: Entry): string {
-  return e.source === "recipe" ? "📖" : e.source === "photo" ? "📷" : e.source === "text" ? "💬" : e.source === "barcode" ? "🏷️" : "✏️";
+function SourceIcon({ e, small }: { e: Entry; small?: boolean }) {
+  const name = e.source === "recipe" ? "recipes" : e.source === "photo" ? "photo" : e.source === "text" ? "text" : e.source === "barcode" ? "barcode" : "manual";
+  return (
+    <svg viewBox="0 0 24 24" className={small ? "h-5 w-5" : "h-6 w-6"} fill="none" stroke="currentColor" strokeWidth={1.4} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      {ADD_ICONS[name]}
+    </svg>
+  );
 }
 
 function EntryRow({ e }: { e: Entry }) {
@@ -311,8 +376,8 @@ function EntryRow({ e }: { e: Entry }) {
         {e.photoId ? (
           <StoredPhoto id={e.photoId} className="h-14 w-14 shrink-0 rounded-2xl object-cover" />
         ) : (
-          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-cream text-[24px]" aria-hidden>
-            {sourceIcon(e)}
+          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/70 text-muted" aria-hidden>
+            <SourceIcon e={e} />
           </span>
         )}
         <div className="min-w-0 flex-1">
@@ -321,7 +386,7 @@ function EntryRow({ e }: { e: Entry }) {
             P {Math.round(m.protein)} · C {Math.round(m.carbs)} · F {Math.round(m.fat)} g
           </div>
         </div>
-        <div className="num text-[20px] font-semibold">
+        <div className="num text-[20px]">
           {fmtKcal(m.kcal)}
           <span className="ml-0.5 text-[12px] font-normal text-muted">kcal</span>
         </div>

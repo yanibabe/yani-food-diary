@@ -32,13 +32,13 @@ export function WeekKcalChart({ entries, date, today, target, onPick }: { entrie
     <section className="card space-y-4 p-5" data-testid="week-kcal">
       <div className="flex items-baseline justify-between">
         <div>
-          <h2 className="text-[17px] font-semibold">{tr("แคลอรีสัปดาห์นี้", "Calories this week")}</h2>
+          <h2 className="text-[17px] font-medium">{tr("แคลอรีสัปดาห์นี้", "Calories this week")}</h2>
           <p className="text-[13px] text-muted">
             {dayParts(w.start, lang).short} – {dayParts(w.end, lang).short}
           </p>
         </div>
         <div className="text-right">
-          <div className="num text-[24px] font-bold leading-none" data-testid="week-kcal-avg">
+          <div className="num text-[26px] leading-none" data-testid="week-kcal-avg">
             {w.avg != null ? fmtKcal(w.avg) : "–"}
           </div>
           <div className="text-[12px] text-muted">{tr("เฉลี่ย kcal/วัน", "avg kcal a day")}</div>
@@ -47,8 +47,8 @@ export function WeekKcalChart({ entries, date, today, target, onPick }: { entrie
 
       <div className="relative" style={{ height: BAR_AREA + 40 }}>
         {/* the daily target line */}
-        <div className="pointer-events-none absolute inset-x-0 border-t-2 border-dashed border-olive" style={{ bottom: 22 + h(target) }}>
-          <span className="num absolute -top-[18px] right-0 rounded bg-paper px-1 text-[11px] text-olive-dark">
+        <div className="pointer-events-none absolute inset-x-0 border-t border-dashed border-ink/30" style={{ bottom: 22 + h(target) }}>
+          <span className="num absolute -top-[18px] right-0 rounded bg-white/70 px-1 text-[11px] text-muted">
             {tr("เป้า", "goal")} {fmtKcal(target)}
           </span>
         </div>
@@ -57,7 +57,7 @@ export function WeekKcalChart({ entries, date, today, target, onPick }: { entrie
             const p = dayParts(d.date, lang);
             const sel = d.date === date;
             const over = d.kcal > target;
-            const color = over ? (sel ? "bg-[#f48aa0]" : "bg-pink") : sel ? "bg-ink" : "bg-yellow-deep";
+            const color = over ? (sel ? "bg-over" : "bg-over/45") : sel ? "bg-ink" : "bg-ink/15";
             return (
               <button
                 key={d.date}
@@ -67,13 +67,13 @@ export function WeekKcalChart({ entries, date, today, target, onPick }: { entrie
                 aria-label={`${p.short}: ${d.logged ? `${fmtKcal(d.kcal)} kcal` : tr("ยังไม่บันทึก", "nothing logged")}`}
                 data-testid="week-kcal-bar"
               >
-                <span className="num relative z-10 rounded bg-paper/85 px-0.5 text-[10px] text-muted">{d.logged ? (d.kcal >= 1000 ? `${(d.kcal / 1000).toFixed(1)}k` : Math.round(d.kcal)) : ""}</span>
+                <span className="num relative z-10 rounded bg-white/70 px-0.5 text-[10px] text-muted">{d.logged ? (d.kcal >= 1000 ? `${(d.kcal / 1000).toFixed(1)}k` : Math.round(d.kcal)) : ""}</span>
                 {d.logged ? (
                   <span className={`w-full rounded-t-lg ${color}`} style={{ height: Math.max(4, h(d.kcal)) }} />
                 ) : (
-                  <span className="h-[4px] w-full rounded-full bg-cream" />
+                  <span className="h-[4px] w-full rounded-full bg-ink/10" />
                 )}
-                <span className={`flex h-[18px] items-center text-[12px] ${sel ? "rounded-full bg-ink px-1.5 font-semibold text-paper" : d.date === today ? "font-semibold text-ink" : "text-muted"}`}>
+                <span className={`flex h-[18px] items-center text-[12px] ${sel ? "rounded-full bg-ink px-1.5 font-medium text-paper" : d.date === today ? "font-semibold text-ink" : "text-muted"}`}>
                   {p.weekday}
                 </span>
               </button>

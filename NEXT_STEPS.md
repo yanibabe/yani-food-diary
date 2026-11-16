@@ -6,7 +6,7 @@
 
 ---
 
-## LIVE (updated 2026-11-16; Round 30 Frosted Calm share picture + Profile LIVE; Round 29 share my day with my trainer (picture) LIVE; Round 28 simpler "กินอะไรดี" (menu + recipe, no delivery) LIVE; Round 27 label numbers = no +15% LIVE; Round 26 grouped "what can I eat" LIVE; Round 25 "what can I eat" LIVE; Round 24 weight moved to Profile, steps removed)
+## LIVE (updated 2026-11-16; Round 31 whole app in Frosted Calm + richer share picture LIVE; Round 30 Frosted Calm share picture + Profile LIVE; Round 29 share my day with my trainer (picture) LIVE; Round 28 simpler "กินอะไรดี" (menu + recipe, no delivery) LIVE; Round 27 label numbers = no +15% LIVE; Round 26 grouped "what can I eat" LIVE; Round 25 "what can I eat" LIVE; Round 24 weight moved to Profile, steps removed)
 
 - **App:** https://yani-food-diary.vercel.app  (Vercel, exm-labs account, free)
 - **Code:** https://github.com/yanibabe/yani-food-diary  (private; pushes auto-deploy)
@@ -30,8 +30,35 @@
    kcal, protein, fat, carbs (and totals). Easy to send (image and/or text via the iPhone share sheet).
    Ask her: picture, text, or both.
 
-## ▶ NEXT: Round 31 — Today page in "Frosted Calm" (then add / recipes / entry pages in Rounds 32+)
-## First: she tries Round 30 on her iPhone (Profile page + "ส่งสรุปวันนี้ให้เทรนเนอร์" picture).
+## ▶ NEXT: she tries Round 31 on her iPhone (whole app in Frosted Calm + new share picture).
+## Then ask what she wants next. Ideas: look over the pages not checked by eye yet (กินอะไรดี, recipe
+## edit, barcode, welcome) for any leftover bright/odd bits; emoji left in a few spots (recipe 🍲 placeholder,
+## empty recipes 🍳) could become thin line icons.
+
+## Round 31 (2026-11-16) — WHOLE APP in "Frosted Calm" + share picture polish ✅ LIVE
+Her words: Round 30 okay; (1) don't say "trainer" on share — she may send it to anyone; (2) share picture
+"still missing something, not well-rounded"; (3) "can't the whole app be one theme? it looks odd mixed".
+- Wording: button = "แชร์สรุปวันนี้" / "Share this day" (with a thin share icon, glass pill);
+  sheet button = "แชร์รูปนี้" / "Share this picture". No "trainer" anywhere on screen.
+- Share picture additions (ShareDayButton.tsx): macro tiles get a color dot + "จาก X g" + thin color line
+  toward the target (peach protein / lilac carbs / sage fat — the cloud colors); a water strip
+  (dots + "5 / 8 แก้ว · 1,250 มล.") only if water was logged; meals grouped by meal time with a small
+  header (name + slot kcal), each meal row shows its PHOTO (rounded square) or a soft tile with the first
+  letter; P/C/F with color dots; empty meal times are ONE quiet line "ไม่ได้บันทึก · มื้อเย็น · ของว่าง".
+  shareDay.ts now carries photoId. ShareDayButton takes macroTargets + water props (page.tsx passes them).
+- Whole app: `calm` class is now on <body> and `<div className="calm-backdrop" />` is in layout.tsx, so
+  EVERY page wears it (Profile no longer adds its own). The old color names in globals.css :root now hold
+  calm colors (cream = white 55%, olive = ink, yellow/pink/mint/sky = soft peach/peach/sage/lilac,
+  protein/carbs/fat = peach/lilac/sage + new --*-dot colors, --over = soft terracotta). New `.sheet`
+  (frosted pop-ups) and `.tabbar` (frosted tab bar, open tab = white pill).
+- Today: ring thin (5px) ink line, over = --over; macro tiles = glass + dot + thin line; "Add food" sheet
+  tiles = glass with thin line icons + a small color dot (no emoji); meal rows use line icons; water card
+  calm (dot heading, soft blue "+1" with dark-blue text); week chart bars soft (ink 15%, selected ink,
+  over = terracotta).
+- Gotcha: the old dev server (started earlier) stopped picking up globals.css changes — restart it if
+  colors look old.
+- Checked in the mock server at phone size: Today, Add sheet, manual add, meal page, recipes, Profile,
+  share picture (3 test meals + photo + water). 92 tests pass, lint + build clean. NOT yet tried on her iPhone.
 
 ## Round 30 (2026-11-16) — "Frosted Calm" look: trainer share picture + Profile ✅ LIVE
 - New thin font IBM Plex Sans Thai (`--font-calm`, layout.tsx). New CSS in globals.css under
