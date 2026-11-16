@@ -6,7 +6,7 @@
 
 ---
 
-## LIVE (updated 2026-11-16; Round 40 Smart Calorie Buffer BUILT + checked locally, NOT deployed — waiting for her OK; Round 39.1 plain water = 0 kcal LIVE; Round 39 nutrition accuracy: careful matching + source marks + unknown nutrients + densities LIVE; Round 38 recipe ingredient photos: any/many photos + average fallback LIVE; Round 37 waiting popup while a photo is read LIVE; Round 36 camera asks once per opening + album photos LIVE; Round 35 scan ingredients in recipes LIVE; Round 34 Phosphor Light icons LIVE; Round 33 recipes in category boxes + pot icon + 34 units LIVE; Round 32 line-only small character + % in tiles + food tip LIVE; Round 31 whole app in Frosted Calm + richer share picture LIVE; Round 30 Frosted Calm share picture + Profile LIVE; Round 29 share my day with my trainer (picture) LIVE; Round 28 simpler "กินอะไรดี" (menu + recipe, no delivery) LIVE; Round 27 label numbers = no +15% LIVE; Round 26 grouped "what can I eat" LIVE; Round 25 "what can I eat" LIVE; Round 24 weight moved to Profile, steps removed)
+## LIVE (updated 2026-11-16; Round 40 Smart Calorie Buffer + final checks LIVE (commit 4526f87, Vercel success); Round 39.1 plain water = 0 kcal LIVE; Round 39 nutrition accuracy: careful matching + source marks + unknown nutrients + densities LIVE; Round 38 recipe ingredient photos: any/many photos + average fallback LIVE; Round 37 waiting popup while a photo is read LIVE; Round 36 camera asks once per opening + album photos LIVE; Round 35 scan ingredients in recipes LIVE; Round 34 Phosphor Light icons LIVE; Round 33 recipes in category boxes + pot icon + 34 units LIVE; Round 32 line-only small character + % in tiles + food tip LIVE; Round 31 whole app in Frosted Calm + richer share picture LIVE; Round 30 Frosted Calm share picture + Profile LIVE; Round 29 share my day with my trainer (picture) LIVE; Round 28 simpler "กินอะไรดี" (menu + recipe, no delivery) LIVE; Round 27 label numbers = no +15% LIVE; Round 26 grouped "what can I eat" LIVE; Round 25 "what can I eat" LIVE; Round 24 weight moved to Profile, steps removed)
 
 - **App:** https://yani-food-diary.vercel.app  (Vercel, exm-labs account, free)
 - **Code:** https://github.com/yanibabe/yani-food-diary  (private; pushes auto-deploy)
@@ -64,19 +64,21 @@ Order: accuracy first, THEN Healthy Recipe Library, personalized meal ideas, wee
   to FIX numbers, which needs a real label photo). Could be its own round later if she wants it.
 - Older open items under Round 36 (food tip ก/ข choice; Rounds 33–35 not tried on iPhone).
 
-## ▶ NEXT — Round 40 is built but NOT deployed
-- Round 40 (Smart Calorie Buffer) is saved in git but NOT on the live site. Deploy only when she says OK.
-- After deploy: she tries it on her iPhone (checklist in the Round 40 section).
+## ▶ NEXT — Round 40 is LIVE (2026-11-16)
+- She tries it on her iPhone (checklist in the Round 40 section + "อกไก่ทอด 200 กรัม" → oil as its own item).
+- Real AI not tried yet with the new prompt.
 - Then Round 41 (USDA) only when she says — she must sign up for a free data.gov key herself.
 
-## Round 40 final checks (2026-11-16) — commit ba57ef0, NOT pushed yet
+## Round 40 final checks (2026-11-16) — commit ba57ef0 ✅ LIVE (pushed with 4526f87)
 Her review asked 2 checks before deploy. (1) Her weight never makes AI numbers "verified" (was already OK).
 Fixed narrowly: weighed item with a guessed recipe → via "amount-known" (badge "น้ำหนักจริง · สูตรประมาณ");
 a guessed oil/sauce "extra" stays a guess (gets her buffer) even if the AI says userAmount; AI prompt no longer
 says "plain food-table values" for weighed items (could drop cooking oil) — guessed oil/sauce go in their own
 extra item. (2) Portion edits: already correct (600 → half at 15% = 300 / 345; P/C/F scale, no buffer; no stacking).
 New `tests/round40-final.test.ts` (7 tests). Tests 162/162, tsc clean, lint 0 errors (1 old warning), build OK,
-mock-AI browser check OK. The push to GitHub was BLOCKED by the auto-mode safety check → needs her go-ahead.
+mock-AI browser check OK. First push was blocked by Claude Code's auto-mode safety check (it judged a push to
+main = production deploy as risky without a direct OK). After her explicit OK the normal push worked: 74b1588..4526f87.
+Vercel status: success. Live check: home 200, /api/status configured, live code has the new badge + buffer text.
 
 ## Round 40 (2026-11-16) — no automatic +15%; optional Smart Calorie Buffer (kcal only) ✅ BUILT, NOT DEPLOYED
 Checkpoint before: git tag `before-round-40` (also on GitHub).
