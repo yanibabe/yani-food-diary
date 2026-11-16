@@ -81,9 +81,11 @@ export function labelProvenance(label: LabelInfo): Provenance {
 }
 
 /** Where a recipe ingredient's numbers came from (same order as the recipe math). */
-export function ingredientProvenance(ing: Ingredient, used: "label" | "pick" | "ai" | "ref"): Provenance {
+export function ingredientProvenance(ing: Ingredient, used: "label" | "pick" | "ai" | "ref", exact = false): Provenance {
   if (used === "label" && ing.label) return labelProvenance(ing.label);
   if (used === "ai") return { source: "ai", verification: "estimated" };
+  // A value fixed by definition (plain water = 0): a reference value, not an estimate, not "verified".
+  if (exact) return { source: "reference", verification: "unverified", via: "defined" };
   if (used === "pick") return { source: "reference", verification: "estimated", via: "picked" };
   return { source: "reference", verification: "estimated" };
 }

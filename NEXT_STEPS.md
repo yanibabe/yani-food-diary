@@ -99,6 +99,21 @@ Browser check at phone size (fake AI): Today "~" + "?" marks, meal badges, recip
 - Remaining / not done: no USDA, no Mahidol, +15% rule untouched (Round 40). AI prompt now returns
   `state` and gPerMl for spoons — real AI answers not tried (mock only).
 
+## Round 39 fix (2026-11-16) — plain water + real zeros ⏸ SAVED LOCALLY, NOT DEPLOYED (waiting for her OK)
+- Bug she found: "น้ำเปล่า" in a recipe → "no nutrition data". Causes: (1) water was not in the table, so it
+  went to the AI; (2) the AI lookup threw away ANY 0-kcal answer (`!(kcal > 0)`), so water, ice, salt,
+  diet drinks were all "not found".
+- Fix: `water` in foodRef.ts (น้ำ, น้ำเปล่า, น้ำดื่ม, น้ำสะอาด, น้ำต้มสุก, น้ำกรอง, น้ำแร่, water, plain/drinking/
+  still/tap/filtered/mineral water), 0/0/0/0, gPerMl 1. New flags: `strict` (any extra word → a different
+  food, never offered: น้ำมะพร้าว, coconut water, น้ำซุป, flavored water…) and `exact` (value fixed by
+  definition → badge "ค่าอ้างอิง", verification "unverified", not "estimated", not "verified").
+- AI answer check moved to `app/lib/ingredientRef.ts` (`cleanIngredientRef`): 0 kcal is kept; only a
+  missing / non-number kcal or known=false is rejected. Prompt says 0 is a valid answer.
+- Checked: suggest.ts / macroTip.ts / suggest page skip 0-kcal items on purpose (meal ideas, % tip) — not
+  ingredient rejections, left alone.
+- Tests 145/145 (8 new in `tests/water.zero.test.ts`). tsc, build OK; lint 0 errors. Browser: น้ำเปล่า 500 มล.
+  → 0 kcal, ค่าอ้างอิง, no AI call. To go live: `git push` (auto-deploys) after her OK.
+
 ## Round 38 (2026-11-16) — recipe ingredient photos: any photo, many photos, average fallback ✅ LIVE
 - Button "รูปฉลาก" → "รูปสินค้า". Picker allows several photos; they show as small squares (× to remove,
   + to add more, max 4), then "อ่าน N รูป" / ยกเลิก. WaitPopup "กำลังอ่านรูป N รูป…".

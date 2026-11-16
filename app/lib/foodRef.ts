@@ -33,6 +33,16 @@ export type RefFood = {
   unitG?: number;
   /** grams in 1 ml (density). Missing = unknown: the app asks instead of assuming 1. */
   gPerMl?: number;
+  /**
+   * The values are fixed by what the food IS (plain water = 0), not a measured average.
+   * Shown as a reference value, never as an estimate — and never claimed as "verified".
+   */
+  exact?: boolean;
+  /**
+   * Only the whole name counts. Anything extra in the name means a DIFFERENT food
+   * ("น้ำมะพร้าว", "coconut water", "น้ำซุป" ≠ water), so it is not offered at all.
+   */
+  strict?: boolean;
 };
 
 export const FOOD_REF: RefFood[] = [
@@ -49,6 +59,9 @@ export const FOOD_REF: RefFood[] = [
   { key: "soy-sauce", label: { th: "ซีอิ๊วขาว", en: "light soy sauce" }, names: ["ซีอิ๊วขาว", "ซีอิ๊ว", "soy sauce", "light soy sauce"], per100: { kcal: 53, protein: 8, carbs: 5, fat: 0.6 }, gPerMl: 1.2 },
   { key: "oyster-sauce", label: { th: "ซอสหอยนางรม (น้ำมันหอย)", en: "oyster sauce" }, names: ["ซอสหอยนางรม", "น้ำมันหอย", "oyster sauce"], per100: { kcal: 51, protein: 1.4, carbs: 11, fat: 0.3 }, gPerMl: 1.2 },
   { key: "sugar", label: { th: "น้ำตาลทราย", en: "sugar" }, names: ["น้ำตาล", "น้ำตาลทราย", "น้ำตาลทรายขาว", "sugar", "white sugar", "granulated sugar"], per100: { kcal: 387, protein: 0, carbs: 100, fat: 0 }, gPerMl: 0.85 },
+
+  // ---- plain water (0 by definition; whole name only — see `strict`) ----
+  { key: "water", label: { th: "น้ำเปล่า", en: "plain water" }, names: ["น้ำ", "น้ำเปล่า", "น้ำดื่ม", "น้ำสะอาด", "น้ำต้มสุก", "น้ำกรอง", "น้ำแร่", "water", "plain water", "drinking water", "still water", "tap water", "filtered water", "mineral water"], per100: { kcal: 0, protein: 0, carbs: 0, fat: 0 }, gPerMl: 1, exact: true, strict: true },
 
   // ---- rice ----
   { key: "rice", group: "rice", state: "cooked", label: { th: "ข้าวสวย (หุงสุกแล้ว)", en: "cooked white rice" }, names: ["ข้าวสวย", "ข้าวสุก", "ข้าวหุงสุก", "cooked rice", "steamed rice", "cooked white rice"], per100: { kcal: 130, protein: 2.7, carbs: 28, fat: 0.3 } },
@@ -201,6 +214,8 @@ export function matchRef(name: string): RefMatch {
   const food = best.food!;
   const rest = n.slice(0, best.at) + " " + n.slice(best.at + best.text.length);
   if (!leftover(rest, food)) return { kind: "exact", food };
+  // Extra words make it a different food (coconut water, flavored water, broth): not this one.
+  if (food.strict) return { kind: "none" };
   // Something else is in the name ("อกไก่ทอด", "ซีอิ๊วดำ", "เนยถั่ว"): offer it, never pick it.
   const options = food.group ? [food, ...FOOD_REF.filter((f) => f.group === food.group && f !== food)] : [food];
   return { kind: "ask", options };

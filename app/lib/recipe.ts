@@ -157,7 +157,7 @@ export function ingredientMacros(ing: Ingredient, lang: Lang = "th"): Ingredient
     macros: scaleMacros(ref.per100, grams / 100),
     source: "estimate",
     refName: ai ? "AI" : refFood!.label[lang],
-    prov: ingredientProvenance(ing, ai ? "ai" : picked ? "pick" : "ref"),
+    prov: ingredientProvenance(ing, ai ? "ai" : picked ? "pick" : "ref", !ai && !!refFood?.exact),
     missing: [],
     state: ai ? (ai.state ?? null) : (refFood!.state ?? null),
   };
