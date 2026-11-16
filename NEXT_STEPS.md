@@ -1227,3 +1227,9 @@ current ones if the file has none. Old USDA/AI buttons moved under "ตัวเ
 Checks: 261 tests pass, tsc clean, lint 0 errors (2 old warnings), build OK, mock browser check at phone width OK.
 NOT verified: real USDA/passcode flow, real iPhone, "weight of one piece"/"density" questions in the sheet.
 Next: she tries it (mock first or after her OK to deploy), then Recipe Library. Do not push without her clear OK.
+
+### Round 42 DEPLOYED (2026-11-16, b572ec7, Vercel success) with her explicit OK
+Live checks: home 200, edit page 200, /api/status usda:true, /api/food/usda 401 without passcode, live JS has the new
+"สร้างวัตถุดิบเอง" and NO key/USDA address. NOT checked: real USDA search (needs her passcode), real iPhone.
+She tries on iPhone: egg rows; "chicken breast" USDA row; custom ingredient save+reuse; airplane mode still allows manual entry.
+Do NOT start the next round until she says.
