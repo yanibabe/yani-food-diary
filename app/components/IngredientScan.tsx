@@ -17,8 +17,9 @@ import { useLang } from "../lib/lang";
 import type { Ingredient } from "../lib/types";
 import { LiveBarcodeScanner } from "./LiveBarcodeScanner";
 import { Icon } from "./Icon";
+import { WaitPopup } from "./ui";
 
-type Busy = null | "barcode" | "label";
+type Busy = null | "barcodePhoto" | "barcode" | "label";
 
 export function IngredientScan({ ing, onPatch }: { ing: Ingredient; onPatch: (p: Partial<Ingredient>) => void }) {
   const { tr, lang } = useLang();
@@ -83,7 +84,7 @@ export function IngredientScan({ ing, onPatch }: { ing: Ingredient; onPatch: (p:
   /** Photo of the barcode → free reader on the phone first; if it can't, the AI reads the digits. */
   async function fromBarcodePhoto(file: File | undefined) {
     if (!file) return;
-    setBusy("barcode");
+    setBusy("barcodePhoto");
     setMsg(null);
     let found: string | null = null;
     try {
@@ -167,7 +168,7 @@ export function IngredientScan({ ing, onPatch }: { ing: Ingredient; onPatch: (p:
           data-testid="ing-scan-barcode"
         >
           <Icon name="barcode" className="h-[18px] w-[18px]" />
-          {busy === "barcode" ? tr("กำลังหา…", "Looking…") : tr("สแกนบาร์โค้ด", "Scan barcode")}
+          {busy === "barcode" || busy === "barcodePhoto" ? tr("กำลังหา…", "Looking…") : tr("สแกนบาร์โค้ด", "Scan barcode")}
         </button>
         <button type="button" className={pill} disabled={busy !== null} onClick={() => labelRef.current?.click()} data-testid="ing-scan-label">
           <Icon name="camera" className="h-[18px] w-[18px]" />
@@ -202,6 +203,17 @@ export function IngredientScan({ ing, onPatch }: { ing: Ingredient; onPatch: (p:
           void fromLabelPhoto(f);
         }}
         data-testid="ing-label-photo-input"
+      />
+      <WaitPopup
+        text={
+          busy === "barcodePhoto"
+            ? tr("กำลังอ่านบาร์โค้ดในรูป…", "Reading the barcode in the photo…")
+            : busy === "barcode"
+              ? tr("กำลังหาสินค้า…", "Looking up the product…")
+              : busy === "label"
+                ? tr("กำลังอ่านฉลาก…", "Reading the label…")
+                : null
+        }
       />
       {live && (
         <LiveBarcodeScanner

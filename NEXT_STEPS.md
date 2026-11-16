@@ -6,7 +6,7 @@
 
 ---
 
-## LIVE (updated 2026-11-16; Round 36 camera asks once per opening + album photos LIVE; Round 35 scan ingredients in recipes LIVE; Round 34 Phosphor Light icons LIVE; Round 33 recipes in category boxes + pot icon + 34 units LIVE; Round 32 line-only small character + % in tiles + food tip LIVE; Round 31 whole app in Frosted Calm + richer share picture LIVE; Round 30 Frosted Calm share picture + Profile LIVE; Round 29 share my day with my trainer (picture) LIVE; Round 28 simpler "กินอะไรดี" (menu + recipe, no delivery) LIVE; Round 27 label numbers = no +15% LIVE; Round 26 grouped "what can I eat" LIVE; Round 25 "what can I eat" LIVE; Round 24 weight moved to Profile, steps removed)
+## LIVE (updated 2026-11-16; Round 37 waiting popup while a photo is read LIVE; Round 36 camera asks once per opening + album photos LIVE; Round 35 scan ingredients in recipes LIVE; Round 34 Phosphor Light icons LIVE; Round 33 recipes in category boxes + pot icon + 34 units LIVE; Round 32 line-only small character + % in tiles + food tip LIVE; Round 31 whole app in Frosted Calm + richer share picture LIVE; Round 30 Frosted Calm share picture + Profile LIVE; Round 29 share my day with my trainer (picture) LIVE; Round 28 simpler "กินอะไรดี" (menu + recipe, no delivery) LIVE; Round 27 label numbers = no +15% LIVE; Round 26 grouped "what can I eat" LIVE; Round 25 "what can I eat" LIVE; Round 24 weight moved to Profile, steps removed)
 
 - **App:** https://yani-food-diary.vercel.app  (Vercel, exm-labs account, free)
 - **Code:** https://github.com/yanibabe/yani-food-diary  (private; pushes auto-deploy)
@@ -30,8 +30,19 @@
    kcal, protein, fat, carbs (and totals). Easy to send (image and/or text via the iPhone share sheet).
    Ask her: picture, text, or both.
 
-## ▶ NEXT: she tries Round 36 on her iPhone, then picks what's next
+## ▶ NEXT: she tries Rounds 36 + 37 on her iPhone, then picks what's next
 Rounds 33–35 tried on her iPhone ✓ ("okay"). Round 36 = her 2 fixes from that try.
+Round 36: she said "okay" (2026-11-16) and asked for Round 37.
+
+## Round 37 (2026-11-16) — a waiting popup every time a photo is read ✅ LIVE
+Her wish: whenever a photo is uploaded or taken and the app is reading it, show a popup saying what it's doing.
+- New `WaitPopup` in app/components/ui.tsx: dim screen + small frosted card in the middle, spinner,
+  one line of what's happening + "อาจใช้เวลาสักครู่". Can't be tapped away (it closes by itself when done).
+- Used in: add food photo/text (`/add/[mode]`, replaced the old full-page wait; keeps the "don't close
+  this page" note) — "กำลังอ่านรูปอาหาร…" / "กำลังวิเคราะห์อาหาร…";
+  BarcodeLookup — "กำลังอ่านบาร์โค้ดในรูป…", "กำลังอ่านฉลาก…", "กำลังหาสินค้า…";
+  IngredientScan (recipes) — same three lines (new busy value "barcodePhoto").
+- Checked at phone size in the browser with a slowed fake AI: popup shows, right words, closes after.
 
 ## Round 36 (2026-11-16) — camera asks less + photos from the album ✅ LIVE
 1. She disliked tapping "Allow camera" on EVERY barcode scan. iPhone home-screen apps forget the camera OK

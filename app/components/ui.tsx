@@ -49,6 +49,26 @@ export function Sheet({
   );
 }
 
+/**
+ * Round 37: a small frosted popup in the middle of the screen while a photo is being read
+ * (food photo, barcode photo, label photo), so she always sees what the app is doing.
+ * `text` = what is happening now ("กำลังอ่านฉลาก…"). Shown while `text` is not null.
+ */
+export function WaitPopup({ text, note }: { text: string | null; note?: string }) {
+  const { tr } = useLang();
+  if (!text) return null;
+  return (
+    <div className="fixed inset-0 z-[60] grid place-items-center bg-ink/25 px-8" role="status" aria-live="polite" data-testid="wait-popup">
+      <div className="sheet w-full max-w-[320px] rounded-[26px] border px-6 py-7 text-center shadow-2xl">
+        <div className="mx-auto h-11 w-11 animate-spin rounded-full border-[3px] border-olive-soft border-t-ink" aria-hidden />
+        <p className="mt-4 text-[18px]" data-testid="wait-text">{text}</p>
+        <p className="mt-1 text-[14px] text-muted">{tr("อาจใช้เวลาสักครู่", "This may take a moment")}</p>
+        {note && <p className="mt-4 rounded-2xl bg-warn px-4 py-3 text-[14px] text-warn-ink">{note}</p>}
+      </div>
+    </div>
+  );
+}
+
 /** The 3 macro tiles. With showSplit (Today), each tile also shows its share of the calories (always 100% together). */
 export function MacroCards({ m, targets, showSplit }: { m: Macros; targets?: { protein: number; carbs: number; fat: number }; showSplit?: boolean }) {
   const { tr } = useLang();

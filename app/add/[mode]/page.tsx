@@ -5,7 +5,7 @@ import { Suspense, useRef, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { BarcodeLookup } from "../../components/BarcodeLookup";
 import { MealReview, type MealDraft } from "../../components/MealReview";
-import { useAiStatus } from "../../components/ui";
+import { useAiStatus, WaitPopup } from "../../components/ui";
 import { guessSlot, thaiDateKey } from "../../lib/date";
 import { useLang } from "../../lib/lang";
 import { blankItem, cleanBox, cleanNumber, newId } from "../../lib/nutrition";
@@ -157,7 +157,7 @@ function AddInner() {
 
       {step === "input" && mode === "barcode" && <BarcodeLookup onPick={pickBarcode} onManual={goManual} />}
 
-      {step === "input" && mode !== "barcode" && (
+      {(step === "input" || step === "loading") && mode !== "barcode" && (
         <div className="space-y-5">
           {mode === "photo" && (
             <div className="card overflow-hidden">
@@ -231,19 +231,16 @@ function AddInner() {
         </div>
       )}
 
-      {step === "loading" && (
-        <div className="flex flex-col items-center gap-4 py-24 text-center">
-          <div className="h-12 w-12 animate-spin rounded-full border-4 border-olive-soft border-t-olive" />
-          <p className="text-[18px]">{tr("กำลังวิเคราะห์อาหาร…", "Checking your food…")}</p>
-          <p className="text-[14px] text-muted">{tr("อาจใช้เวลาสักครู่", "This may take a moment")}</p>
-          <p className="mx-6 rounded-2xl bg-warn px-4 py-3 text-[15px] text-warn-ink" data-testid="stay-note">
-            {tr(
-              "อย่าปิดหน้านี้หรือสลับไปแอปอื่นนะ ถ้าปิดไป อาจต้องเริ่มใหม่",
-              "Please keep this page open and don't switch apps. If you close it, you may need to start again.",
-            )}
-          </p>
-        </div>
-      )}
+      <WaitPopup
+        text={
+          step === "loading"
+            ? mode === "photo"
+              ? tr("กำลังอ่านรูปอาหาร…", "Reading your food photo…")
+              : tr("กำลังวิเคราะห์อาหาร…", "Checking your food…")
+            : null
+        }
+        note={tr("อย่าปิดหน้านี้หรือสลับไปแอปอื่นนะ", "Please keep this page open and don't switch apps.")}
+      />
 
       {step === "review" && (
         <MealReview
