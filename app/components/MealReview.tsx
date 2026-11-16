@@ -2,7 +2,8 @@
 import { OffAttribution } from "./OffAttribution";
 import { aiFetch } from "../lib/aiFetch";
 import { useMemo, useRef, useState } from "react";
-import { AI_MARGIN, blankItem, changeAmount, cleanBox, cleanNumber, energyCheck, fmtAmount, fmtKcal, newId, pickMacros, sumMacros } from "../lib/nutrition";
+import { blankItem, changeAmount, cleanBox, cleanNumber, energyCheck, fmtAmount, fmtKcal, newId, pickMacros, sumMacros } from "../lib/nutrition";
+import { BUFFER_TEXT, LEGACY_MARGIN_PCT, bufferSummary, cleanBufferPct, dropBuffer, forEnergyCheck, hasLegacyMargin, isBuffered, originalKcal, pctLabel, startBuffer } from "../lib/calorieBuffer";
 import { aiDairy, dairyItems, isDairy, warnDairy } from "../lib/dairy";
 import { useLang } from "../lib/lang";
 import { useStore } from "../lib/store";
@@ -70,10 +71,13 @@ export function ItemEditor({
   // Round 39: typing a number = her own number now. A nutrient she types is no longer unknown.
   const setNumber = (k: "kcal" | MacroKey, n: number | null) => {
     const missing = (item.missing ?? []).filter((x) => x !== k);
-    onChange({ ...item, [k]: cleanNumber(n), prov: USER_TYPED, missing: missing.length ? missing : undefined });
+    // Round 40: typing kcal = her own kcal now → the AI's number and the buffer are dropped.
+    // Old +15% items: the typed kcal is hers too, so the old mark goes.
+    const base = k === "kcal" ? { ...dropBuffer(item), margin: item.margin === true ? false : item.margin } : item;
+    onChange({ ...base, [k]: cleanNumber(n), prov: USER_TYPED, missing: missing.length ? missing : undefined });
   };
   const shown = (k: MacroKey) => (item.missing?.includes(k) ? null : item[k]);
-  const { tr } = useLang();
+  const { tr, lang } = useLang();
   return (
     <div className="space-y-4 pb-2">
       <div>
@@ -115,7 +119,12 @@ export function ItemEditor({
           <NumberField id="it-f" value={shown("fat")} onChange={(n) => setNumber("fat", n)} placeholder={tr("ไม่ทราบ", "Unknown")} />
         </div>
       </div>
-      <EnergyHint m={item} missing={item.missing} />
+      {isBuffered(item) && (
+        <p className="-mt-2 text-[13px] text-muted" data-testid="item-buffer-note">
+          {BUFFER_TEXT.aiSaid[lang]} ~{fmtKcal(originalKcal(item))} · {pctLabel(item.bufferPct ?? 0)} → {BUFFER_TEXT.counted[lang]} {fmtKcal(item.kcal)} kcal
+        </p>
+      )}
+      <EnergyHint m={forEnergyCheck(item)} missing={item.missing} />
       <label className="flex min-h-[48px] items-center gap-3 rounded-2xl bg-cream px-4">
         <input type="checkbox" className="h-5 w-5 accent-[var(--olive)]" checked={item.estimated} onChange={(e) => set({ estimated: e.target.checked })} />
         <span>{tr("เป็นค่าประมาณ", "This is an estimate")}</span>
@@ -145,7 +154,6 @@ export function MealReview({
   photo,
   initial,
   mockBadge,
-  marginNote,
   firstQuestion,
   chatEnabled,
   chatDisabledReason,
@@ -161,8 +169,6 @@ export function MealReview({
   photo: string | null;
   initial: MealDraft;
   mockBadge?: boolean;
-  /** Show "AI numbers include a +15% safety margin". */
-  marginNote?: boolean;
   firstQuestion?: string | null;
   chatEnabled: boolean;
   chatDisabledReason?: string;
@@ -177,7 +183,6 @@ export function MealReview({
   const [title, setTitle] = useState(initial.title);
   const [slot, setSlot] = useState<MealSlot>(initial.slot);
   const [items, setItems] = useState<FoodItem[]>(initial.items);
-  const pct = Math.round(AI_MARGIN * 100);
   const [editingId, setEditingId] = useState<string | null>(startEditingId ?? null);
   const [chat, setChat] = useState<ChatMsg[]>(firstQuestion ? [{ role: "assistant", text: firstQuestion }] : []);
   const [msg, setMsg] = useState("");
@@ -188,6 +193,9 @@ export function MealReview({
 
   const total = useMemo(() => sumMacros(items.map(pickMacros)), [items]);
   const { goals } = useStore();
+  // Round 40: her buffer for NEW AI guesses from the chat. Items keep their own % once made.
+  const bufferPct = cleanBufferPct(goals.calorieBuffer);
+  const buf = useMemo(() => bufferSummary(items), [items]);
   const avoidDairy = warnDairy(goals);
   const milky = avoidDairy ? dairyItems(items) : [];
   const editing = items.find((i) => i.id === editingId) ?? null;
@@ -206,8 +214,10 @@ export function MealReview({
         "/api/refine",
         {
           title,
-          items: items.map(({ id, name, amount, unit, kcal, protein, carbs, fat, kind, estimated, margin }) => ({
-            id, name, amount, unit, kcal, protein, carbs, fat, kind, estimated, margin: margin === true,
+          // Round 40: the AI sees its own kcal (never the buffered one); margin=true only for old +15% items.
+          items: items.map((i) => ({
+            id: i.id, name: i.name, amount: i.amount, unit: i.unit, kcal: originalKcal(i), protein: i.protein, carbs: i.carbs, fat: i.fat,
+            kind: i.kind, estimated: i.estimated, margin: hasLegacyMargin(i),
           })),
           history: chat.filter((c) => !c.error).map(({ role, text }) => ({ role, text })),
           message: text,
@@ -227,8 +237,8 @@ export function MealReview({
       const r = data.result as {
         reply: string;
         question: string | null;
-        edits: { id: string; action: "update" | "remove"; item: Omit<FoodItem, "id"> | null }[];
-        adds: Omit<FoodItem, "id">[];
+        edits: { id: string; action: "update" | "remove"; item: (Omit<FoodItem, "id"> & { userAmount?: boolean }) | null }[];
+        adds: (Omit<FoodItem, "id"> & { userAmount?: boolean })[];
       };
       const changed: string[] = [];
       setItems((prev) => {
@@ -240,8 +250,11 @@ export function MealReview({
             next = next.filter((x) => x.id !== e.id);
           } else if (e.item) {
             const old = next[idx];
-            next[idx] = {
-              ...old,
+            const exact = e.item.userAmount === true || e.item.fromLabel === true;
+            // An old +15% item scaled by the AI ("ate half") keeps its old numbers' meaning: no new buffer on top.
+            const keepLegacy = hasLegacyMargin(old) && !exact;
+            const updated: FoodItem = {
+              ...dropBuffer(old),
               name: e.item.name || old.name,
               amount: cleanNumber(e.item.amount),
               unit: e.item.unit || old.unit,
@@ -254,19 +267,24 @@ export function MealReview({
               box: old.box, // the photo position never changes
               dairy: aiDairy(e.item.name || old.name, e.item.dairy) || old.dairy === true,
               dairySource: e.item.dairySource ?? old.dairySource ?? null,
-              margin: e.item.margin === false ? false : old.margin,
-              fromLabel: e.item.fromLabel === true ? true : e.item.margin === false ? false : old.fromLabel,
+              margin: keepLegacy ? true : old.margin === true ? false : old.margin,
+              fromLabel: e.item.fromLabel === true ? true : exact ? false : old.fromLabel,
               // Round 39: the AI wrote new numbers for this item → they are the AI's now.
-              prov: provFromAi({ fromLabel: e.item.fromLabel === true, userAmount: (e.item as { userAmount?: boolean }).userAmount === true }),
+              prov: provFromAi({ fromLabel: e.item.fromLabel === true, userAmount: e.item.userAmount === true }),
               missing: undefined,
             };
+            // Round 40: fresh AI numbers → the item keeps its OWN buffer %, worked out again from the AI's kcal.
+            // Items that never had a buffer (labels, her numbers, older items) get 0%: nothing is added to them.
+            next[idx] = keepLegacy ? updated : startBuffer(updated, old.aiKcal != null ? (old.bufferPct ?? 0) : 0);
             changed.push(old.id);
           }
         }
         for (const a of r.adds) {
           const id = newId("it");
-          next.push({
-            ...a,
+          const { userAmount, margin: _m, ...rest } = a;
+          void _m;
+          next.push(startBuffer({
+            ...rest,
             id,
             amount: cleanNumber(a.amount),
             kcal: cleanNumber(a.kcal),
@@ -279,10 +297,9 @@ export function MealReview({
             box: cleanBox(a.box),
             dairy: aiDairy(a.name, a.dairy),
             dairySource: a.dairySource ?? null,
-            margin: a.margin === true,
             fromLabel: a.fromLabel === true,
-            prov: provFromAi({ fromLabel: a.fromLabel === true, userAmount: (a as { userAmount?: boolean }).userAmount === true }),
-          });
+            prov: provFromAi({ fromLabel: a.fromLabel === true, userAmount: userAmount === true }),
+          }, bufferPct));
           changed.push(id);
         }
         return next;
@@ -347,13 +364,20 @@ export function MealReview({
         <MacroCards m={total} />
         <MissingNote missing={joinMissing(...items.map((i) => i.missing))} className="text-center" />
         {items.some((i) => i.ref?.source === "off") && <OffAttribution />}
-        {marginNote && items.some((i) => i.margin) && (
-          <p className="text-center text-[13px] text-muted" data-testid="margin-note">
-            {tr(
-              `รายการที่มีป้าย +${pct}% คือ AI กะปริมาณเอง จึงบวกเผื่อไว้ · ถ้าบอกน้ำหนักจริง (เช่น "แซลมอน 120 กรัม") หรือถ่ายให้เห็นฉลากโภชนาการ จะใช้ค่าจริง ไม่บวกเพิ่ม`,
-              `Items marked +${pct}% are the AI's own guess, so a safety margin is added · Tell it the real weight (e.g. "salmon 120 g") or show the nutrition label in the photo, and the real numbers are used with no margin`,
-            )}
+        {buf.extra > 0.5 && (
+          <p className="text-center text-[14px] text-muted" data-testid="buffer-note">
+            {BUFFER_TEXT.aiSaid[lang]} <span className="num">~{fmtKcal(buf.aiKcal)}</span> · {BUFFER_TEXT.counted[lang]}{" "}
+            <span className="num font-semibold text-ink">{fmtKcal(buf.trackingKcal)}</span> kcal
+            <span className="block text-[12px]">
+              {tr(
+                `เผื่อ ${buf.pcts.map(pctLabel).join(" / ")} เฉพาะแคลอรี่ของรายการที่ AI กะเอง · โปรตีน คาร์บ ไขมันเท่าเดิม`,
+                `${buf.pcts.map(pctLabel).join(" / ")} buffer on calories of AI-guessed items only · Protein, carbs and fat unchanged`,
+              )}
+            </span>
           </p>
+        )}
+        {items.some(hasLegacyMargin) && (
+          <p className="text-center text-[12px] text-muted" data-testid="legacy-margin-note">{BUFFER_TEXT.legacyNote[lang]}</p>
         )}
       </div>
 
@@ -365,7 +389,8 @@ export function MealReview({
         <ul className="divide-y divide-line">
           {items.map((i) => {
             const prov = itemProvenance(i, entrySource ? { source: entrySource } : null);
-            const off = energyCheck(i, i.missing).status;
+            // Round 40: checked on the AI's own kcal, so her buffer never looks like a mistake.
+            const off = energyCheck(forEnergyCheck(i), i.missing).status;
             return (
             <li key={i.id}>
               <button
@@ -380,8 +405,9 @@ export function MealReview({
                     <span className="font-medium">{i.name || tr("ไม่มีชื่อ", "No name")}</span>
                     {i.kind === "extra" && <Badge tone="olive">{tr("เพิ่มเติม", "Extra")}</Badge>}
                     {(i.estimated || prov.verification === "estimated") && <Badge>{tr("ประมาณ", "Estimate")}</Badge>}
-                    {marginNote && i.margin && <Badge tone="muted">+{pct}%</Badge>}
-                    {marginNote && prov.source === "ai" && i.margin === false && <Badge tone="olive">{tr("น้ำหนักจริง", "Exact amount")}</Badge>}
+                    {isBuffered(i) && <Badge tone="muted">{pctLabel(i.bufferPct ?? 0)}</Badge>}
+                    {hasLegacyMargin(i) && <Badge tone="muted">{tr(`เดิม +${LEGACY_MARGIN_PCT}%`, `Old +${LEGACY_MARGIN_PCT}%`)}</Badge>}
+                    {prov.source === "ai" && prov.via === "exact-amount" && <Badge tone="olive">{tr("น้ำหนักจริง", "Exact amount")}</Badge>}
                     {prov.source !== "ai" && <ProvenanceBadge prov={prov} />}
                     {i.missing?.length ? <Badge tone="muted">{tr("ข้อมูลไม่ครบ", "Incomplete")}</Badge> : null}
                     {(off === "high" || off === "low") && <Badge tone="muted">{tr("ตัวเลขไม่ค่อยตรง", "Numbers don't add up")}</Badge>}

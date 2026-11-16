@@ -6,7 +6,7 @@
 
 ---
 
-## LIVE (updated 2026-11-16; Round 39.1 plain water = 0 kcal LIVE; Round 39 nutrition accuracy: careful matching + source marks + unknown nutrients + densities LIVE; Round 38 recipe ingredient photos: any/many photos + average fallback LIVE; Round 37 waiting popup while a photo is read LIVE; Round 36 camera asks once per opening + album photos LIVE; Round 35 scan ingredients in recipes LIVE; Round 34 Phosphor Light icons LIVE; Round 33 recipes in category boxes + pot icon + 34 units LIVE; Round 32 line-only small character + % in tiles + food tip LIVE; Round 31 whole app in Frosted Calm + richer share picture LIVE; Round 30 Frosted Calm share picture + Profile LIVE; Round 29 share my day with my trainer (picture) LIVE; Round 28 simpler "กินอะไรดี" (menu + recipe, no delivery) LIVE; Round 27 label numbers = no +15% LIVE; Round 26 grouped "what can I eat" LIVE; Round 25 "what can I eat" LIVE; Round 24 weight moved to Profile, steps removed)
+## LIVE (updated 2026-11-16; Round 40 Smart Calorie Buffer BUILT + checked locally, NOT deployed — waiting for her OK; Round 39.1 plain water = 0 kcal LIVE; Round 39 nutrition accuracy: careful matching + source marks + unknown nutrients + densities LIVE; Round 38 recipe ingredient photos: any/many photos + average fallback LIVE; Round 37 waiting popup while a photo is read LIVE; Round 36 camera asks once per opening + album photos LIVE; Round 35 scan ingredients in recipes LIVE; Round 34 Phosphor Light icons LIVE; Round 33 recipes in category boxes + pot icon + 34 units LIVE; Round 32 line-only small character + % in tiles + food tip LIVE; Round 31 whole app in Frosted Calm + richer share picture LIVE; Round 30 Frosted Calm share picture + Profile LIVE; Round 29 share my day with my trainer (picture) LIVE; Round 28 simpler "กินอะไรดี" (menu + recipe, no delivery) LIVE; Round 27 label numbers = no +15% LIVE; Round 26 grouped "what can I eat" LIVE; Round 25 "what can I eat" LIVE; Round 24 weight moved to Profile, steps removed)
 
 - **App:** https://yani-food-diary.vercel.app  (Vercel, exm-labs account, free)
 - **Code:** https://github.com/yanibabe/yani-food-diary  (private; pushes auto-deploy)
@@ -46,8 +46,8 @@ Order: accuracy first, THEN Healthy Recipe Library, personalized meal ideas, wee
   (never assume every liquid is 1 g/ml). 4/4/9 kcal check as a hint only. Small estimate marks in the
   existing design. Never rewrite saved diary numbers. Regression tests for every issue.
   NOT in Round 39: USDA, Mahidol data, any change to the +15% rule, recipe library, meal planner.
-- **Round 40:** her decision on the +15% rule (plan: keep AI best guess + show a range; optional
-  "calorie buffer" on kcal only, never on protein, never on verified/label values).
+- **Round 40 ✅ BUILT (not deployed yet):** +15% removed; optional Smart Calorie Buffer 0–20% on kcal only
+  (she chose: no numeric ranges unless the method is clear → only "~" estimate marks). See Round 40 section.
 - **Round 41:** USDA FoodData Central (free, public domain CC0, source credit requested). Needs a free
   data.gov API key that SHE signs up for; key lives on the server only. 1,000 requests/hour.
 - **Round 42:** Mahidol INMU Thai Food Composition Database — free for non-commercial use with credit,
@@ -63,6 +63,46 @@ Order: accuracy first, THEN Healthy Recipe Library, personalized meal ideas, wee
 - Barcode page "ไม่ตรงกับซอง? ถ่าย/เลือกรูปฉลาก" was NOT changed (she let me decide: that button exists
   to FIX numbers, which needs a real label photo). Could be its own round later if she wants it.
 - Older open items under Round 36 (food tip ก/ข choice; Rounds 33–35 not tried on iPhone).
+
+## ▶ NEXT — Round 40 is built but NOT deployed
+- Round 40 (Smart Calorie Buffer) is saved in git but NOT on the live site. Deploy only when she says OK.
+- After deploy: she tries it on her iPhone (checklist in the Round 40 section).
+- Then Round 41 (USDA) only when she says — she must sign up for a free data.gov key herself.
+
+## Round 40 (2026-11-16) — no automatic +15%; optional Smart Calorie Buffer (kcal only) ✅ BUILT, NOT DEPLOYED
+Checkpoint before: git tag `before-round-40` (also on GitHub).
+Tests 155/155 (142 old; 5 old +15% tests updated/retired on purpose: margin.test.ts removed, 1 in
+logic.test.ts, 3 in suggest.test.ts; 13 new in `tests/round40.test.ts`). tsc clean. Lint 0 errors
+(1 old warning in LiveBarcodeScanner.tsx). Build OK. Browser check at phone size with the pretend AI (passed).
+- **Rule now:** the AI gives its plain best guess. Nothing is added by default (0%). In Profile → "เผื่อแคลอรี่"
+  she can pick 0 / 5 / 10 / 15 / 20% (`goals.calorieBuffer`, missing = 0).
+- **Only** fresh AI guesses (prov.source "ai", amount guessed) get it: photo/text meals, chat adds, and
+  "กินอะไรดี" AI ideas. **Never:** labels, Open Food Facts, numbers she typed, recipes/reference values,
+  AI items with an exact weight she gave, old saved items.
+- **kcal only.** Protein / carbs / fat never change.
+- **Stored per item:** `aiKcal` (AI's own kcal), `bufferPct`, `kcal` = tracking kcal (what totals count),
+  plus `prov` from Round 39. `setBuffer` always works from `aiKcal` → no double buffer. Changing the amount
+  scales `aiKcal` too. Typing kcal herself drops `aiKcal`/`bufferPct` (it's her number now).
+- **Old items:** never rewritten. Old items with `margin: true` already have the old +15% in ALL numbers;
+  they now show a small "เดิม +15%" badge + a note when opened. Chat edits on them scale as before, no new buffer.
+- **Screens:** meal review shows "AI ประมาณ ~710 · นับในไดอารี 799 kcal" when a buffer is on, "+15%" badge per
+  item; item editor shows "AI ~290 · +15% → 334". Today keeps "~" for estimates. 4/4/9 hint uses the AI's
+  kcal, so a buffer never triggers "ตัวเลขไม่ค่อยตรง". No numeric ranges shown (no invented ranges).
+- **AI prompts:** removed "be generous / pick the larger portion" and every +15% instruction. The AI now asks
+  ONE short question when a missing detail (portion, oil, sauce, sugar, fried vs steamed) would change kcal a
+  lot (~100 kcal or 20%+), and not for small things. Ideas: room told to the AI is shrunk by the buffer so
+  ideas still fit after it.
+- Files: new `app/lib/calorieBuffer.ts`, `tests/round40.test.ts`; changed `types.ts`, `nutrition.ts`
+  (AI_MARGIN/withMargin/markMargin removed), `suggest.ts`, `server/ai.ts`, `api/suggest/route.ts`,
+  `components/MealReview.tsx`, `add/[mode]/page.tsx`, `add/suggest/page.tsx`, `profile/page.tsx`.
+- **Not tried:** the real AI (only the pretend AI) — real question quality and real estimates unknown.
+  NOT on her iPhone. NOT deployed.
+- **Behavior she may notice:** new AI meals are ~13% lower than before (no automatic +15%) unless she picks
+  15%. Editing a label/typed item with the AI chat never adds a buffer.
+- **iPhone checklist (after deploy):** (1) Profile → เผื่อแคลอรี่ shows 0%; pick 15%; (2) add a meal by photo →
+  "+15%" badges and "AI ประมาณ ~X · นับในไดอารี Y"; protein/carbs/fat same as AI; (3) a snack with a label in
+  the photo → no "+15%"; (4) tell the AI "กินครึ่งเดียว" → kcal halves, still +15% (not more); (5) old meals on
+  Today show the same kcal as before; (6) set back to 0% → new meals have no buffer.
 
 ## Round 39 (2026-11-16) — nutrition accuracy (matching, source, unknowns, density) ✅ LIVE
 Tests: 137/137 pass (118 old, 4 old ones updated on purpose, 19 new in `tests/round39.test.ts`).

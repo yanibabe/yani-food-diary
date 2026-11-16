@@ -1,5 +1,6 @@
 "use client";
 import { MILK_WARNING_ON } from "../lib/dairy";
+import { BUFFER_CHOICES, BUFFER_TEXT, cleanBufferPct } from "../lib/calorieBuffer";
 // Profile ("Frosted Calm" look, Round 30): her character, name, 2 big numbers, then a short list.
 // Each list row opens what it holds right under it. Everything the page did before is still here.
 // "แก้ข้อมูล" edits the same answers as first-run setup; a new suggestion
@@ -40,7 +41,7 @@ import { useStore } from "../lib/store";
 import type { Goals, Profile } from "../lib/types";
 import { Icon } from "../components/Icon";
 
-type Panel = "target" | "body" | "weight" | "avoid" | "lang" | "backup" | "method";
+type Panel = "target" | "body" | "weight" | "buffer" | "avoid" | "lang" | "backup" | "method";
 
 export default function ProfilePage() {
   const { goals } = useStore();
@@ -117,6 +118,15 @@ export default function ProfilePage() {
             </ListRow>
             <ListRow label={tr("น้ำหนัก", "Weight")} on={open === "weight"} onClick={() => toggle("weight")} testId="row-weight">
               <WeightCard />
+            </ListRow>
+            <ListRow
+              label={tr("เผื่อแคลอรี่", "Calorie buffer")}
+              hint={cleanBufferPct(goals.calorieBuffer) === 0 ? BUFFER_TEXT.none[lang] : `+${cleanBufferPct(goals.calorieBuffer)}%`}
+              on={open === "buffer"}
+              onClick={() => toggle("buffer")}
+              testId="row-buffer"
+            >
+              <BufferCard />
             </ListRow>
             {MILK_WARNING_ON && (
               <ListRow label={tr("อาหารที่เลี่ยง", "Foods I avoid")} on={open === "avoid"} onClick={() => toggle("avoid")}>
@@ -223,6 +233,36 @@ function TargetCard({ goals, onSaved }: { goals: Goals; onSaved: () => void }) {
               `Usual split P20/C50/F30 → Protein ${Math.round(mt.protein)} g · Carbs ${Math.round(mt.carbs)} g · Fat ${Math.round(mt.fat)} g`,
             )}
       </p>
+    </section>
+  );
+}
+
+/** Round 40: the optional Smart Calorie Buffer (kcal only, AI guesses only, 0% by default). */
+function BufferCard() {
+  const { goals, setGoals } = useStore();
+  const { lang } = useLang();
+  const now = cleanBufferPct(goals.calorieBuffer);
+  return (
+    <section className="space-y-3 pb-3" data-testid="buffer-card">
+      <div className="grid grid-cols-5 gap-1.5" role="radiogroup" aria-label={BUFFER_TEXT.title[lang]}>
+        {BUFFER_CHOICES.map((p) => (
+          <button
+            key={p}
+            role="radio"
+            aria-checked={now === p}
+            onClick={() => setGoals({ ...goals, calorieBuffer: p })}
+            className={`num min-h-[44px] rounded-2xl text-[15px] font-medium ${now === p ? "bg-olive text-white" : "bg-cream text-ink"}`}
+            data-testid={`buffer-${p}`}
+          >
+            {p}%
+          </button>
+        ))}
+      </div>
+      <p className="px-1 text-[13px] text-muted">
+        {now === 0 ? BUFFER_TEXT.none[lang] : `+${now}%`} · {lang === "en" ? "e.g. AI 500 kcal →" : "เช่น AI 500 kcal →"}{" "}
+        <b className="num text-ink">{Math.round((500 * (100 + now)) / 100)}</b> kcal
+      </p>
+      <p className="px-1 text-[13px] text-muted">{BUFFER_TEXT.explain[lang]}</p>
     </section>
   );
 }

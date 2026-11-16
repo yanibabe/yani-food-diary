@@ -28,33 +28,18 @@ export function pickMacros(m: Macros): Macros {
   return { kcal: m.kcal, protein: m.protein, carbs: m.carbs, fat: m.fat };
 }
 
-/**
- * Safety margin for AI guesses (photo / typed meals). Exact numbers are not
- * known, so the app rounds UP by 15% (her rule: over-estimate by 15–20%).
- * Recipes and nutrition labels are exact and never get this margin.
- */
-export const AI_MARGIN = 0.15;
-
-/** Add the AI safety margin to kcal and macros. */
-export function withMargin<T extends Macros>(m: T, margin = AI_MARGIN): T {
-  return { ...m, ...scaleMacros(m, 1 + margin) };
-}
-
-/**
- * The margin is only for amounts the AI guessed. When the user gave the exact
- * amount (userAmount), or the numbers were read from a printed nutrition label
- * or kcal on the pack (fromLabel), the numbers stay as they are. margin says which.
- */
-export function markMargin<T extends Macros & { userAmount?: boolean; fromLabel?: boolean }>(i: T): T & { margin: boolean } {
-  return i.userAmount || i.fromLabel ? { ...i, margin: false } : { ...withMargin(i), margin: true };
-}
+// Round 40: the old automatic +15% (AI_MARGIN / withMargin / markMargin) is gone.
+// The optional, kcal-only buffer lives in calorieBuffer.ts.
 
 /** Change an item's amount and scale its numbers in proportion. */
 export function changeAmount(item: FoodItem, newAmount: number): FoodItem {
   if (!(newAmount >= 0)) return item;
   if (item.amount > 0) {
     const f = newAmount / item.amount;
-    return { ...item, ...scaleMacros(item, f), amount: newAmount };
+    const out: FoodItem = { ...item, ...scaleMacros(item, f), amount: newAmount };
+    // Round 40: the AI's own kcal scales too, so the buffer stays the same %.
+    if (item.aiKcal != null) out.aiKcal = item.aiKcal * f;
+    return out;
   }
   return { ...item, amount: newAmount };
 }

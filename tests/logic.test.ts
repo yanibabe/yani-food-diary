@@ -264,15 +264,12 @@ test("language: date label and label lists", () => {
   assert.equal(trFor("th")("วันนี้", "Today"), "วันนี้");
 });
 
-test("AI safety margin adds 15% to kcal and macros, keeps other fields", async () => {
-  const { withMargin, AI_MARGIN } = await import("../app/lib/nutrition.ts");
-  assert.equal(AI_MARGIN, 0.15);
-  const out = withMargin({ name: "ผัดกะเพรา", amount: 1, kcal: 600, protein: 20, carbs: 70, fat: 26 });
-  assert.equal(out.name, "ผัดกะเพรา");
-  assert.equal(out.amount, 1);
-  assert.equal(Math.round(out.kcal), 690);
-  assert.equal(Math.round(out.protein * 10) / 10, 23);
-  assert.equal(Math.round(out.fat * 10) / 10, 29.9);
+// Round 40 (updated on purpose): the old automatic +15% on kcal AND macros is gone.
+test("no automatic margin any more: the old helpers are removed", async () => {
+  const n = (await import("../app/lib/nutrition.ts")) as Record<string, unknown>;
+  assert.equal(n.AI_MARGIN, undefined);
+  assert.equal(n.withMargin, undefined);
+  assert.equal(n.markMargin, undefined);
 });
 
 import { guessSlot, upgradeSlot } from "../app/lib/date.ts";

@@ -27,6 +27,7 @@ export async function POST(req: Request) {
       eatenToday: (Array.isArray(body.eatenToday) ? body.eatenToday : []).slice(0, 20).map((t) => String(t).slice(0, 80)),
       avoidDairy: body.avoidDairy === true,
       lang,
+      bufferPct: Number(body.bufferPct) || 0,
     });
     return Response.json({ result, mock: process.env.AI_MOCK === "1" });
   } catch (e) {

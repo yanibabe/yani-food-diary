@@ -13,6 +13,7 @@ import { compressImage, savePhoto } from "../../lib/photos";
 import { useStore } from "../../lib/store";
 import { foodToItem } from "../../lib/food/toItem";
 import { provFromAi } from "../../lib/provenance";
+import { cleanBufferPct, startBuffer } from "../../lib/calorieBuffer";
 import type { Food } from "../../lib/food/provider";
 import type { FoodItem } from "../../lib/types";
 import { Icon } from "../../components/Icon";
@@ -26,7 +27,7 @@ function AddInner() {
   const search = useSearchParams();
   const date = search.get("date") || thaiDateKey();
   const router = useRouter();
-  const { upsertEntry } = useStore();
+  const { upsertEntry, goals } = useStore();
   const ai = useAiStatus();
   const { tr, lang } = useLang();
   const defaultUnit = tr("จาน", "plate");
@@ -69,7 +70,8 @@ function AddInner() {
         return;
       }
       const r = data.result as { title: string; question: string | null; items: Omit<FoodItem, "id">[] };
-      const items: FoodItem[] = r.items.map((a) => ({
+      const pct = cleanBufferPct(goals.calorieBuffer);
+      const items: FoodItem[] = r.items.map((a): FoodItem => startBuffer({
         id: newId("it"),
         name: a.name,
         amount: cleanNumber(a.amount),
@@ -84,11 +86,11 @@ function AddInner() {
         box: mode === "photo" ? cleanBox(a.box) : null,
         dairy: aiDairy(a.name, a.dairy),
         dairySource: a.dairySource ?? null,
-        margin: a.margin === true,
         fromLabel: a.fromLabel === true,
         // Round 39: where these numbers came from (an AI guess, or a printed label the AI read).
         prov: provFromAi({ fromLabel: a.fromLabel === true, userAmount: (a as { userAmount?: boolean }).userAmount === true }),
-      }));
+        // Round 40: her optional buffer (kcal only) for AI guesses; 0% by default. The AI's own kcal is kept.
+      }, pct));
       setDraft({ title: r.title || tr("อาหาร", "Meal"), slot: draft.slot, items });
       setQuestion(r.question);
       setMock(Boolean(data.mock));
@@ -251,7 +253,6 @@ function AddInner() {
           photo={mode === "photo" ? photo : null}
           initial={draft}
           mockBadge={mock}
-          marginNote={mode !== "manual" && mode !== "barcode"}
           firstQuestion={question}
           chatEnabled={aiReady}
           chatDisabledReason={tr("ยังไม่ได้ตั้งค่า AI (OpenRouter) — แตะรายการเพื่อแก้เองได้", "The AI (OpenRouter) is not set up — tap an item to edit it yourself")}

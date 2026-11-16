@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { MealReview, type MealDraft } from "../../components/MealReview";
 import { Badge, useAiStatus } from "../../components/ui";
 import { aiFetch } from "../../lib/aiFetch";
+import { cleanBufferPct } from "../../lib/calorieBuffer";
 import { aiDairy } from "../../lib/dairy";
 import { guessSlot, thaiDateKey, thaiHour } from "../../lib/date";
 import { macroTargets, proteinTargetG } from "../../lib/energy";
@@ -72,6 +73,7 @@ function SuggestInner() {
           eatenToday: todays.map((e) => e.title),
           avoidDairy: goals.avoidDairy === true,
           lang,
+          bufferPct: cleanBufferPct(goals.calorieBuffer),
         },
         lang,
       );
@@ -90,7 +92,7 @@ function SuggestInner() {
       setError(`${tr("เชื่อมต่อไม่ได้", "Couldn't connect")}: ${e instanceof Error ? e.message : String(e)}`);
     }
     setLoading(false);
-  }, [left, proteinLeft, todays, goals.avoidDairy, lang, tr]);
+  }, [left, proteinLeft, todays, goals.avoidDairy, goals.calorieBuffer, lang, tr]);
 
   // Ask once, as soon as her diary has loaded.
   const asked = useRef(false);
@@ -122,7 +124,8 @@ function SuggestInner() {
             box: null,
             dairy: aiDairy(idea.name, undefined),
             dairySource: null,
-            margin: idea.margin,
+            // Round 40: the AI's own kcal + the buffer % this idea was sized with (kcal only).
+            ...(idea.aiKcal != null ? { aiKcal: idea.aiKcal, bufferPct: idea.bufferPct } : {}),
             // Round 39: her recipe → worked out from it; an AI idea → the AI's estimate.
             prov: idea.place === "recipe" ? { source: "recipe", verification: "unknown" } : { source: "ai", verification: "estimated", via: "suggest" },
           },
@@ -175,7 +178,6 @@ function SuggestInner() {
           photo={null}
           initial={picked.draft}
           mockBadge={mock}
-          marginNote={picked.idea.margin}
           chatEnabled={aiReady}
           chatDisabledReason={tr("ยังไม่ได้ตั้งค่า AI (OpenRouter) — แตะรายการเพื่อแก้เองได้", "The AI (OpenRouter) is not set up — tap an item to edit it yourself")}
           onSave={save}
@@ -235,7 +237,12 @@ function SuggestInner() {
         </section>
 
         <p className="px-1 text-[13px] text-muted">
-          {tr("สูตรและแคลอรี่จาก AI เป็นค่าประมาณ (บวกเผื่อไว้ 15% แล้ว)", "The recipe and kcal come from the AI and are estimates (15% already added to be safe)")}
+          {c.bufferPct > 0 && c.aiKcal != null
+            ? tr(
+                `สูตรและแคลอรี่จาก AI เป็นค่าประมาณ (AI ~${Math.round(c.aiKcal)} kcal + เผื่อ ${c.bufferPct}% ตามที่ตั้งไว้ = ${Math.round(c.kcal)} kcal)`,
+                `The recipe and kcal come from the AI and are estimates (AI ~${Math.round(c.aiKcal)} kcal + your ${c.bufferPct}% buffer = ${Math.round(c.kcal)} kcal)`,
+              )
+            : tr("สูตรและแคลอรี่จาก AI เป็นค่าประมาณ", "The recipe and kcal come from the AI and are estimates")}
         </p>
 
         <button className="btn-primary w-full" onClick={() => pick(c)} data-testid="cook-log">

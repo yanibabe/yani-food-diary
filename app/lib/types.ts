@@ -73,8 +73,14 @@ export type FoodItem = Macros & {
   dairy?: boolean;
   /** Which dairy, e.g. "นมข้นหวาน". From the AI. */
   dairySource?: string | null;
-  /** true = the AI guessed the amount, so +15% was added. false = exact amount, no margin. Missing on old items. */
+  /** OLD items only (before Round 40): true = the old automatic +15% is already inside ALL the numbers.
+   *  New items never set it. See app/lib/calorieBuffer.ts. */
   margin?: boolean;
+  /** Round 40: the AI's own kcal for this amount, before any buffer. Only on new AI guesses.
+   *  When set, `kcal` above = the kcal the diary counts (tracking kcal). Missing on old items. */
+  aiKcal?: number;
+  /** Round 40: the calorie buffer % used for `kcal` (0, 5, 10, 15 or 20). kcal only, never macros. */
+  bufferPct?: number;
   /** true = numbers read from a printed nutrition label / kcal on the pack (no margin). */
   fromLabel?: boolean;
   /** Where the numbers came from, when it was an outside food database (e.g. Open Food Facts).
@@ -293,4 +299,6 @@ export type Goals = {
   avoidDairy?: boolean;
   /** Glasses of water per day (250 ml each). Missing = 8. */
   waterGoal?: number;
+  /** Round 40: Smart Calorie Buffer % for new AI guesses (0, 5, 10, 15, 20). Missing = 0. */
+  calorieBuffer?: number;
 };

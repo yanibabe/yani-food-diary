@@ -4,11 +4,11 @@
 
 import { z } from "zod";
 import { trFor, type Lang } from "../i18n.ts";
-import { AI_MARGIN, markMargin } from "../nutrition.ts";
+import { LEGACY_MARGIN_PCT, cleanBufferPct } from "../calorieBuffer.ts";
 import { UNITS, type IngredientUnit } from "../types.ts";
 import { IngredientRefSchema, cleanIngredientRef, type IngredientRef } from "../ingredientRef.ts";
 export { IngredientRefSchema, cleanIngredientRef, type IngredientRef };
-import { AI_PLACES, fitAiIdeas, kcalRoom, type AiGroups, type RawIdea } from "../suggest.ts";
+import { AI_PLACES, aiRoom, fitAiIdeas, kcalRoom, type AiGroups, type RawIdea } from "../suggest.ts";
 
 const ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
 export const MODEL = "google/gemini-3.8-flash";
@@ -45,7 +45,7 @@ const ItemSchema = z.object({
 export const AnalysisSchema = z.object({
   title: z.string().catch("").describe("Short name for the whole meal"),
   items: z.array(ItemSchema),
-  question: z.string().nullish().describe("ONE short question if something important is unclear, else null"),
+  question: z.string().nullish().describe("ONE short, easy question ONLY if a missing detail (portion size, cooking oil, sauce/dressing, sugar, fried vs steamed…) would change the meal's kcal a lot; else null"),
 });
 export type Analysis = z.infer<typeof AnalysisSchema>;
 
@@ -85,15 +85,15 @@ Rules:
   1) Judge its size against the plate, bowl, spoon or hand in the photo. Standard Thai plates are about 23–26 cm wide; a plate of rice is often 150–250 g of cooked rice.
   2) Write the eaten weight in grams.
   3) Work out kcal from grams using values for the dish AS COOKED in Thai shops and homes (cooked rice ≈ 130 kcal/100 g), not for plain raw ingredients.
-- Thai dishes are often cooked with a lot of oil, coconut milk, sugar and fatty meat. Be generous with cooking oil — when a dish is fried or stir-fried, assume a bit MORE oil than looks likely. Count this hidden energy: stir-fried, deep-fried and fried-egg dishes soak up oil (often 1–2 tbsp = 120–240 kcal per plate); curries with coconut milk, sweet sauces and pork belly add a lot too. Include it in the dish's kcal, or list cooking oil as its own "extra" item (estimated=true, say so in note) — never both.
-- Photo estimates usually come out TOO LOW, because portions look smaller in photos and hidden oil is missed. When you are unsure between two sizes, pick the larger, typical restaurant portion.
+- Thai dishes are often cooked with oil, coconut milk, sugar and fatty meat. Count this hidden energy REALISTICALLY, the way the dish is usually made: stir-fried, deep-fried and fried-egg dishes soak up oil (often 1–2 tbsp = 120–240 kcal per plate); curries with coconut milk, sweet sauces and pork belly add a lot too. Do not leave it out, and do not inflate it. Include it in the dish's kcal, or list cooking oil as its own "extra" item (estimated=true, say so in note) — never both.
+- Give your single BEST estimate: not deliberately high, not deliberately low. Portions in photos can look smaller than they are, so judge the size carefully against the plate. NEVER add a safety margin yourself — the app adds an optional calorie buffer only if the user chose one.
 - Check your numbers: kcal should be close to protein×4 + carbs×4 + fat×9.
 - Set estimated=true whenever portion size or recipe is a guess.
 - PRINTED LABELS: if the photo clearly shows a nutrition facts table (ข้อมูลโภชนาการ / Nutrition Facts) or printed energy (พลังงาน ... กิโลแคลอรี / kcal) for an item, or the user types the numbers printed on the pack, use THOSE numbers exactly — do not enlarge them, add no oil — and set fromLabel=true. Labels are usually per serving (หนึ่งหน่วยบริโภค): multiply by the servings actually eaten (if they ate the whole pack, use servings per pack, จำนวนหน่วยบริโภคต่อ...). If a macro is not printed, estimate only that one and say so in note. If the numbers are blurry or cut off, do NOT guess them: set fromLabel=false and estimate normally. Food with no label in the photo always has fromLabel=false.
-- When the user gives an item's exact weight or volume, use it EXACTLY (do not enlarge it) and set userAmount=true. If they say how it was cooked (e.g. grilled with no oil, air-fried, steamed), follow that: do not add oil they said they did not use. Use plain food-table values for those items; the app adds no margin to them.
+- When the user gives an item's exact weight or volume, use it EXACTLY (do not enlarge it) and set userAmount=true. If they say how it was cooked (e.g. grilled with no oil, air-fried, steamed), follow that: do not add oil they said they did not use. Use plain food-table values for those items.
 - dairy: think about how the dish is usually made in Thailand (e.g. Thai iced tea, coffee drinks, bakery, creamy soups, some curries and desserts use milk, butter or condensed milk). Set dairy=true when it likely contains ANY milk product, and name it in dairySource.
 - box: when there is a photo and you can locate the food, give its bounding box as fractions (0..1) of the image. Otherwise null.
-- question: ask at most ONE short question only if the answer would change calories a lot. Otherwise null.
+- question: if an important detail is missing and you cannot see or reasonably infer it — portion size, how much cooking oil, a sauce or dressing, sugar or milk in a drink, fried vs steamed/boiled — and the answer would change the meal's kcal a lot (roughly 100 kcal or 20% or more), ask ONE short, easy question about the biggest one (e.g. "Was it stir-fried with a lot of oil or a little?"). Still give your best estimate now and set estimated=true on that item. Do NOT ask about small things (garnish, herbs, a pinch of salt, a splash of sauce). If nothing important is unclear, null.
 - Use typical Thai portion sizes and Thai food composition values (e.g. INMU Thai Food Composition Table). Be realistic: do not shrink portions or leave out cooking fat.
 Return ONLY a JSON object matching this JSON Schema:
 ${shapeOf(AnalysisSchema)}`;
@@ -104,9 +104,10 @@ Rules:
 - Change ONLY the items their message is about. Do not touch other items.
 - For an update, return the full new values for that item: amount eaten and nutrients scaled to what was actually eaten. Keep its box unchanged.
 - "Ate it all" / "finished it" means no change for that item.
-- Items with margin=true already include the app's +${Math.round(AI_MARGIN * 100)}% safety margin; items with margin=false do not. When you update an item by scaling (e.g. "ate half"), scale from its current numbers and set userAmount=false. If you must re-estimate an item from scratch without an exact amount, add ${Math.round(AI_MARGIN * 100)}% to your best guess (userAmount=false).
-- If the user now gives an item's exact weight or volume (e.g. "salmon was 120 g"), recalculate that item with plain food-table values for exactly that amount, with NO margin, and set userAmount=true. Same for new items in adds: userAmount=true only if they gave the exact amount. Do NOT add the margin yourself to adds — the app adds it when userAmount is false.
-- If the user now gives the numbers printed on an item's pack or nutrition label (e.g. "the label says 180 kcal, protein 10 g"), use those numbers exactly for the amount eaten, with NO margin, and set fromLabel=true. Same for adds.
+- NEVER add any safety margin yourself. The numbers you see are the AI's own best estimates, except items with margin=true: those were saved by an older version of the app and already include an old +${LEGACY_MARGIN_PCT}% on all numbers. When you update an item by scaling (e.g. "ate half"), scale from its current numbers and set userAmount=false. If you must re-estimate an item from scratch without an exact amount, give your plain best estimate (userAmount=false).
+- If the user now gives an item's exact weight or volume (e.g. "salmon was 120 g"), recalculate that item with plain food-table values for exactly that amount and set userAmount=true. Same for new items in adds: userAmount=true only if they gave the exact amount.
+- If the user now gives the numbers printed on an item's pack or nutrition label (e.g. "the label says 180 kcal, protein 10 g"), use those numbers exactly for the amount eaten and set fromLabel=true. Same for adds.
+- If they answer an earlier question (e.g. how much oil, which sauce, how it was cooked), update only the item(s) it is about.
 - If they mention oil, sauce or add-ons that are not in the list, add them in adds (kind "extra"); if the amount is unclear, give a typical amount, set estimated=true, and say so in note.
 - For every item you return, set dairy=true (and dairySource) when it likely contains ANY milk product.
 - If a change is ambiguous, make no edit for it and ask one short question.
@@ -216,20 +217,13 @@ async function callAi<T>(system: string, content: Part[], schema: z.ZodType<T>, 
   return parsed.data;
 }
 
-type AiItem = Analysis["items"][number];
-/** What the app gets back: each item says if the +15% margin was added (margin=true). */
-export type MarkedItem = AiItem & { margin: boolean };
-export type AnalysisOut = Omit<Analysis, "items"> & { items: MarkedItem[] };
-export type RefineOut = Omit<Refine, "edits" | "adds"> & {
-  edits: (Omit<Refine["edits"][number], "item"> & { item?: (AiItem & { margin?: boolean }) | null })[];
-  adds: MarkedItem[];
-};
-
-/** The margin is only for amounts the AI had to guess. Exact amounts and label numbers stay as they are. */
-const marked = (i: AiItem): MarkedItem => markMargin(i);
+// Round 40: the AI's plain best estimates go to the phone. No margin is added here any more;
+// the phone adds her optional calorie buffer (kcal only) — see app/lib/calorieBuffer.ts.
+export type AnalysisOut = Analysis;
+export type RefineOut = Refine;
 
 export async function analyzeMeal(input: { image: string | null; text: string; lang: Lang }): Promise<AnalysisOut> {
-  if (process.env.AI_MOCK === "1") return addMargin(mockAnalyze(input));
+  if (process.env.AI_MOCK === "1") return mockAnalyze(input);
   const content: Part[] = [
     {
       type: "text",
@@ -243,12 +237,7 @@ export async function analyzeMeal(input: { image: string | null; text: string; l
       throw new AiError("bad-output", trFor(input.lang)("รูปแบบรูปไม่รองรับ", "This picture format is not supported"), 400);
     content.push({ type: "image_url", image_url: { url: input.image } });
   }
-  return addMargin(await callAi(ANALYZE_SYSTEM(input.lang), content, AnalysisSchema, input.lang));
-}
-
-/** Guessed items get the safety margin (see AI_MARGIN in nutrition.ts); exact ones don't. */
-function addMargin(a: Analysis): AnalysisOut {
-  return { ...a, items: a.items.map(marked) };
+  return callAi(ANALYZE_SYSTEM(input.lang), content, AnalysisSchema, input.lang);
 }
 
 export type RefineInput = {
@@ -260,7 +249,7 @@ export type RefineInput = {
 };
 
 export async function refineMeal(input: RefineInput): Promise<RefineOut> {
-  if (process.env.AI_MOCK === "1") return marginOnAdds(mockRefine(input));
+  if (process.env.AI_MOCK === "1") return mockRefine(input);
   const text = [
     `Meal: ${input.title}`,
     `Current items (JSON): ${JSON.stringify(input.items)}`,
@@ -271,20 +260,7 @@ export async function refineMeal(input: RefineInput): Promise<RefineOut> {
   ]
     .filter(Boolean)
     .join("\n\n");
-  return marginOnAdds(await callAi(REFINE_SYSTEM(input.lang), [{ type: "text", text }], RefineSchema, input.lang));
-}
-
-/**
- * New items from a chat message get the margin unless the amount was exact.
- * Edits scale from numbers that already have it (margin unchanged), except an
- * edit with an exact amount, which has no margin.
- */
-function marginOnAdds(r: Refine): RefineOut {
-  return {
-    ...r,
-    edits: r.edits.map((e) => (e.item?.userAmount || e.item?.fromLabel ? { ...e, item: { ...e.item, margin: false } } : e)),
-    adds: r.adds.map(marked),
-  };
+  return callAi(REFINE_SYSTEM(input.lang), [{ type: "text", text }], RefineSchema, input.lang);
 }
 
 // ---------------------------------------------------------------------------
@@ -317,7 +293,9 @@ function mockAnalyze(input: { image: string | null; text: string; lang: Lang }):
   if (/น้ำมัน/.test(t)) {
     items.push({ name: "น้ำมันพืช", amount: 1, unit: "ช้อนชา", kcal: 40, protein: 0, carbs: 0, fat: 4.5, estimated: true, kind: "extra", note: "ไม่ได้ระบุปริมาณ ใช้ค่าประมาณ 1 ช้อนชา", box: null });
   }
-  return { title: "ข้าวไก่ทอดกับผักลวก", items, question: null };
+  // Round 40: an important detail is missing (how much oil) → ask, instead of adding anything silently.
+  const question = /ผัด/.test(t) && !/น้ำมัน/.test(t) ? "ผัดใช้น้ำมันเยอะหรือน้อยคะ? (เช่น 1 ช้อนชา หรือ 1 ช้อนโต๊ะ)" : null;
+  return { title: "ข้าวไก่ทอดกับผักลวก", items, question };
 }
 
 function mockRefine(input: RefineInput): Refine {
@@ -362,7 +340,7 @@ function mockRefine(input: RefineInput): Refine {
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 // One ingredient's nutrition per 100 g (for recipes, when there is no label).
-// No safety margin here: these are plain food-table values for a raw ingredient.
+// No buffer here: these are plain food-table values for a raw ingredient.
 // ---------------------------------------------------------------------------
 
 
@@ -556,12 +534,14 @@ export type SuggestInput = {
   eatenToday: string[];
   avoidDairy: boolean;
   lang: Lang;
+  /** Round 40: her calorie buffer %; the room told to the AI is made smaller so ideas still fit. */
+  bufferPct?: number;
 };
 
 const SUGGEST_SYSTEM = (lang: Lang) => `You are a friendly nutrition helper inside a Thai food diary app in Thailand.
 The user asks: "I have this many kcal left today — what can I eat?" Give 8 ideas: 4 with place "7-eleven" and 4 with place "menu".
 Rules:
-- Each idea must be ONE thing to eat now, sized so its kcal is AT MOST the "kcal room" given. Aim for about 50–85% of the room; never above it. The app adds a +${Math.round(AI_MARGIN * 100)}% safety margin to your numbers afterwards, so be realistic, not low.
+- Each idea must be ONE thing to eat now, sized so its kcal is AT MOST the "kcal room" given. Aim for about 50–85% of the room; never above it. Give realistic numbers (your best estimate), not low and not padded.
 - 7-eleven: real products sold at 7-Eleven Thailand (e.g. boiled eggs, chicken breast packs, onigiri, steamed buns, ready meals, unsweetened soy milk, Greek yogurt).
 - menu: simple, well-known dishes anyone can cook at home in a normal kitchen (about 20 minutes or less), with easy-to-buy ingredients. Use the common dish name so she can also search it. Give ONE serving: "ingredients" with amounts (grams or spoons) and 3–6 short "steps". The kcal must match those ingredients. Prefer different dishes.
 - She wants HIGH PROTEIN ideas: prefer eggs, chicken breast, fish, tofu, soy milk, lean meat. Try to help her reach the protein left.
@@ -576,8 +556,9 @@ ${shapeOf(SuggestSchema)}`;
 
 export async function suggestMeals(input: SuggestInput): Promise<AiGroups & { light: boolean }> {
   const { room, light } = kcalRoom(input.kcalLeft);
-  const raw = process.env.AI_MOCK === "1" ? mockSuggest() : await callAi(SUGGEST_SYSTEM(input.lang), [{ type: "text", text: suggestPrompt(input, room, light) }], SuggestSchema, input.lang);
-  return { ...fitAiIdeas(raw.ideas, input.kcalLeft), light };
+  const pct = cleanBufferPct(input.bufferPct);
+  const raw = process.env.AI_MOCK === "1" ? mockSuggest() : await callAi(SUGGEST_SYSTEM(input.lang), [{ type: "text", text: suggestPrompt(input, aiRoom(room, pct), light) }], SuggestSchema, input.lang);
+  return { ...fitAiIdeas(raw.ideas, input.kcalLeft, undefined, pct), light };
 }
 
 function suggestPrompt(input: SuggestInput, room: number, light: boolean): string {
