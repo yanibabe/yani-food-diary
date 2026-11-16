@@ -50,16 +50,84 @@ export type FoodItem = Macros & {
 /** source + id in that database. "off" = Open Food Facts (id = barcode). */
 export type FoodRef = { source: "off" | "usda" | "fatsecret"; sourceId: string };
 
-export type IngredientUnit = "g" | "kg" | "ml" | "l" | "egg" | "piece";
+/** How a unit turns into grams: "mass" × factor = grams; "volume" × factor = ml;
+ *  "count" (egg, clove, can…) needs the weight of one unit. */
+export type UnitKind = "mass" | "volume" | "count";
 
-export const UNIT_LABEL: Record<IngredientUnit, L> = {
-  g: { th: "กรัม", en: "g" },
-  kg: { th: "กิโลกรัม", en: "kg" },
-  ml: { th: "มล.", en: "ml" },
-  l: { th: "ลิตร", en: "liter" },
-  egg: { th: "ฟอง", en: "egg" },
-  piece: { th: "ชิ้น", en: "piece" },
-};
+type UnitDef = L & { kind: UnitKind; factor: number };
+
+/** Every unit people use for food. The ORDER here is the order in the picker. */
+export const UNITS = {
+  // weight
+  g: { th: "กรัม", en: "g", kind: "mass", factor: 1 },
+  kg: { th: "กิโลกรัม", en: "kg", kind: "mass", factor: 1000 },
+  mg: { th: "มิลลิกรัม", en: "mg", kind: "mass", factor: 0.001 },
+  oz: { th: "ออนซ์", en: "oz", kind: "mass", factor: 28.35 },
+  lb: { th: "ปอนด์", en: "lb", kind: "mass", factor: 453.6 },
+  // volume
+  ml: { th: "มล.", en: "ml", kind: "volume", factor: 1 },
+  l: { th: "ลิตร", en: "liter", kind: "volume", factor: 1000 },
+  tsp: { th: "ช้อนชา", en: "teaspoon", kind: "volume", factor: 5 },
+  tbsp: { th: "ช้อนโต๊ะ", en: "tablespoon", kind: "volume", factor: 15 },
+  cup: { th: "ถ้วยตวง", en: "cup", kind: "volume", factor: 240 },
+  floz: { th: "ออนซ์น้ำ (fl oz)", en: "fl oz", kind: "volume", factor: 29.57 },
+  // counted
+  egg: { th: "ฟอง", en: "egg", kind: "count", factor: 1 },
+  piece: { th: "ชิ้น", en: "piece", kind: "count", factor: 1 },
+  fruit: { th: "ลูก / ผล", en: "whole fruit", kind: "count", factor: 1 },
+  clove: { th: "กลีบ", en: "clove", kind: "count", factor: 1 },
+  seed: { th: "เม็ด", en: "grain / small one", kind: "count", factor: 1 },
+  leaf: { th: "ใบ", en: "leaf", kind: "count", factor: 1 },
+  stalk: { th: "ต้น", en: "stalk", kind: "count", factor: 1 },
+  pod: { th: "ฝัก", en: "pod / cob", kind: "count", factor: 1 },
+  head: { th: "หัว", en: "head / bulb", kind: "count", factor: 1 },
+  slice: { th: "แผ่น", en: "slice", kind: "count", factor: 1 },
+  strip: { th: "เส้น", en: "strip", kind: "count", factor: 1 },
+  cube: { th: "ก้อน", en: "cube / block", kind: "count", factor: 1 },
+  stick: { th: "ไม้", en: "skewer", kind: "count", factor: 1 },
+  ladle: { th: "ทัพพี", en: "ladle", kind: "count", factor: 1 },
+  bowl: { th: "ถ้วย / ชาม", en: "bowl", kind: "count", factor: 1 },
+  handful: { th: "กำมือ", en: "handful", kind: "count", factor: 1 },
+  pinch: { th: "หยิบมือ", en: "pinch", kind: "count", factor: 1 },
+  sachet: { th: "ซอง", en: "sachet", kind: "count", factor: 1 },
+  pack: { th: "แพ็ค", en: "pack", kind: "count", factor: 1 },
+  bag: { th: "ถุง", en: "bag", kind: "count", factor: 1 },
+  box: { th: "กล่อง", en: "box / carton", kind: "count", factor: 1 },
+  can: { th: "กระป๋อง", en: "can", kind: "count", factor: 1 },
+  bottle: { th: "ขวด", en: "bottle", kind: "count", factor: 1 },
+} as const satisfies Record<string, UnitDef>;
+
+export type IngredientUnit = keyof typeof UNITS;
+
+/** Name of a unit to show on screen. Kept for old code. */
+export const UNIT_LABEL: Record<IngredientUnit, L> = UNITS;
+
+export const UNIT_GROUPS: { kind: UnitKind; label: L }[] = [
+  { kind: "mass", label: { th: "น้ำหนัก", en: "Weight" } },
+  { kind: "volume", label: { th: "ปริมาตร", en: "Volume" } },
+  { kind: "count", label: { th: "นับเป็นหน่วย", en: "Counted" } },
+];
+
+/** Count units where "a typical piece" from the AI / built-in table fits as-is. */
+export const PIECE_LIKE: IngredientUnit[] = ["egg", "piece", "fruit"];
+
+export function unitKind(u: IngredientUnit): UnitKind {
+  return (UNITS[u] ?? UNITS.g).kind;
+}
+
+// ---- Recipe categories (Round 33) ----
+export type RecipeCategory = "onedish" | "side" | "soup" | "salad" | "snack" | "drink" | "other";
+
+/** Order here = order on the My recipes page. */
+export const RECIPE_CATEGORIES: { key: RecipeCategory; label: L }[] = [
+  { key: "onedish", label: { th: "อาหารจานเดียว", en: "One-dish meals" } },
+  { key: "side", label: { th: "กับข้าว", en: "Dishes with rice" } },
+  { key: "soup", label: { th: "ต้ม · แกง", en: "Soups & curries" } },
+  { key: "salad", label: { th: "สลัด · ผัก", en: "Salads & veggies" } },
+  { key: "snack", label: { th: "ของว่าง · ขนม", en: "Snacks & sweets" } },
+  { key: "drink", label: { th: "เครื่องดื่ม", en: "Drinks" } },
+  { key: "other", label: { th: "อื่น ๆ", en: "Other" } },
+];
 
 export type LabelInfo = Macros & {
   /** per100 = per 100 g (or 100 ml). perUnit = per 1 egg / 1 piece. */
@@ -85,6 +153,8 @@ export type AiRef = {
   per100: Macros;
   /** grams in 1 egg / 1 piece, if that makes sense */
   unitG: number | null;
+  /** Which unit unitG is for (Round 33). Missing = a plain piece / egg / fruit. */
+  unitFor?: IngredientUnit | null;
   /** grams in 1 ml (density), for liquids */
   gPerMl: number | null;
 };
@@ -98,6 +168,8 @@ export type Recipe = {
   ingredients: Ingredient[];
   steps: string[];
   coverPhotoId: string | null;
+  /** Missing on recipes saved before Round 33 → shown under "Other". */
+  category?: RecipeCategory;
   createdAt: number;
   updatedAt: number;
 };

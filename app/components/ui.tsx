@@ -184,3 +184,29 @@ export function Badge({ children, tone = "warn" }: { children: React.ReactNode; 
     tone === "warn" ? "bg-warn text-warn-ink" : tone === "olive" ? "bg-olive-soft text-olive-dark" : "bg-cream text-muted";
   return <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[12px] font-medium ${cls}`}>{children}</span>;
 }
+
+/** Thin line pot — the recipe "logo" used instead of a photo or emoji (Round 33). */
+export function PotIcon({ className, strokeWidth = 1.3 }: { className?: string; strokeWidth?: number }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" className={className} aria-hidden>
+      <path d="M4 10h16v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5v-5z" />
+      <path d="M2 10h20M9 6c0-1 1-1.5 1-2.5M13 6c0-1 1-1.5 1-2.5" />
+    </svg>
+  );
+}
+
+/** Soft color tiles for recipe icons, picked from the recipe id so each keeps its color. */
+const POT_TONES = ["#f3dccd", "#e6e2f3", "#e2eadb", "#f1e6d4", "#e4ecf3", "#f2dfe0"];
+export function potTone(id: string): string {
+  let h = 0;
+  for (const ch of id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return POT_TONES[h % POT_TONES.length];
+}
+
+export function PotTile({ id, size = 40, radius = 12 }: { id: string; size?: number; radius?: number }) {
+  return (
+    <div className="grid shrink-0 place-items-center text-ink" style={{ width: size, height: size, borderRadius: radius, background: potTone(id) }}>
+      <PotIcon className="opacity-60" />
+    </div>
+  );
+}

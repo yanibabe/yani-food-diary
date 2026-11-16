@@ -5,6 +5,7 @@
 import { z } from "zod";
 import { trFor, type Lang } from "../i18n.ts";
 import { AI_MARGIN, markMargin } from "../nutrition.ts";
+import { UNITS, type IngredientUnit } from "../types.ts";
 import { AI_PLACES, fitAiIdeas, kcalRoom, type AiGroups, type RawIdea } from "../suggest.ts";
 
 const ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
@@ -387,8 +388,13 @@ ${shapeOf(IngredientRefSchema)}`;
 const clamp = (n: number, max: number) => (Number.isFinite(n) ? Math.min(Math.max(n, 0), max) : 0);
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
-export async function lookupIngredient(input: { name: string; lang: Lang }): Promise<IngredientRef | null> {
-  const r = process.env.AI_MOCK === "1" ? mockIngredient(input.name) : await callAi(INGREDIENT_SYSTEM, [{ type: "text", text: input.name }], IngredientRefSchema, input.lang);
+export async function lookupIngredient(input: { name: string; lang: Lang; unit?: IngredientUnit | null }): Promise<(IngredientRef & { unitFor: IngredientUnit | null }) | null> {
+  const unit = input.unit ?? null;
+  // For a counted unit like "กลีบ" or "กระป๋อง", unitG must be the weight of ONE of that unit.
+  const text = unit
+    ? `${input.name}\nThe user counts it in "${UNITS[unit].th}" (${UNITS[unit].en}). Set unitG to the typical weight in grams of ONE ${UNITS[unit].en} of this ingredient (the edible amount, without the container unless it is eaten).`
+    : input.name;
+  const r = process.env.AI_MOCK === "1" ? mockIngredient(input.name) : await callAi(INGREDIENT_SYSTEM, [{ type: "text", text }], IngredientRefSchema, input.lang);
   if (!r.known || !(r.kcal > 0)) return null;
   return {
     known: true,
@@ -396,8 +402,9 @@ export async function lookupIngredient(input: { name: string; lang: Lang }): Pro
     protein: round1(clamp(r.protein, 100)),
     carbs: round1(clamp(r.carbs, 100)),
     fat: round1(clamp(r.fat, 100)),
-    unitG: r.unitG != null && r.unitG > 0 && r.unitG < 5000 ? Math.round(r.unitG) : null,
+    unitG: r.unitG != null && r.unitG > 0 && r.unitG < 5000 ? (r.unitG < 10 ? Math.max(0.1, round1(r.unitG)) : Math.round(r.unitG)) : null,
     gPerMl: r.gPerMl != null && r.gPerMl > 0.3 && r.gPerMl < 3 ? Math.round(r.gPerMl * 100) / 100 : null,
+    unitFor: unit,
   };
 }
 

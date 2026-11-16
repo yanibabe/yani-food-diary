@@ -1,11 +1,12 @@
 import { AiError, lookupIngredient } from "@/app/lib/server/ai";
 import { trFor } from "@/app/lib/i18n";
+import { UNITS, type IngredientUnit } from "@/app/lib/types";
 import { passcodeBlock } from "@/app/lib/server/passcode";
 
 export const maxDuration = 60;
 
 export async function POST(req: Request) {
-  let body: { name?: string; lang?: string };
+  let body: { name?: string; lang?: string; unit?: string };
   try {
     body = await req.json();
   } catch {
@@ -17,7 +18,10 @@ export async function POST(req: Request) {
   const name = typeof body.name === "string" ? body.name.trim().slice(0, 120) : "";
   if (!name) return Response.json({ error: "bad-request", message: trFor(lang)("ยังไม่ได้ใส่ชื่อวัตถุดิบ", "No ingredient name") }, { status: 400 });
   try {
-    const result = await lookupIngredient({ name, lang });
+    // A counted unit (clove, can, ladle…): ask the AI for the weight of ONE of that unit.
+    const u = typeof body.unit === "string" && body.unit in UNITS ? (body.unit as IngredientUnit) : null;
+    const unit = u && UNITS[u].kind === "count" ? u : null;
+    const result = await lookupIngredient({ name, lang, unit });
     return Response.json({ result, mock: process.env.AI_MOCK === "1" });
   } catch (e) {
     const err = e instanceof AiError ? e : new AiError("api", String(e), 500);

@@ -8,7 +8,7 @@ import { compressImage, savePhoto } from "../../../lib/photos";
 import { ingredientMacros, recipeTotals } from "../../../lib/recipe";
 import { useLang } from "../../../lib/lang";
 import { useStore } from "../../../lib/store";
-import { UNIT_LABEL, type Ingredient, type IngredientUnit, type Recipe } from "../../../lib/types";
+import { PIECE_LIKE, RECIPE_CATEGORIES, UNIT_GROUPS, UNITS, unitKind, type Ingredient, type IngredientUnit, type Recipe, type RecipeCategory } from "../../../lib/types";
 
 function blankIngredient(): Ingredient {
   return { id: newId("ing"), name: "", amount: 0, unit: "g", label: null, gramsPerUnit: null, photoId: null };
@@ -42,13 +42,14 @@ function IngredientCard({
   const trimmed = ing.name.trim();
   const hasAi = !!ing.aiRef && ing.aiRef.name === trimmed;
 
-  async function lookUp() {
+  async function lookUp(forUnit: IngredientUnit = ing.unit) {
     const name = ing.name.trim();
     if (!name || ing.label || looking === name) return;
     setLooking(name);
     setAiMsg(null);
     try {
-      const r = await aiFetch("/api/ingredient", { name, lang }, lang);
+      const unit = unitKind(forUnit) === "count" ? forUnit : undefined;
+      const r = await aiFetch("/api/ingredient", { name, lang, unit }, lang);
       const data = await r.json().catch(() => null);
       if (!r.ok) {
         setAiMsg(data?.message ?? tr("AI หาค่าไม่ได้ ลองอีกครั้ง", "The AI couldn't look it up. Try again."));
@@ -56,7 +57,7 @@ function IngredientCard({
         setAiMsg(tr("AI ไม่รู้จักวัตถุดิบนี้ — กรอกค่าจากฉลากได้", "The AI doesn't know this ingredient — add the label values"));
       } else {
         const x = data.result;
-        onPatch({ aiRef: { name, per100: { kcal: x.kcal, protein: x.protein, carbs: x.carbs, fat: x.fat }, unitG: x.unitG, gPerMl: x.gPerMl } });
+        onPatch({ aiRef: { name, per100: { kcal: x.kcal, protein: x.protein, carbs: x.carbs, fat: x.fat }, unitG: x.unitG, gPerMl: x.gPerMl, unitFor: x.unitFor ?? null } });
       }
     } catch {
       setAiMsg(tr("เชื่อมต่อไม่ได้ ลองอีกครั้ง", "No connection. Try again."));
@@ -64,12 +65,20 @@ function IngredientCard({
       setLooking(null);
     }
   }
-  const isCount = ing.unit === "egg" || ing.unit === "piece";
+  const isCount = unitKind(ing.unit) === "count";
+  /** Does the AI's "weight of one" already fit this unit? */
+  const aiFitsUnit = (u: IngredientUnit) =>
+    !!ing.aiRef && ing.aiRef.name === trimmed && (ing.aiRef.unitFor ? ing.aiRef.unitFor === u : PIECE_LIKE.includes(u));
+  function changeUnit(u: IngredientUnit) {
+    set({ unit: u });
+    // New counted unit (e.g. กลีบ, กระป๋อง): ask the AI how much ONE of it weighs.
+    if (unitKind(u) === "count" && !ing.label && !ing.gramsPerUnit && trimmed && !aiFitsUnit(u)) void lookUp(u);
+  }
   const needsGpu =
     (ing.label?.basis === "per100" && isCount) ||
     (ing.label?.basis === "perUnit" && !isCount) ||
     (!ing.label && isCount);
-  const unitWord = isCount ? UNIT_LABEL[ing.unit][lang] : tr("ชิ้น", "piece");
+  const unitWord = isCount ? UNITS[ing.unit][lang] : tr("ชิ้น", "piece");
 
   return (
     <div className="card space-y-3 p-4" data-testid="ingredient-card">
@@ -78,9 +87,15 @@ function IngredientCard({
           <input className="field" value={ing.name} onChange={(e) => { set({ name: e.target.value }); setAiMsg(null); }} onBlur={() => { if (!hasAi) void lookUp(); }} placeholder={tr("ชื่อวัตถุดิบ เช่น ไข่ไก่", "Ingredient, e.g. egg")} aria-label={tr("ชื่อวัตถุดิบ", "Ingredient name")} />
           <div className="grid grid-cols-[1fr_auto] gap-2">
             <NumberField value={ing.amount || null} onChange={(n) => set({ amount: n ?? 0 })} placeholder={tr("ปริมาณ", "Amount")} aria-label={tr("ปริมาณ", "Amount")} />
-            <select className="field !w-auto" value={ing.unit} onChange={(e) => set({ unit: e.target.value as IngredientUnit })} aria-label={tr("หน่วย", "Unit")}>
-              {(Object.keys(UNIT_LABEL) as IngredientUnit[]).map((u) => (
-                <option key={u} value={u}>{UNIT_LABEL[u][lang]}</option>
+            <select className="field !w-auto max-w-[150px]" value={ing.unit} onChange={(e) => changeUnit(e.target.value as IngredientUnit)} aria-label={tr("หน่วย", "Unit")}>
+              {UNIT_GROUPS.map((g) => (
+                <optgroup key={g.kind} label={g.label[lang]}>
+                  {(Object.keys(UNITS) as IngredientUnit[])
+                    .filter((u) => UNITS[u].kind === g.kind)
+                    .map((u) => (
+                      <option key={u} value={u}>{UNITS[u][lang]}</option>
+                    ))}
+                </optgroup>
               ))}
             </select>
           </div>
@@ -108,7 +123,7 @@ function IngredientCard({
                 onClick={() => set({ label: { ...ing.label!, basis: b } })}
                 className={`min-h-[44px] rounded-xl text-[15px] font-medium ${ing.label!.basis === b ? "bg-olive text-white" : "bg-paper"}`}
               >
-                {b === "per100" ? tr("ต่อ 100 กรัม/มล.", "Per 100 g/ml") : tr("ต่อ 1 หน่วย (ฟอง/ชิ้น)", "Per 1 unit (egg/piece)")}
+                {b === "per100" ? tr("ต่อ 100 กรัม/มล.", "Per 100 g/ml") : isCount ? tr(`ต่อ 1 ${unitWord}`, `Per 1 ${unitWord}`) : tr("ต่อ 1 หน่วย (ชิ้น/ซอง)", "Per 1 unit (piece/sachet)")}
               </button>
             ))}
           </div>
@@ -209,6 +224,7 @@ function RecipeForm({ initial, onSave, onCancel }: { initial: Recipe | null; onS
   const [ings, setIngs] = useState<Ingredient[]>(initial?.ingredients ?? [blankIngredient()]);
   const [steps, setSteps] = useState<string[]>(initial?.steps ?? []);
   const [cover, setCover] = useState<string | null>(initial?.coverPhotoId ?? null);
+  const [category, setCategory] = useState<RecipeCategory | null>(initial?.category ?? null);
   const [err, setErr] = useState<string | null>(null);
   const coverRef = useRef<HTMLInputElement>(null);
   const { tr, lang } = useLang();
@@ -220,6 +236,7 @@ function RecipeForm({ initial, onSave, onCancel }: { initial: Recipe | null; onS
     if (!name.trim()) return setErr(tr("ใส่ชื่อเมนูก่อน", "Enter the dish name first"));
     if (!(servings && servings > 0)) return setErr(tr("จำนวนเสิร์ฟต้องมากกว่า 0", "Servings must be more than 0"));
     if (clean.length === 0) return setErr(tr("ใส่วัตถุดิบอย่างน้อย 1 อย่าง", "Add at least 1 ingredient"));
+    if (!category) return setErr(tr("เลือกหมวดของเมนูก่อน", "Pick a category first"));
     const now = Date.now();
     onSave({
       id: initial?.id ?? newId("rc"),
@@ -229,6 +246,7 @@ function RecipeForm({ initial, onSave, onCancel }: { initial: Recipe | null; onS
       ingredients: clean,
       steps: steps.map((s) => s.trim()).filter(Boolean),
       coverPhotoId: cover,
+      category,
       createdAt: initial?.createdAt ?? now,
       updatedAt: now,
     });
@@ -248,7 +266,7 @@ function RecipeForm({ initial, onSave, onCancel }: { initial: Recipe | null; onS
         {cover ? (
           <StoredPhoto id={cover} className="h-full w-full object-cover" alt={tr("รูปปก", "Cover photo")} />
         ) : (
-          <span className="text-[16px]">📷 {tr("เพิ่มรูปปก (ไม่บังคับ)", "Add a cover photo (optional)")}</span>
+          <span className="text-[16px]">{tr("+ เพิ่มรูปปก (ไม่บังคับ)", "+ Add a cover photo (optional)")}</span>
         )}
       </button>
       <input
@@ -266,6 +284,23 @@ function RecipeForm({ initial, onSave, onCancel }: { initial: Recipe | null; onS
         <div>
           <label className="label" htmlFor="rc-name">{tr("ชื่อเมนู", "Dish name")}</label>
           <input id="rc-name" className="field" value={name} onChange={(e) => setName(e.target.value)} placeholder={tr("เช่น ไข่เจียวแหนม", "e.g. omelet with naem")} />
+        </div>
+        <div>
+          <span className="label">{tr("หมวด", "Category")}</span>
+          <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={tr("หมวด", "Category")} data-testid="category-picker">
+            {RECIPE_CATEGORIES.map((c) => (
+              <button
+                key={c.key}
+                type="button"
+                role="radio"
+                aria-checked={category === c.key}
+                onClick={() => setCategory(c.key)}
+                className={`min-h-[40px] rounded-full border px-4 text-[14px] ${category === c.key ? "border-ink bg-ink text-white" : "border-white/80 bg-white/60"}`}
+              >
+                {c.label[lang]}
+              </button>
+            ))}
+          </div>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>

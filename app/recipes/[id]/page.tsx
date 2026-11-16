@@ -2,7 +2,7 @@
 import { Suspense, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { Badge, KcalBig, MacroCards, NumberField, Sheet, StoredPhoto } from "../../components/ui";
+import { Badge, KcalBig, MacroCards, NumberField, Sheet, StoredPhoto, PotIcon, potTone } from "../../components/ui";
 import { guessSlot, thaiDateKey } from "../../lib/date";
 import { fmtAmount, fmtG, fmtKcal, newId } from "../../lib/nutrition";
 import { ingredientMacros, mealFromRecipe, totalsForRecipe } from "../../lib/recipe";
@@ -193,7 +193,9 @@ function RecipeInner() {
         {recipe.coverPhotoId ? (
           <StoredPhoto id={recipe.coverPhotoId} className="aspect-[4/3] w-full object-cover" alt={recipe.name} />
         ) : (
-          <div className="flex aspect-[16/9] items-center justify-center bg-olive-soft text-[72px]" aria-hidden>🍲</div>
+          <div className="flex aspect-[16/9] items-center justify-center text-ink" style={{ background: potTone(recipe.id) }} aria-hidden>
+            <PotIcon className="h-20 w-20 opacity-50" strokeWidth={1} />
+          </div>
         )}
         <button
           className="absolute left-4 h-11 w-11 rounded-full bg-paper/95 text-[20px] shadow"

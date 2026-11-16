@@ -1,7 +1,7 @@
 import { findRef } from "./foodRef.ts";
 import { trFor, type Lang } from "./i18n.ts";
 import { scaleMacros, sumMacros, ZERO } from "./nutrition.ts";
-import type { Ingredient, Macros, Recipe } from "./types.ts";
+import { PIECE_LIKE, UNITS, unitKind, type Ingredient, type Macros, type Recipe } from "./types.ts";
 
 export type IngredientResult =
   | { ok: true; macros: Macros; source: "label" | "estimate"; refName: string | null }
@@ -21,12 +21,14 @@ export type IngredientResult =
 export function ingredientMacros(ing: Ingredient, lang: Lang = "th"): IngredientResult {
   const t = trFor(lang);
   const raw = ing.amount > 0 ? ing.amount : 0;
-  // kg → g, liters → ml. From here on, "g"/"ml" amounts are in grams / ml.
-  const amount = ing.unit === "kg" || ing.unit === "l" ? raw * 1000 : raw;
-  const unit = ing.unit === "kg" ? "g" : ing.unit === "l" ? "ml" : ing.unit;
-  const isCountUnit = ing.unit === "egg" || ing.unit === "piece";
+  // Every weight unit → grams, every volume unit → ml. Counted units stay as a count.
+  const kind = unitKind(ing.unit);
+  const def = UNITS[ing.unit] ?? UNITS.g;
+  const amount = kind === "count" ? raw : raw * def.factor;
+  const unit = kind === "mass" ? "g" : kind === "volume" ? "ml" : ing.unit;
+  const isCountUnit = kind === "count";
   const gpu = ing.gramsPerUnit && ing.gramsPerUnit > 0 ? ing.gramsPerUnit : null;
-  const unitWord = ing.unit === "egg" ? t("ฟอง", "egg") : t("ชิ้น", "piece");
+  const unitWord = isCountUnit ? def[lang] : t("ชิ้น", "piece");
 
   if (ing.label) {
     const label: Macros = ing.label;
@@ -80,7 +82,10 @@ export function ingredientMacros(ing: Ingredient, lang: Lang = "th"): Ingredient
   if (unit === "g") grams = amount;
   else if (unit === "ml") grams = amount * (ref.gPerMl ?? 1);
   else {
-    const w = gpu ?? ref.unitG ?? null;
+    // The AI's / table's "one piece" weight only fits the unit it was made for.
+    const refUnitFor = ai ? (ai.unitFor ?? null) : null;
+    const refFits = refUnitFor ? refUnitFor === ing.unit : PIECE_LIKE.includes(ing.unit);
+    const w = gpu ?? (refFits ? ref.unitG : null) ?? null;
     if (!w)
       return {
         ok: false,
