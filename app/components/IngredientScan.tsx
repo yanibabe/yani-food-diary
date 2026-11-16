@@ -171,7 +171,7 @@ export function IngredientScan({ ing, onPatch }: { ing: Ingredient; onPatch: (p:
         </button>
         <button type="button" className={pill} disabled={busy !== null} onClick={() => labelRef.current?.click()} data-testid="ing-scan-label">
           <Icon name="camera" className="h-[18px] w-[18px]" />
-          {busy === "label" ? tr("กำลังอ่านฉลาก…", "Reading…") : tr("ถ่ายรูปฉลาก", "Photo the label")}
+          {busy === "label" ? tr("กำลังอ่านฉลาก…", "Reading…") : tr("รูปฉลาก", "Label photo")}
         </button>
       </div>
       {msg && (
@@ -183,7 +183,6 @@ export function IngredientScan({ ing, onPatch }: { ing: Ingredient; onPatch: (p:
         ref={barcodePhotoRef}
         type="file"
         accept="image/*"
-        capture="environment"
         hidden
         onChange={(e) => {
           const f = e.target.files?.[0];
@@ -196,7 +195,6 @@ export function IngredientScan({ ing, onPatch }: { ing: Ingredient; onPatch: (p:
         ref={labelRef}
         type="file"
         accept="image/*"
-        capture="environment"
         hidden
         onChange={(e) => {
           const f = e.target.files?.[0];

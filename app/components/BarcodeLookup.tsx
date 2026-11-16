@@ -235,13 +235,12 @@ export function BarcodeLookup({ onPick, onManual }: { onPick: (food: Food, grams
           <Icon name="camera" className="mr-1.5 inline-block h-5 w-5 align-[-4px]" />{tr("สแกนด้วยกล้อง", "Scan with camera")}
         </button>
         <button className="btn-soft w-full" onClick={() => cameraRef.current?.click()} disabled={busy || reading} data-testid="barcode-photo">
-          {reading ? tr("กำลังอ่านบาร์โค้ด…", "Reading the barcode…") : `🖼️ ${tr("ถ่ายรูปบาร์โค้ดแทน", "Take a photo instead")}`}
+          {reading ? tr("กำลังอ่านบาร์โค้ด…", "Reading the barcode…") : `🖼️ ${tr("ถ่าย/เลือกรูปบาร์โค้ดแทน", "Take or choose a photo instead")}`}
         </button>
         <input
           ref={cameraRef}
           type="file"
           accept="image/*"
-          capture="environment"
           hidden
           onChange={(e) => {
             const f = e.target.files?.[0];
@@ -311,7 +310,7 @@ export function BarcodeLookup({ onPick, onManual }: { onPick: (food: Food, grams
               </b>
               <div className="text-[12px] text-muted">{tr("เช็กว่าตรงกับบนซองนะ", "Check it matches the pack")}</div>
               <div className="mt-1 flex justify-center gap-4 text-[13px]">
-                <button className="underline" onClick={() => labelRef.current?.click()} disabled={readingLabel}>{tr("ถ่ายใหม่", "Retake")}</button>
+                <button className="underline" onClick={() => labelRef.current?.click()} disabled={readingLabel}>{tr("เปลี่ยนรูป", "Change photo")}</button>
                 <button className="underline" onClick={openFixForm}>{tr("แก้เอง", "Edit")}</button>
                 <button className="underline text-muted" onClick={undoFix} data-testid="label-fix-undo">{tr("ใช้ข้อมูลเดิม", "Use the original data")}</button>
               </div>
@@ -320,7 +319,7 @@ export function BarcodeLookup({ onPick, onManual }: { onPick: (food: Food, grams
             !fixForm && (
               <div className="space-y-2 text-center">
                 <button className="btn-soft w-full" onClick={() => labelRef.current?.click()} disabled={readingLabel} data-testid="label-photo">
-                  {readingLabel ? tr("กำลังอ่านฉลาก…", "Reading the label…") : <><Icon name="camera" className="mr-1.5 inline-block h-5 w-5 align-[-4px]" />{tr("ไม่ตรงกับซอง? ถ่ายรูปฉลาก", "Doesn't match the pack? Photo the label")}</>}
+                  {readingLabel ? tr("กำลังอ่านฉลาก…", "Reading the label…") : <><Icon name="camera" className="mr-1.5 inline-block h-5 w-5 align-[-4px]" />{tr("ไม่ตรงกับซอง? ถ่าย/เลือกรูปฉลาก", "Doesn't match the pack? Take or choose a label photo")}</>}
                 </button>
                 <button className="text-[13px] text-muted underline" onClick={openFixForm} data-testid="label-fix-open">
                   {tr("หรือพิมพ์เอง", "or type it")}
@@ -332,7 +331,6 @@ export function BarcodeLookup({ onPick, onManual }: { onPick: (food: Food, grams
             ref={labelRef}
             type="file"
             accept="image/*"
-            capture="environment"
             hidden
             onChange={(e) => {
               const f = e.target.files?.[0];

@@ -6,7 +6,7 @@
 
 ---
 
-## LIVE (updated 2026-11-16; Round 35 scan ingredients in recipes LIVE; Round 34 Phosphor Light icons LIVE; Round 33 recipes in category boxes + pot icon + 34 units LIVE; Round 32 line-only small character + % in tiles + food tip LIVE; Round 31 whole app in Frosted Calm + richer share picture LIVE; Round 30 Frosted Calm share picture + Profile LIVE; Round 29 share my day with my trainer (picture) LIVE; Round 28 simpler "กินอะไรดี" (menu + recipe, no delivery) LIVE; Round 27 label numbers = no +15% LIVE; Round 26 grouped "what can I eat" LIVE; Round 25 "what can I eat" LIVE; Round 24 weight moved to Profile, steps removed)
+## LIVE (updated 2026-11-16; Round 36 camera asks once per opening + album photos LIVE; Round 35 scan ingredients in recipes LIVE; Round 34 Phosphor Light icons LIVE; Round 33 recipes in category boxes + pot icon + 34 units LIVE; Round 32 line-only small character + % in tiles + food tip LIVE; Round 31 whole app in Frosted Calm + richer share picture LIVE; Round 30 Frosted Calm share picture + Profile LIVE; Round 29 share my day with my trainer (picture) LIVE; Round 28 simpler "กินอะไรดี" (menu + recipe, no delivery) LIVE; Round 27 label numbers = no +15% LIVE; Round 26 grouped "what can I eat" LIVE; Round 25 "what can I eat" LIVE; Round 24 weight moved to Profile, steps removed)
 
 - **App:** https://yani-food-diary.vercel.app  (Vercel, exm-labs account, free)
 - **Code:** https://github.com/yanibabe/yani-food-diary  (private; pushes auto-deploy)
@@ -30,7 +30,21 @@
    kcal, protein, fat, carbs (and totals). Easy to send (image and/or text via the iPhone share sheet).
    Ask her: picture, text, or both.
 
-## ▶ NEXT: she tries Round 35 on her iPhone, then picks what's next
+## ▶ NEXT: she tries Round 36 on her iPhone, then picks what's next
+Rounds 33–35 tried on her iPhone ✓ ("okay"). Round 36 = her 2 fixes from that try.
+
+## Round 36 (2026-11-16) — camera asks less + photos from the album ✅ LIVE
+1. She disliked tapping "Allow camera" on EVERY barcode scan. iPhone home-screen apps forget the camera OK
+   once the camera is switched off. The app can NOT make iOS remember forever (that is iOS's rule).
+   What we did: app/lib/cameraStream.ts keeps ONE camera open (hidden, not recorded) for 3 minutes after a
+   scan; the next scan reuses it → no new question. Turns off for real after 3 min idle, or when the app
+   goes to the background / phone locks. So she is asked about once per app opening, not per scan.
+   If she still finds it annoying: she may try iPhone Settings → Apps → Safari → Camera → "Allow"
+   (may or may not apply to home-screen apps; untested). She changes that herself.
+2. Label / barcode photos can now come from the album: removed capture="environment" from the photo inputs
+   in IngredientScan + BarcodeLookup, so iPhone shows its own menu (photo library / take photo / file).
+   Button words: recipe "รูปฉลาก"; add-by-barcode "ถ่าย/เลือกรูป…"; live scanner fallback "ใช้รูปแทน".
+- 114 tests pass, build clean. Checked at phone size (buttons fit one line). Camera reuse NOT testable on Mac.
 Still open (ask her ONE at a time):
 - Food tip line (Round 32): she asked why no AI / how it decides. Explained: compares today's food with her
   targets from Profile (20/50/30 split, or protein by body weight). Offered: (ก) tap the tip → show the numbers
