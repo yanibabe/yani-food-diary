@@ -33,7 +33,12 @@
 ## ▶ NEXT (2026-11-16): Round 30 — WHOLE-APP RESTYLE (every page)
 ## Round 29 share tried on her iPhone ✓ ("okay to a degree" — works).
 ## Her wish: every page looks more professional and easy to use; LESS text on screen, but still clear.
-## She is collecting reference pictures of the style she wants and will send them. WAIT for them.
+## She had no references, so she asked ME for 5–6 style ideas. FOCUS first: (a) the trainer share picture
+## (minimal but professional, details clear) and (b) the Profile page (too plain; show her character).
+## Made 6 samples (share picture + profile each): docs/design-round30/styles.html
+##   1 Clean White · 2 Soft Pastel Blocks · 3 Big Numbers (Editorial) · 4 Receipt · 5 Night Mode · 6 Character Sticker
+## View: food-diary dev server → /styles-preview.html (a copy in public/, NOT in git — kept out via .git/info/exclude).
+## WAITING for her pick (or a mix), then build share picture + profile in that style, then the rest of the app.
 ## Then: use them for the FEEL only (never copy), show 2–3 mockups to pick from (she likes minimal),
 ## keep her own brand character as-is, then build page by page. May need 2–3 rounds.
 ## Still untried with the REAL AI: Rounds 27 + 28 (label photo; a "เมนูทำเอง" recipe; "ค้นหาสูตรอื่น" link).
