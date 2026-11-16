@@ -46,7 +46,8 @@ export function hasLegacyMargin(item: Pick<FoodItem, "margin" | "aiKcal">): bool
 export function canBuffer(item: FoodItem): boolean {
   const p = item.prov;
   if (!p || p.source !== "ai" || p.verification !== "estimated") return false;
-  if (p.via === "exact-amount") return false;
+  // Her own weight (with or without a guessed recipe) → the AI did not guess the amount → no buffer.
+  if (p.via === "exact-amount" || p.via === "amount-known") return false;
   if (item.fromLabel) return false;
   if (hasLegacyMargin(item)) return false;
   return true;

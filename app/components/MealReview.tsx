@@ -270,7 +270,7 @@ export function MealReview({
               margin: keepLegacy ? true : old.margin === true ? false : old.margin,
               fromLabel: e.item.fromLabel === true ? true : exact ? false : old.fromLabel,
               // Round 39: the AI wrote new numbers for this item → they are the AI's now.
-              prov: provFromAi({ fromLabel: e.item.fromLabel === true, userAmount: e.item.userAmount === true }),
+              prov: provFromAi({ fromLabel: e.item.fromLabel === true, userAmount: e.item.userAmount === true, estimated: Boolean(e.item.estimated), kind: e.item.kind }),
               missing: undefined,
             };
             // Round 40: fresh AI numbers → the item keeps its OWN buffer %, worked out again from the AI's kcal.
@@ -298,7 +298,7 @@ export function MealReview({
             dairy: aiDairy(a.name, a.dairy),
             dairySource: a.dairySource ?? null,
             fromLabel: a.fromLabel === true,
-            prov: provFromAi({ fromLabel: a.fromLabel === true, userAmount: userAmount === true }),
+            prov: provFromAi({ fromLabel: a.fromLabel === true, userAmount: userAmount === true, estimated: Boolean(a.estimated), kind: a.kind }),
           }, bufferPct));
           changed.push(id);
         }
@@ -408,6 +408,7 @@ export function MealReview({
                     {isBuffered(i) && <Badge tone="muted">{pctLabel(i.bufferPct ?? 0)}</Badge>}
                     {hasLegacyMargin(i) && <Badge tone="muted">{tr(`เดิม +${LEGACY_MARGIN_PCT}%`, `Old +${LEGACY_MARGIN_PCT}%`)}</Badge>}
                     {prov.source === "ai" && prov.via === "exact-amount" && <Badge tone="olive">{tr("น้ำหนักจริง", "Exact amount")}</Badge>}
+                    {prov.source === "ai" && prov.via === "amount-known" && <Badge tone="olive">{tr("น้ำหนักจริง · สูตรประมาณ", "Exact amount · recipe estimated")}</Badge>}
                     {prov.source !== "ai" && <ProvenanceBadge prov={prov} />}
                     {i.missing?.length ? <Badge tone="muted">{tr("ข้อมูลไม่ครบ", "Incomplete")}</Badge> : null}
                     {(off === "high" || off === "low") && <Badge tone="muted">{tr("ตัวเลขไม่ค่อยตรง", "Numbers don't add up")}</Badge>}

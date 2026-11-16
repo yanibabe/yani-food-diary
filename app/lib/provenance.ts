@@ -33,10 +33,20 @@ export function sourceLabel(p: Provenance): L {
   return SOURCE_LABEL[p.source];
 }
 
-/** What the AI said about one item → where its numbers came from. */
-export function provFromAi(a: { fromLabel?: boolean; userAmount?: boolean }): Provenance {
+/**
+ * What the AI said about one item → where its numbers came from.
+ * An AI item is ALWAYS "estimated", even when she gave the weight: the numbers per gram still come
+ * from the AI. Final check before Round 40 deploy:
+ * - weight given + recipe clear (estimated=false) → "exact-amount"
+ * - weight given but the recipe / oil / sauce inside is a guess (estimated=true) → "amount-known"
+ * - an "extra" (oil, sauce, sugar…) the AI still calls uncertain → "guess", even if it said
+ *   userAmount: the AI guessed how much, so it is not her confirmed amount.
+ */
+export function provFromAi(a: { fromLabel?: boolean; userAmount?: boolean; estimated?: boolean; kind?: string }): Provenance {
   if (a.fromLabel) return { source: "label", verification: "unverified", via: "ai-read" };
-  return { source: "ai", verification: "estimated", via: a.userAmount ? "exact-amount" : "guess" };
+  if (!a.userAmount) return { source: "ai", verification: "estimated", via: "guess" };
+  if (a.kind === "extra" && a.estimated) return { source: "ai", verification: "estimated", via: "guess" };
+  return { source: "ai", verification: "estimated", via: a.estimated ? "amount-known" : "exact-amount" };
 }
 
 /** She typed or changed the numbers herself. */

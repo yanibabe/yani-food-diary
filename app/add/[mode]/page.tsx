@@ -88,7 +88,7 @@ function AddInner() {
         dairySource: a.dairySource ?? null,
         fromLabel: a.fromLabel === true,
         // Round 39: where these numbers came from (an AI guess, or a printed label the AI read).
-        prov: provFromAi({ fromLabel: a.fromLabel === true, userAmount: (a as { userAmount?: boolean }).userAmount === true }),
+        prov: provFromAi({ fromLabel: a.fromLabel === true, userAmount: (a as { userAmount?: boolean }).userAmount === true, estimated: Boolean(a.estimated), kind: a.kind }),
         // Round 40: her optional buffer (kcal only) for AI guesses; 0% by default. The AI's own kcal is kept.
       }, pct));
       setDraft({ title: r.title || tr("อาหาร", "Meal"), slot: draft.slot, items });
