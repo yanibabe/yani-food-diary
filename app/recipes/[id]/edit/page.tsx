@@ -9,6 +9,7 @@ import { ingredientMacros, recipeTotals } from "../../../lib/recipe";
 import { useLang } from "../../../lib/lang";
 import { useStore } from "../../../lib/store";
 import { PIECE_LIKE, RECIPE_CATEGORIES, UNIT_GROUPS, UNITS, unitKind, type Ingredient, type IngredientUnit, type Recipe, type RecipeCategory } from "../../../lib/types";
+import { Icon } from "../../../components/Icon";
 
 function blankIngredient(): Ingredient {
   return { id: newId("ing"), name: "", amount: 0, unit: "g", label: null, gramsPerUnit: null, photoId: null };
@@ -165,7 +166,7 @@ function IngredientCard({
       <div className="flex items-center justify-between gap-2">
         <div className="text-[14px]">
           {looking && !ing.label ? (
-            <span className="text-muted">✨ {tr("AI กำลังหาค่าสารอาหาร…", "The AI is looking up the nutrition…")}</span>
+            <span className="text-muted"><Icon name="sparkle" className="mr-1 inline-block h-4 w-4 align-[-3px]" />{tr("AI กำลังหาค่าสารอาหาร…", "The AI is looking up the nutrition…")}</span>
           ) : res.ok ? (
             <span className="flex flex-wrap items-center gap-1.5">
               <span className="num font-semibold">{fmtKcal(res.macros.kcal)} kcal</span>
@@ -173,7 +174,7 @@ function IngredientCard({
               {res.source === "label" ? (
                 <Badge tone="olive">{tr("จากฉลาก", "From label")}</Badge>
               ) : res.refName === "AI" ? (
-                <Badge>✨ {tr("ค่าจาก AI", "AI estimate")}</Badge>
+                <Badge><Icon name="sparkle" className="mr-1 inline-block h-3.5 w-3.5 align-[-2px]" />{tr("ค่าจาก AI", "AI estimate")}</Badge>
               ) : (
                 <Badge>{tr("ค่าประมาณ", "Estimate")} ({res.refName})</Badge>
               )}
@@ -191,7 +192,7 @@ function IngredientCard({
           )}
           {!ing.label && !hasAi && !looking && trimmed && (
             <button className="mt-1 block min-h-[36px] text-[14px] font-medium text-olive-dark" onClick={() => void lookUp()}>
-              ✨ {tr("ให้ AI หาค่าสารอาหาร", "Let the AI look up the nutrition")}
+              <Icon name="sparkle" className="mr-1 inline-block h-4 w-4 align-[-3px]" />{tr("ให้ AI หาค่าสารอาหาร", "Let the AI look up the nutrition")}
             </button>
           )}
         </div>
@@ -255,7 +256,7 @@ function RecipeForm({ initial, onSave, onCancel }: { initial: Recipe | null; onS
   return (
     <main className="page space-y-5">
       <header className="flex items-center gap-3">
-        <button className="h-11 w-11 rounded-full bg-paper text-[20px]" onClick={onCancel} aria-label={tr("กลับ", "Back")}>‹</button>
+        <button className="grid h-11 w-11 place-items-center rounded-full bg-paper" onClick={onCancel} aria-label={tr("กลับ", "Back")}><Icon name="caret-left" className="h-5 w-5" /></button>
         <h1 className="text-[22px] font-semibold">{initial ? tr("แก้สูตร", "Edit recipe") : tr("สูตรใหม่", "New recipe")}</h1>
       </header>
 
@@ -347,7 +348,7 @@ function RecipeForm({ initial, onSave, onCancel }: { initial: Recipe | null; onS
               onChange={(e) => setSteps((p) => p.map((x, j) => (j === k ? e.target.value : x)))}
               aria-label={tr(`ขั้นตอนที่ ${k + 1}`, `Step ${k + 1}`)}
             />
-            <button className="mt-2 px-2 py-2 text-danger" onClick={() => setSteps((p) => p.filter((_, j) => j !== k))} aria-label={tr("ลบขั้นตอน", "Delete step")}>×</button>
+            <button className="mt-2 px-2 py-2 text-danger" onClick={() => setSteps((p) => p.filter((_, j) => j !== k))} aria-label={tr("ลบขั้นตอน", "Delete step")}><Icon name="x" className="h-5 w-5" /></button>
           </div>
         ))}
         <button className="btn-soft w-full" onClick={() => setSteps((p) => [...p, ""])}>+ {tr("เพิ่มขั้นตอน", "Add step")}</button>

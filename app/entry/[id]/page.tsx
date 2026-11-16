@@ -7,6 +7,7 @@ import { deletePhoto, getPhoto } from "../../lib/photos";
 import { photoStillUsed } from "../../lib/repeat";
 import { useLang } from "../../lib/lang";
 import { useStore } from "../../lib/store";
+import { Icon } from "../../components/Icon";
 
 export default function EntryPage() {
   const { id } = useParams<{ id: string }>();
@@ -41,8 +42,8 @@ export default function EntryPage() {
   return (
     <main className="page">
       <header className="mb-4 flex items-center gap-3">
-        <button className="h-11 w-11 rounded-full bg-paper text-[20px]" onClick={() => router.back()} aria-label={tr("กลับ", "Back")}>
-          ‹
+        <button className="grid h-11 w-11 place-items-center rounded-full bg-paper" onClick={() => router.back()} aria-label={tr("กลับ", "Back")}>
+          <Icon name="caret-left" className="h-5 w-5" />
         </button>
         <h1 className="text-[22px] font-semibold">{tr("แก้มื้อนี้", "Edit this meal")}</h1>
       </header>

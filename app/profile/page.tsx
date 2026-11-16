@@ -38,6 +38,7 @@ import { fmtKcal } from "../lib/nutrition";
 import { EMPTY_PROFILE, fillProfile } from "../lib/profile";
 import { useStore } from "../lib/store";
 import type { Goals, Profile } from "../lib/types";
+import { Icon } from "../components/Icon";
 
 type Panel = "target" | "body" | "weight" | "avoid" | "lang" | "backup" | "method";
 
@@ -168,7 +169,7 @@ function ListRow({
         <span>{label}</span>
         <span className="flex items-center gap-2 text-[14px] text-muted">
           {hint}
-          <span className={`inline-block text-[20px] leading-none transition-transform ${on ? "rotate-90" : ""}`} aria-hidden>›</span>
+          <Icon name="caret-right" className={`h-4 w-4 transition-transform ${on ? "rotate-90" : ""}`} />
         </span>
       </button>
       {on && <div className="calm-open pb-4">{children}</div>}

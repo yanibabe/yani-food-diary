@@ -10,6 +10,7 @@ import { thaiDateKey } from "../lib/date";
 import { useLang } from "../lib/lang";
 import { fillProfile } from "../lib/profile";
 import { useStore } from "../lib/store";
+import { Icon } from "./Icon";
 
 const fmtKg = (n: number) => (Math.round(n * 10) / 10).toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
@@ -36,7 +37,7 @@ export function WeightCard() {
 
   return (
     <section className="card space-y-4 p-5" data-testid="weight-card">
-      <h2 className="text-[17px] font-semibold">⚖️ {tr("น้ำหนัก", "Weight")}</h2>
+      <h2 className="flex items-center gap-2 text-[17px] font-semibold"><Icon name="scales" className="h-5 w-5" /> {tr("น้ำหนัก", "Weight")}</h2>
       <WeightEntry
         key={`${date}-${dayValue ?? ""}`}
         date={date}

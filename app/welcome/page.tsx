@@ -21,6 +21,7 @@ import { fmtKcal } from "../lib/nutrition";
 import { EMPTY_PROFILE, fillProfile } from "../lib/profile";
 import { useStore } from "../lib/store";
 import type { Profile } from "../lib/types";
+import { Icon } from "../components/Icon";
 
 const TITLES = [
   { th: "ยินดีต้อนรับ", en: "Welcome" },
@@ -76,8 +77,8 @@ export default function WelcomePage() {
     <main className="page flex min-h-dvh flex-col !pb-[calc(env(safe-area-inset-bottom,0px)+20px)]">
       <div className="mb-5 flex items-center gap-3">
         {step > 0 ? (
-          <button className="h-11 w-11 shrink-0 rounded-full bg-paper text-[20px]" onClick={() => setStep(step - 1)} aria-label={tr("ย้อนกลับ", "Back")}>
-            ‹
+          <button className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-paper" onClick={() => setStep(step - 1)} aria-label={tr("ย้อนกลับ", "Back")}>
+            <Icon name="caret-left" className="h-5 w-5" />
           </button>
         ) : (
           <span className="h-11 w-11 shrink-0" />

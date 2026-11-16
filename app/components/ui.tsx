@@ -6,6 +6,7 @@ import { getPhoto } from "../lib/photos";
 import { macroSplit } from "../lib/macroSplit";
 import { macroTip } from "../lib/macroTip";
 import type { Macros } from "../lib/types";
+import { Icon } from "./Icon";
 
 /** Bottom sheet that slides up over the page. */
 export function Sheet({
@@ -37,8 +38,8 @@ export function Sheet({
         {title && (
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-[20px] font-medium">{title}</h2>
-            <button onClick={onClose} className="h-10 w-10 rounded-full bg-white/70 text-[20px] text-muted" aria-label={tr("ปิด", "Close")}>
-              ×
+            <button onClick={onClose} className="h-10 w-10 rounded-full bg-white/70 text-[20px] text-muted grid place-items-center" aria-label={tr("ปิด", "Close")}>
+              <Icon name="x" className="h-5 w-5" />
             </button>
           </div>
         )}
@@ -185,14 +186,9 @@ export function Badge({ children, tone = "warn" }: { children: React.ReactNode; 
   return <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[12px] font-medium ${cls}`}>{children}</span>;
 }
 
-/** Thin line pot — the recipe "logo" used instead of a photo or emoji (Round 33). */
-export function PotIcon({ className, strokeWidth = 1.3 }: { className?: string; strokeWidth?: number }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" className={className} aria-hidden>
-      <path d="M4 10h16v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5v-5z" />
-      <path d="M2 10h20M9 6c0-1 1-1.5 1-2.5M13 6c0-1 1-1.5 1-2.5" />
-    </svg>
-  );
+/** The recipe "logo": Phosphor Light cooking pot (Round 34; was a hand-drawn pot). */
+export function PotIcon({ className }: { className?: string; strokeWidth?: number }) {
+  return <Icon name="cooking-pot" className={className} />;
 }
 
 /** Soft color tiles for recipe icons, picked from the recipe id so each keeps its color. */
@@ -206,7 +202,7 @@ export function potTone(id: string): string {
 export function PotTile({ id, size = 40, radius = 12 }: { id: string; size?: number; radius?: number }) {
   return (
     <div className="grid shrink-0 place-items-center text-ink" style={{ width: size, height: size, borderRadius: radius, background: potTone(id) }}>
-      <PotIcon className="opacity-60" />
+      <PotIcon className="h-[58%] w-[58%] opacity-60" />
     </div>
   );
 }

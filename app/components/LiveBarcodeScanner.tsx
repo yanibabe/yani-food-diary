@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { scanBarcodeFrame, warmUpBarcodeReader } from "../lib/barcodeScan";
 import { cameraErrorKind, makeConfirmer, scanArea } from "../lib/liveScan";
 import { useLang } from "../lib/lang";
+import { Icon } from "./Icon";
 
 const SLOW_HINT_MS = 12000;
 
@@ -131,7 +132,7 @@ export function LiveBarcodeScanner({
       <div className="space-y-3 bg-black px-5 pt-4 pb-[calc(20px+env(safe-area-inset-bottom))]">
         {(slow || error) && (
           <button className="btn-primary w-full" onClick={onUsePhoto} data-testid="live-scanner-photo">
-            📷 {slow && !error ? tr("อ่านไม่ได้? ถ่ายรูปแทน", "Not reading? Take a photo instead") : tr("ถ่ายรูปแทน", "Take a photo instead")}
+            <Icon name="camera" className="mr-1.5 inline-block h-5 w-5 align-[-4px]" />{slow && !error ? tr("อ่านไม่ได้? ถ่ายรูปแทน", "Not reading? Take a photo instead") : tr("ถ่ายรูปแทน", "Take a photo instead")}
           </button>
         )}
         <button className="w-full rounded-2xl bg-white/15 py-3 text-[17px] font-medium" onClick={onClose} data-testid="live-scanner-close">

@@ -10,6 +10,7 @@ import { dairyIngredients, looksDairy, warnDairy } from "../../lib/dairy";
 import { useLang } from "../../lib/lang";
 import { useStore } from "../../lib/store";
 import { SLOT_LABEL, SLOTS, UNIT_LABEL, type Ingredient, type MealSlot, type Recipe } from "../../lib/types";
+import { Icon } from "../../components/Icon";
 
 function LogSheet({ recipe, open, onClose, date }: { recipe: Recipe; open: boolean; onClose: () => void; date: string }) {
   const { upsertEntry } = useStore();
@@ -198,12 +199,12 @@ function RecipeInner() {
           </div>
         )}
         <button
-          className="absolute left-4 h-11 w-11 rounded-full bg-paper/95 text-[20px] shadow"
+          className="absolute left-4 grid h-11 w-11 place-items-center rounded-full bg-paper/95 shadow"
           style={{ top: "calc(env(safe-area-inset-top, 0px) + 12px)" }}
           onClick={() => router.push("/recipes")}
           aria-label={tr("กลับ", "Back")}
         >
-          ‹
+          <Icon name="caret-left" className="h-5 w-5" />
         </button>
       </div>
 

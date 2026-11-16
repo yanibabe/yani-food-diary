@@ -11,6 +11,7 @@ import { getPhoto } from "../lib/photos";
 import { GLASS_ML } from "../lib/water";
 import { SLOT_LABEL, type Entry } from "../lib/types";
 import type { Lang } from "../lib/i18n";
+import { Icon } from "./Icon";
 
 // "Frosted Calm" look (Round 30). A still picture can't blur, so the glass cards are
 // white ~55% fill + a thin white border, and the color clouds are soft radial gradients.
@@ -472,11 +473,7 @@ export function ShareDayButton({
         }}
         data-testid="share-day-button"
       >
-        <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-          <path d="M12 15V4" />
-          <path d="m8 8 4-4 4 4" />
-          <path d="M6 12v6.5A1.5 1.5 0 0 0 7.5 20h9a1.5 1.5 0 0 0 1.5-1.5V12" />
-        </svg>
+        <Icon name="export" className="h-5 w-5" />
         {tr("แชร์สรุปวันนี้", "Share this day")}
       </button>
       <Sheet open={open} onClose={() => setOpen(false)} title={tr("สรุปวันนี้", "This day")}>

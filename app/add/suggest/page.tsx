@@ -18,6 +18,7 @@ import { totalsForRecipe } from "../../lib/recipe";
 import { useStore } from "../../lib/store";
 import { recipeIdeas, type Idea, type RecipeOption } from "../../lib/suggest";
 import type { Entry } from "../../lib/types";
+import { Icon } from "../../components/Icon";
 
 /** A web search for the dish name, so she can find other recipes or videos. */
 const searchUrl = (name: string, lang: string) =>
@@ -163,8 +164,8 @@ function SuggestInner() {
     return (
       <main className="page">
         <header className="mb-4 flex items-center gap-3">
-          <button className="h-11 w-11 rounded-full bg-paper text-[20px]" onClick={() => setStep(picked.idea.place === "menu" ? "cook" : "ideas")} aria-label={tr("กลับ", "Back")}>
-            ‹
+          <button className="grid h-11 w-11 place-items-center rounded-full bg-paper" onClick={() => setStep(picked.idea.place === "menu" ? "cook" : "ideas")} aria-label={tr("กลับ", "Back")}>
+            <Icon name="caret-left" className="h-5 w-5" />
           </button>
           <h1 className="text-[22px] font-semibold">{tr("ตรวจก่อนบันทึก", "Check before saving")}</h1>
         </header>
@@ -193,8 +194,8 @@ function SuggestInner() {
     return (
       <main className="page space-y-4" data-testid="suggest-cook">
         <header className="flex items-center gap-3">
-          <button className="h-11 w-11 shrink-0 rounded-full bg-paper text-[20px]" onClick={() => setStep("ideas")} aria-label={tr("กลับ", "Back")}>
-            ‹
+          <button className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-paper" onClick={() => setStep("ideas")} aria-label={tr("กลับ", "Back")}>
+            <Icon name="caret-left" className="h-5 w-5" />
           </button>
           <h1 className="min-w-0 text-[22px] font-semibold leading-snug">{c.name}</h1>
         </header>
@@ -300,8 +301,8 @@ function SuggestInner() {
   return (
     <main className="page space-y-5">
       <header className="flex items-center gap-3">
-        <button className="h-11 w-11 rounded-full bg-paper text-[20px]" onClick={() => router.push("/")} aria-label={tr("กลับ", "Back")}>
-          ‹
+        <button className="grid h-11 w-11 place-items-center rounded-full bg-paper" onClick={() => router.push("/")} aria-label={tr("กลับ", "Back")}>
+          <Icon name="caret-left" className="h-5 w-5" />
         </button>
         <h1 className="text-[22px] font-semibold">{tr("กินอะไรดี", "What can I eat?")}</h1>
         {mock && <Badge>{tr("AI จำลอง", "Test AI")}</Badge>}

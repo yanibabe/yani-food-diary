@@ -16,56 +16,23 @@ import { useLang } from "./lib/lang";
 import { useStore } from "./lib/store";
 import { glassesOn, waterGoal } from "./lib/water";
 import { SLOT_LABEL, SLOTS, type Entry } from "./lib/types";
+import { Icon, type IconName } from "./components/Icon";
 
 const SLOT_COLORS = ["var(--protein-dot)", "var(--fat-dot)", "var(--carbs-dot)", "var(--water)"];
 
 /** Thin line icons for the "Add food" choices (calm look, no emoji). */
-const ADD_ICONS: Record<string, React.ReactNode> = {
-  photo: (
-    <>
-      <path d="M4 8.5A1.5 1.5 0 0 1 5.5 7H8l1.5-2h5L16 7h2.5A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5z" />
-      <circle cx="12" cy="13" r="3.2" />
-    </>
-  ),
-  text: (
-    <>
-      <path d="M5 6.5A1.5 1.5 0 0 1 6.5 5h11A1.5 1.5 0 0 1 19 6.5v8a1.5 1.5 0 0 1-1.5 1.5H11l-4 3v-3h-.5A1.5 1.5 0 0 1 5 14.5z" />
-      <path d="M9 9.5h6M9 12.5h4" />
-    </>
-  ),
-  recipes: (
-    <>
-      <path d="M5 5.5c2.5-1 5-1 7 .5v13c-2-1.5-4.5-1.5-7-.5z" />
-      <path d="M19 5.5c-2.5-1-5-1-7 .5v13c2-1.5 4.5-1.5 7-.5z" />
-    </>
-  ),
-  manual: (
-    <>
-      <path d="M15.5 5.5 18.5 8.5 9 18l-4 1 1-4z" />
-      <path d="M13.5 7.5l3 3" />
-    </>
-  ),
-  barcode: (
-    <>
-      <path d="M5 6v12M8 6v12M11 6v12M15 6v12M19 6v12" />
-      <path d="M13 6v12M17 6v12" strokeWidth={0.8} />
-    </>
-  ),
-  again: (
-    <>
-      <path d="M5 11a7 7 0 0 1 12-4.9L19 8" />
-      <path d="M19 4v4h-4" />
-      <path d="M19 13a7 7 0 0 1-12 4.9L5 16" />
-      <path d="M5 20v-4h4" />
-    </>
-  ),
+const ADD_ICONS: Record<string, IconName> = {
+  photo: "camera",
+  text: "chat-text",
+  recipes: "book-open",
+  manual: "pencil-simple",
+  barcode: "barcode",
+  again: "arrows-clockwise",
 };
 
 function AddIcon({ name }: { name: string }) {
   return (
-    <svg viewBox="0 0 24 24" className="h-8 w-8" fill="none" stroke="currentColor" strokeWidth={1.4} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      {ADD_ICONS[name]}
-    </svg>
+    <Icon name={ADD_ICONS[name]} className="h-8 w-8" />
   );
 }
 
@@ -141,20 +108,20 @@ function TodayInner() {
         </div>
       )}
       <header className="flex items-center justify-between">
-        <button className="glass h-11 w-11 !rounded-full text-[20px]" onClick={() => go(shiftDateKey(date, -1))} aria-label={tr("วันก่อนหน้า", "Previous day")}>
-          ‹
+        <button className="glass grid h-11 w-11 place-items-center !rounded-full" onClick={() => go(shiftDateKey(date, -1))} aria-label={tr("วันก่อนหน้า", "Previous day")}>
+          <Icon name="caret-left" className="h-5 w-5" />
         </button>
         <div className="text-center">
           <h1 className="text-[26px] font-medium">{date === today ? tr("วันนี้", "Today") : tr("ย้อนดู", "Looking back")}</h1>
           <p className="text-[14px] text-muted">{thaiDateLabel(date, lang)}</p>
         </div>
         <button
-          className="glass h-11 w-11 !rounded-full text-[20px] disabled:opacity-30"
+          className="glass grid h-11 w-11 place-items-center !rounded-full disabled:opacity-30"
           onClick={() => go(shiftDateKey(date, 1))}
           disabled={date >= today}
           aria-label={tr("วันถัดไป", "Next day")}
         >
-          ›
+          <Icon name="caret-right" className="h-5 w-5" />
         </button>
       </header>
 
@@ -273,7 +240,7 @@ function TodayInner() {
         {againView ? (
           <div className="pb-4" data-testid="eat-again">
             <button className="mb-3 flex items-center gap-1 px-1 text-[16px] font-medium text-olive-dark" onClick={() => setAgainView(false)} data-testid="eat-again-back">
-              ‹ {tr("กลับ", "Back")}
+              <Icon name="caret-left" className="h-4 w-4" /> {tr("กลับ", "Back")}
             </button>
             <h3 className="px-1 pb-1 text-[18px] font-medium">{tr("กินซ้ำ", "Eat again")}</h3>
             <p className="px-1 pb-3 text-[13px] text-muted">
@@ -360,9 +327,7 @@ function TodayInner() {
 function SourceIcon({ e, small }: { e: Entry; small?: boolean }) {
   const name = e.source === "recipe" ? "recipes" : e.source === "photo" ? "photo" : e.source === "text" ? "text" : e.source === "barcode" ? "barcode" : "manual";
   return (
-    <svg viewBox="0 0 24 24" className={small ? "h-5 w-5" : "h-6 w-6"} fill="none" stroke="currentColor" strokeWidth={1.4} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      {ADD_ICONS[name]}
-    </svg>
+    <Icon name={ADD_ICONS[name]} className={small ? "h-5 w-5" : "h-6 w-6"} />
   );
 }
 

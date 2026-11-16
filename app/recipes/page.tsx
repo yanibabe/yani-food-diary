@@ -8,6 +8,7 @@ import { fmtKcal } from "../lib/nutrition";
 import { totalsForRecipe } from "../lib/recipe";
 import { useStore } from "../lib/store";
 import { RECIPE_CATEGORIES, type RecipeCategory } from "../lib/types";
+import { Icon } from "../components/Icon";
 
 // Round 33 — her pick "C": recipes sorted into category boxes that open and close.
 // Rows show the line pot icon, never the photo (photos live inside the recipe).
@@ -25,9 +26,7 @@ function readOpen(): RecipeCategory[] | null {
 
 function Chevron({ open }: { open: boolean }) {
   return (
-    <svg viewBox="0 0 24 24" className={`h-4 w-4 text-muted transition-transform ${open ? "rotate-180" : ""}`} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" aria-hidden>
-      <path d="M6 9l6 6 6-6" />
-    </svg>
+    <Icon name="caret-down" className={`h-4 w-4 text-muted transition-transform ${open ? "rotate-180" : ""}`} />
   );
 }
 
@@ -67,9 +66,7 @@ function RecipesInner() {
           aria-label={tr("สูตรใหม่", "New recipe")}
           data-testid="new-recipe"
         >
-          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" aria-hidden>
-            <path d="M12 5v14M5 12h14" />
-          </svg>
+          <Icon name="plus" className="h-5 w-5" />
         </Link>
       </header>
 
@@ -128,9 +125,7 @@ function RecipesInner() {
                       ) : (
                         <span className="shrink-0 text-[12px] text-warn-ink">{tr("ข้อมูลยังไม่ครบ", "Missing details")}</span>
                       )}
-                      <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 shrink-0 text-muted" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" aria-hidden>
-                        <path d="M9 6l6 6-6 6" />
-                      </svg>
+                      <Icon name="caret-right" className="h-3.5 w-3.5 shrink-0 text-muted" />
                     </Link>
                   );
                 })}

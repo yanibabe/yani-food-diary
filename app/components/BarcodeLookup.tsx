@@ -15,6 +15,7 @@ import { readFixes, writeFixes } from "../lib/food/labelFixStore";
 import { LiveBarcodeScanner } from "./LiveBarcodeScanner";
 import { OffAttribution } from "./OffAttribution";
 import { NumberField } from "./ui";
+import { Icon } from "./Icon";
 
 export function BarcodeLookup({ onPick, onManual }: { onPick: (food: Food, grams: number) => void; onManual: () => void }) {
   const { tr, lang } = useLang();
@@ -231,7 +232,7 @@ export function BarcodeLookup({ onPick, onManual }: { onPick: (food: Food, grams
     <div className="space-y-5">
       <div className="card space-y-3 p-4">
         <button className="btn-primary w-full" onClick={startLive} disabled={busy || reading} data-testid="barcode-live">
-          {`📷 ${tr("สแกนด้วยกล้อง", "Scan with camera")}`}
+          <Icon name="camera" className="mr-1.5 inline-block h-5 w-5 align-[-4px]" />{tr("สแกนด้วยกล้อง", "Scan with camera")}
         </button>
         <button className="btn-soft w-full" onClick={() => cameraRef.current?.click()} disabled={busy || reading} data-testid="barcode-photo">
           {reading ? tr("กำลังอ่านบาร์โค้ด…", "Reading the barcode…") : `🖼️ ${tr("ถ่ายรูปบาร์โค้ดแทน", "Take a photo instead")}`}
@@ -319,7 +320,7 @@ export function BarcodeLookup({ onPick, onManual }: { onPick: (food: Food, grams
             !fixForm && (
               <div className="space-y-2 text-center">
                 <button className="btn-soft w-full" onClick={() => labelRef.current?.click()} disabled={readingLabel} data-testid="label-photo">
-                  {readingLabel ? tr("กำลังอ่านฉลาก…", "Reading the label…") : `📷 ${tr("ไม่ตรงกับซอง? ถ่ายรูปฉลาก", "Doesn't match the pack? Photo the label")}`}
+                  {readingLabel ? tr("กำลังอ่านฉลาก…", "Reading the label…") : <><Icon name="camera" className="mr-1.5 inline-block h-5 w-5 align-[-4px]" />{tr("ไม่ตรงกับซอง? ถ่ายรูปฉลาก", "Doesn't match the pack? Photo the label")}</>}
                 </button>
                 <button className="text-[13px] text-muted underline" onClick={openFixForm} data-testid="label-fix-open">
                   {tr("หรือพิมพ์เอง", "or type it")}

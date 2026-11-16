@@ -14,6 +14,7 @@ import { useStore } from "../../lib/store";
 import { foodToItem } from "../../lib/food/toItem";
 import type { Food } from "../../lib/food/provider";
 import type { FoodItem } from "../../lib/types";
+import { Icon } from "../../components/Icon";
 
 type Mode = "photo" | "text" | "manual" | "barcode";
 
@@ -148,8 +149,8 @@ function AddInner() {
   return (
     <main className="page">
       <header className="mb-4 flex items-center gap-3">
-        <button className="h-11 w-11 rounded-full bg-paper text-[20px]" onClick={() => router.back()} aria-label={tr("กลับ", "Back")}>
-          ‹
+        <button className="grid h-11 w-11 place-items-center rounded-full bg-paper" onClick={() => router.back()} aria-label={tr("กลับ", "Back")}>
+          <Icon name="caret-left" className="h-5 w-5" />
         </button>
         <h1 className="text-[22px] font-semibold">{step === "review" ? tr("ตรวจผล", "Check the result") : heading}</h1>
       </header>
@@ -164,8 +165,8 @@ function AddInner() {
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={photo} alt={tr("รูปที่เลือก", "Chosen photo")} className="block max-h-[60dvh] w-full object-cover" />
               ) : (
-                <div className="flex aspect-[4/3] items-center justify-center bg-cream text-[64px]" aria-hidden>
-                  📷
+                <div className="flex aspect-[4/3] items-center justify-center bg-cream text-muted" aria-hidden>
+                  <Icon name="camera" className="h-16 w-16" />
                 </div>
               )}
               <div className="grid grid-cols-2 gap-3 p-4">
