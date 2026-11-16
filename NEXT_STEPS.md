@@ -6,7 +6,7 @@
 
 ---
 
-## LIVE (updated 2026-11-16; Round 29 share my day with my trainer (picture) LIVE; Round 28 simpler "กินอะไรดี" (menu + recipe, no delivery) LIVE; Round 27 label numbers = no +15% LIVE; Round 26 grouped "what can I eat" LIVE; Round 25 "what can I eat" LIVE; Round 24 weight moved to Profile, steps removed)
+## LIVE (updated 2026-11-16; Round 30 Frosted Calm share picture + Profile LIVE; Round 29 share my day with my trainer (picture) LIVE; Round 28 simpler "กินอะไรดี" (menu + recipe, no delivery) LIVE; Round 27 label numbers = no +15% LIVE; Round 26 grouped "what can I eat" LIVE; Round 25 "what can I eat" LIVE; Round 24 weight moved to Profile, steps removed)
 
 - **App:** https://yani-food-diary.vercel.app  (Vercel, exm-labs account, free)
 - **Code:** https://github.com/yanibabe/yani-food-diary  (private; pushes auto-deploy)
@@ -30,7 +30,27 @@
    kcal, protein, fat, carbs (and totals). Easy to send (image and/or text via the iPhone share sheet).
    Ask her: picture, text, or both.
 
-## ▶ NEXT (2026-11-16): Round 30 — WHOLE-APP RESTYLE (every page)
+## ▶ NEXT: Round 31 — Today page in "Frosted Calm" (then add / recipes / entry pages in Rounds 32+)
+## First: she tries Round 30 on her iPhone (Profile page + "ส่งสรุปวันนี้ให้เทรนเนอร์" picture).
+
+## Round 30 (2026-11-16) — "Frosted Calm" look: trainer share picture + Profile ✅ LIVE
+- New thin font IBM Plex Sans Thai (`--font-calm`, layout.tsx). New CSS in globals.css under
+  "Frosted Calm": `.calm` (page scope), `.calm-backdrop` (beige + 3 color clouds, fixed),
+  `.glass` + `.calm .card` (frosted glass), `.calm-open` (a card opened inside the list loses its box + title).
+  To restyle another page later: add `calm relative z-0` to its <main> and `<div className="calm-backdrop" />`.
+  (`relative z-0` must be ON the element: without it the clouds hide behind the body's cream.)
+- Profile (app/profile/page.tsx): her character 124px (tap → dress-up sheet), name, "age · cm · kg",
+  glass box with 2 thin numbers (kcal a day | goal kg, or kg now if no weight goal) — tap it to open
+  the target editor. Then ONE glass list: ข้อมูลร่างกาย · น้ำหนัก · (อาหารที่เลี่ยง if milk warning on) ·
+  ภาษา · สำรองข้อมูล · วิธีคำนวณ. Each row opens its old content right under it. /profile#backup opens backup.
+- Share picture (ShareDayButton.tsx canvas): beige + soft radial clouds, glass = white 55% + white border,
+  her character drawn with the same layers as Today (color through body mask → cheeks → lines → deco),
+  "NAME · d · m · yyyy" spaced + Thai date, big thin kcal + "kcal · เป้า · เหลือ/เกิน" + thin bar,
+  3 macro tiles, one glass card of meals (slot | name + detail + P/C/F | kcal), footer SNAPCAL.
+- Checked in the mock server at phone size: Profile, rows open/close, target editor, share picture with 3 test meals.
+  92 tests pass, lint + build clean. NOT yet tried on her iPhone.
+
+## (done) Round 30 plan — WHOLE-APP RESTYLE (every page)
 ## Round 29 share tried on her iPhone ✓ ("okay to a degree" — works).
 ## Her wish: every page looks more professional and easy to use; LESS text on screen, but still clear.
 ## She had no references, so she asked ME for 5–6 style ideas. FOCUS first: (a) the trainer share picture

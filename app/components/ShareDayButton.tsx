@@ -7,35 +7,41 @@ import { useLang } from "../lib/lang";
 import { thaiDateLabel } from "../lib/date";
 import { fmtKcal } from "../lib/nutrition";
 import { buildShareDay, shareFileName, type ShareDay } from "../lib/shareDay";
+import { BACKUP_KEYS } from "../lib/backup";
+import { BLUSH, CHAR_BOX, DECOS, cleanLook, parseLook, type CharLook } from "../lib/character";
 import { SLOT_LABEL, type Entry } from "../lib/types";
 import type { Lang } from "../lib/i18n";
 
+// "Frosted Calm" look (Round 30). A still picture can't blur, so the glass cards are
+// white ~55% fill + a thin white border, and the color clouds are soft radial gradients.
 const W = 1080;
-const PAD = 72; // outside edge
-const IN = 56; // inside the white card
-const SLOT_COLORS = ["#ffd84d", "#8cc9b2", "#7fb2ea", "#f09aab"];
+const PAD = 64; // page edge
+const IN = 48; // inside a glass card
+const CHAR = 180; // character size
 const C = {
-  cream: "#f8f6f3",
-  paper: "#ffffff",
-  line: "#ebe6e0",
-  ink: "#1a1a1a",
-  muted: "#8b857e",
-  protein: "#ffe1e6",
-  proteinInk: "#a03a50",
-  carbs: "#fff1bf",
-  carbsInk: "#7a5b00",
-  fat: "#dcebff",
-  fatInk: "#2e5c8f",
-  warnInk: "#8a5212",
+  bg: "#F4EFE7",
+  clouds: [
+    { x: 0.18, y: 0.08, r: 0.62, c: "243,217,200" }, // peach, top-left
+    { x: 0.9, y: 0.5, r: 0.66, c: "227,224,242" }, // lilac, right
+    { x: 0.28, y: 0.97, r: 0.66, c: "230,238,221" }, // sage, bottom
+  ],
+  glass: "rgba(255,255,255,0.55)",
+  glassEdge: "rgba(255,255,255,0.9)",
+  ink: "#2B2724",
+  muted: "#9C948A",
+  line: "rgba(43,39,36,0.09)",
+  track: "rgba(43,39,36,0.12)",
+  over: "#B0603A",
 };
 
-type Info = { day: ShareDay; dateLabel: string; name: string; target: number; lang: Lang };
+type Info = { day: ShareDay; date: string; dateLabel: string; name: string; target: number; lang: Lang; char: HTMLCanvasElement | null };
+type Box = { x: number; y: number; w: number; h: number; r: number };
 
-function fontFamilies(): string {
+function calmFont(): string {
   const s = getComputedStyle(document.documentElement);
+  const calm = s.getPropertyValue("--font-calm").trim();
   const thai = s.getPropertyValue("--font-thai").trim();
-  const round = s.getPropertyValue("--font-round-latin").trim();
-  return [round, thai, "sans-serif"].filter(Boolean).join(", ");
+  return [calm, thai, "sans-serif"].filter(Boolean).join(", ");
 }
 
 /** Cut text to fit maxW, adding "…". */
@@ -64,164 +70,242 @@ function wrap(ctx: CanvasRenderingContext2D, text: string, maxW: number, maxLine
   return lines;
 }
 
-function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number, fill: string) {
-  ctx.beginPath();
-  ctx.roundRect(x, y, w, h, r);
-  ctx.fillStyle = fill;
-  ctx.fill();
+/** Load a picture (her character files, or our own small SVG pieces). */
+function loadImg(src: string): Promise<HTMLImageElement> {
+  return new Promise((ok, bad) => {
+    const i = new Image();
+    i.onload = () => ok(i);
+    i.onerror = () => bad(new Error("image " + src.slice(0, 40)));
+    i.src = src;
+  });
+}
+const svgUrl = (inner: string) =>
+  "data:image/svg+xml;charset=utf-8," +
+  encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${CHAR_BOX} ${CHAR_BOX}">${inner}</svg>`);
+
+/** Her character, same layers as on Today: color (through the body mask) → cheeks → her lines → decoration. */
+async function drawCharacter(look: CharLook, size: number): Promise<HTMLCanvasElement> {
+  const l = cleanLook(look);
+  const c = document.createElement("canvas");
+  c.width = c.height = size;
+  const ctx = c.getContext("2d")!;
+  const [body, lines] = await Promise.all([loadImg("/character-body.png"), loadImg("/character-lines.png")]);
+  ctx.fillStyle = l.color;
+  ctx.fillRect(0, 0, size, size);
+  ctx.globalCompositeOperation = "destination-in";
+  ctx.drawImage(body, 0, 0, size, size);
+  ctx.globalCompositeOperation = "source-over";
+  if (l.blush) ctx.drawImage(await loadImg(svgUrl(BLUSH)), 0, 0, size, size);
+  ctx.drawImage(lines, 0, 0, size, size);
+  if (l.deco !== "none") ctx.drawImage(await loadImg(svgUrl(DECOS[l.deco].s)), 0, 0, size, size);
+  return c;
 }
 
-/** Draws the picture. Runs twice: once to measure the height, once to draw. */
-function paint(ctx: CanvasRenderingContext2D, info: Info, fam: string, draw: boolean): { h: number; cardBottom: number } {
+/** Lays out (and, when draw is true, writes) everything. Runs twice: measure, then draw.
+ *  Returns the page height and where the glass cards go. */
+function paint(ctx: CanvasRenderingContext2D, info: Info, fam: string, draw: boolean): { h: number; boxes: Box[] } {
   const tr = (th: string, en: string) => (info.lang === "en" ? en : th);
-  const font = (size: number, weight = 500) => (ctx.font = `${weight} ${size}px ${fam}`);
+  const font = (size: number, weight = 300) => (ctx.font = `${weight} ${size}px ${fam}`);
   const text = (t: string, x: number, y: number, color: string, align: CanvasTextAlign = "left") => {
     if (!draw) return;
     ctx.fillStyle = color;
     ctx.textAlign = align;
     ctx.fillText(t, x, y);
   };
-  const L = PAD + IN;
-  const R = W - PAD - IN;
-  const inner = R - L;
+  /** Wide letter spacing, drawn one letter at a time (works on every iPhone). */
+  const spaced = (t: string, cx: number, y: number, gap: number, color: string) => {
+    const chars = Array.from(t);
+    const total = chars.reduce((a, ch) => a + ctx.measureText(ch).width, 0) + gap * (chars.length - 1);
+    let x = cx - total / 2;
+    for (const ch of chars) {
+      text(ch, x, y, color);
+      x += ctx.measureText(ch).width + gap;
+    }
+  };
+  const boxes: Box[] = [];
+  const L = PAD;
+  const R = W - PAD;
   const { day, target } = info;
   ctx.textBaseline = "alphabetic";
 
-  let y = PAD + IN;
-  // Header
-  font(30, 700);
-  y += 30;
-  text("SnapCal", L, y, C.muted);
-  if (info.name) text(info.name, R, y, C.muted, "right");
-  font(46, 700);
-  y += 70;
-  text(fit(ctx, info.dateLabel, inner), L, y, C.ink);
+  // Character + name · date
+  let y = PAD + 8;
+  if (draw && info.char) ctx.drawImage(info.char, (W - CHAR) / 2, y, CHAR, CHAR);
+  y += CHAR + 44;
+  const [yy, mm, dd] = info.date.split("-");
+  font(28, 400);
+  const who = (info.name ? info.name.toUpperCase() + "  ·  " : "") + `${Number(dd)} · ${Number(mm)} · ${yy}`;
+  spaced(fit(ctx, who, W - PAD * 4), W / 2, y, 7, C.muted);
+  y += 44;
+  font(30, 300);
+  text(fit(ctx, info.dateLabel, W - PAD * 2), W / 2, y, C.muted, "center");
 
-  // Big total
+  // Big kcal
   y += 40;
-  if (draw) roundRect(ctx, L, y, inner, 200, 36, C.cream);
-  font(96, 800);
-  const big = fmtKcal(day.total.kcal);
-  text(big, L + 40, y + 120, C.ink);
-  const bigW = ctx.measureText(big).width;
-  font(34, 600);
-  text(`/ ${fmtKcal(target)} kcal`, L + 40 + bigW + 18, y + 120, C.muted);
+  const kTop = y;
+  y += 56 + 150;
+  font(170, 200);
+  text(fmtKcal(day.total.kcal), W / 2, y, C.ink, "center");
+  y += 62;
   const left = target - day.total.kcal;
-  font(32, 600);
+  font(32, 300);
   text(
-    left >= 0 ? tr(`เหลืออีก ${fmtKcal(left)} kcal`, `${fmtKcal(left)} kcal left`) : tr(`เกินเป้า ${fmtKcal(-left)} kcal`, `${fmtKcal(-left)} kcal over`),
-    L + 40,
-    y + 170,
-    left >= 0 ? C.ink : C.warnInk,
+    `kcal · ${tr("เป้า", "goal")} ${fmtKcal(target)} · ` +
+      (left >= 0 ? tr(`เหลือ ${fmtKcal(left)}`, `${fmtKcal(left)} left`) : tr(`เกิน ${fmtKcal(-left)}`, `${fmtKcal(-left)} over`)),
+    W / 2,
+    y,
+    left >= 0 ? C.muted : C.over,
+    "center",
   );
-  y += 200;
+  y += 44;
+  const barX = L + IN + 40;
+  const barW = R - L - (IN + 40) * 2;
+  if (draw) {
+    ctx.fillStyle = C.track;
+    ctx.fillRect(barX, y, barW, 4);
+    ctx.fillStyle = left >= 0 ? C.ink : C.over;
+    ctx.fillRect(barX, y, barW * Math.min(1, target > 0 ? day.total.kcal / target : 0), 4);
+  }
+  y += 4 + 52;
+  boxes.push({ x: L, y: kTop, w: R - L, h: y - kTop, r: 72 });
 
-  // Protein / carbs / fat
-  y += 24;
-  const gap = 20;
-  const bw = (inner - gap * 2) / 3;
+  // Protein / carbs / fat: 3 small glass tiles
+  y += 26;
+  const gap = 24;
+  const tw = (R - L - gap * 2) / 3;
   const macros = [
-    { label: tr("โปรตีน", "Protein"), g: day.total.protein, bg: C.protein, ink: C.proteinInk },
-    { label: tr("คาร์บ", "Carbs"), g: day.total.carbs, bg: C.carbs, ink: C.carbsInk },
-    { label: tr("ไขมัน", "Fat"), g: day.total.fat, bg: C.fat, ink: C.fatInk },
+    { label: tr("โปรตีน", "Protein"), g: day.total.protein },
+    { label: tr("คาร์บ", "Carbs"), g: day.total.carbs },
+    { label: tr("ไขมัน", "Fat"), g: day.total.fat },
   ];
   macros.forEach((mc, i) => {
-    const x = L + i * (bw + gap);
-    if (draw) roundRect(ctx, x, y, bw, 150, 30, mc.bg);
-    font(30, 600);
-    text(mc.label, x + bw / 2, y + 52, mc.ink, "center");
-    font(58, 800);
-    text(`${mc.g}`, x + bw / 2 - 14, y + 120, C.ink, "center");
-    const nw = ctx.measureText(`${mc.g}`).width;
-    font(30, 600);
-    text("g", x + bw / 2 - 14 + nw / 2 + 8, y + 120, C.muted);
+    const x = L + i * (tw + gap);
+    boxes.push({ x, y, w: tw, h: 170, r: 52 });
+    font(68, 300);
+    text(`${mc.g}`, x + tw / 2, y + 92, C.ink, "center");
+    font(28, 300);
+    text(`${mc.label} g`, x + tw / 2, y + 138, C.muted, "center");
   });
-  y += 150;
+  y += 170;
 
-  // Meals
-  info.day.slots.forEach((s, i) => {
-    y += 64;
-    if (draw) {
-      ctx.beginPath();
-      ctx.arc(L + 12, y - 13, 12, 0, Math.PI * 2);
-      ctx.fillStyle = SLOT_COLORS[i % SLOT_COLORS.length];
-      ctx.fill();
+  // Meals: one glass card, one line per meal, thin lines between
+  y += 26;
+  const mTop = y;
+  y += 16;
+  const slotW = 170;
+  const nameX = L + IN + slotW;
+  const R2 = R - IN;
+  let first = true;
+  const divider = () => {
+    if (!first && draw) {
+      ctx.fillStyle = C.line;
+      ctx.fillRect(L + IN, y, R - L - IN * 2, 2);
     }
-    font(38, 700);
-    text(SLOT_LABEL[s.slot][info.lang], L + 40, y, C.ink);
-    font(32, 600);
-    text(`${fmtKcal(s.m.kcal)} kcal`, R, y, C.muted, "right");
-    y += 18;
+    first = false;
+  };
+  day.slots.forEach((s) => {
     if (s.meals.length === 0) {
-      y += 50;
-      font(30, 500);
-      text(tr("ไม่ได้บันทึก", "Nothing logged"), L + 40, y, C.muted);
-      y += 16;
+      divider();
+      y += 76;
+      font(28, 300);
+      text(SLOT_LABEL[s.slot][info.lang], L + IN, y, C.muted);
+      font(34, 300);
+      text("—", nameX, y, C.muted);
+      y += 34;
       return;
     }
     s.meals.forEach((m, j) => {
-      if (j > 0 && draw) {
-        ctx.fillStyle = C.line;
-        ctx.fillRect(L + 40, y + 6, inner - 40, 2);
+      divider();
+      y += 76;
+      if (j === 0) {
+        font(28, 300);
+        text(SLOT_LABEL[s.slot][info.lang], L + IN, y, C.muted);
       }
-      font(34, 800);
-      const kcal = `${fmtKcal(m.m.kcal)}`;
+      font(36, 400);
+      const kcal = fmtKcal(m.m.kcal);
       const kw = ctx.measureText(kcal).width;
-      y += 56;
-      text(kcal, R, y, C.ink, "right");
-      font(34, 600);
-      const titleLines = wrap(ctx, m.title, inner - 40 - kw - 32, 2);
-      titleLines.forEach((t, k) => {
-        if (k > 0) y += 46;
-        text(t, L + 40, y, C.ink);
+      text(kcal, R2, y, C.ink, "right");
+      font(36, 300);
+      wrap(ctx, m.title, R2 - nameX - kw - 32, 2).forEach((t, k) => {
+        if (k > 0) y += 48;
+        text(t, nameX, y, C.ink);
       });
+      font(26, 300);
       if (m.detail) {
-        font(26, 500);
-        wrap(ctx, m.detail, inner - 40, 3).forEach((t) => {
-          y += 38;
-          text(t, L + 40, y, C.muted);
+        wrap(ctx, m.detail, R2 - nameX, 3).forEach((t) => {
+          y += 40;
+          text(t, nameX, y, C.muted);
         });
       }
-      y += 42;
-      font(28, 600);
+      y += 40;
       text(
         tr(`โปรตีน ${m.m.protein} · คาร์บ ${m.m.carbs} · ไขมัน ${m.m.fat} g`, `Protein ${m.m.protein} · Carbs ${m.m.carbs} · Fat ${m.m.fat} g`),
-        L + 40,
+        nameX,
         y,
         C.muted,
       );
-      y += 16;
+      y += 34;
     });
   });
+  y += 24;
+  boxes.push({ x: L, y: mTop, w: R - L, h: y - mTop, r: 64 });
 
-  y += 40 + IN;
-  const cardBottom = y;
-  // Footer, under the white card
-  y += 56;
-  font(26, 500);
-  text(tr("บันทึกด้วย SnapCal", "Logged with SnapCal"), W / 2, y, C.muted, "center");
-  return { h: y + PAD - 20, cardBottom };
+  // Footer
+  y += 64;
+  font(24, 400);
+  spaced("SNAPCAL", W / 2, y, 10, C.muted);
+  return { h: y + PAD - 8, boxes };
 }
 
-async function makePicture(info: Info): Promise<Blob> {
-  const fam = fontFamilies();
-  // Make sure the Thai + number fonts are ready, or the canvas uses a plain font.
+async function makePicture(info: Omit<Info, "char">, look: CharLook): Promise<Blob> {
+  const fam = calmFont();
+  // Make sure the thin Thai + number font is ready, or the canvas uses a plain font.
   await Promise.all(
-    [500, 600, 700, 800].map((w) => document.fonts.load(`${w} 32px ${fam}`, "กขค 0123 kcal").catch(() => [])),
+    [200, 300, 400].map((w) => document.fonts.load(`${w} 32px ${fam}`, "กขค 0123 kcal").catch(() => [])),
   );
+  // The character is nice to have: if it fails to load, the picture still works.
+  const char = await drawCharacter(look, CHAR * 2).catch(() => null);
+  const full: Info = { ...info, char };
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("canvas");
-  const size = paint(ctx, info, fam, false);
+  const size = paint(ctx, full, fam, false);
   const H = Math.ceil(size.h);
   canvas.width = W;
   canvas.height = H;
-  ctx.fillStyle = C.cream;
+  // Beige page + 3 soft color clouds
+  ctx.fillStyle = C.bg;
   ctx.fillRect(0, 0, W, H);
-  // White card: from the top edge to just above the footer.
-  roundRect(ctx, PAD, PAD, W - PAD * 2, size.cardBottom - PAD, 48, C.paper);
-  paint(ctx, info, fam, true);
+  for (const cl of C.clouds) {
+    const cx = cl.x * W;
+    const cy = cl.y * H;
+    const r = cl.r * Math.max(W, H * 0.7);
+    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+    g.addColorStop(0, `rgba(${cl.c},1)`);
+    g.addColorStop(1, `rgba(${cl.c},0)`);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+  }
+  // Glass cards
+  for (const b of size.boxes) {
+    ctx.beginPath();
+    ctx.roundRect(b.x, b.y, b.w, b.h, b.r);
+    ctx.fillStyle = C.glass;
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = C.glassEdge;
+    ctx.stroke();
+  }
+  paint(ctx, full, fam, true);
   return new Promise((ok, bad) => canvas.toBlob((b) => (b ? ok(b) : bad(new Error("toBlob"))), "image/png"));
+}
+
+function savedLook(): CharLook {
+  try {
+    return parseLook(localStorage.getItem(BACKUP_KEYS.buddy));
+  } catch {
+    return parseLook(null);
+  }
 }
 
 export function ShareDayButton({ entries, date, target, name }: { entries: Entry[]; date: string; target: number; name: string }) {
@@ -234,7 +318,7 @@ export function ShareDayButton({ entries, date, target, name }: { entries: Entry
     if (!open) return;
     let url = "";
     let stop = false;
-    makePicture({ day: buildShareDay(entries, date), dateLabel: thaiDateLabel(date, lang), name, target, lang })
+    makePicture({ day: buildShareDay(entries, date), date, dateLabel: thaiDateLabel(date, lang), name, target, lang }, savedLook())
       .then((blob) => {
         if (stop) return;
         url = URL.createObjectURL(blob);

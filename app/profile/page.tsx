@@ -1,10 +1,12 @@
 "use client";
 import { MILK_WARNING_ON } from "../lib/dairy";
-// Profile: who she is, her plan, the daily kcal target (tap to edit), and her weight log.
+// Profile ("Frosted Calm" look, Round 30): her character, name, 2 big numbers, then a short list.
+// Each list row opens what it holds right under it. Everything the page did before is still here.
 // "แก้ข้อมูล" edits the same answers as first-run setup; a new suggestion
 // only replaces the target after she confirms.
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { CharacterMaker, CharacterPicture, useCharLook } from "../components/Character";
 import { BackupCard } from "../components/BackupCard";
 import { WeightCard } from "../components/WeightCard";
 import {
@@ -37,22 +39,40 @@ import { EMPTY_PROFILE, fillProfile } from "../lib/profile";
 import { useStore } from "../lib/store";
 import type { Goals, Profile } from "../lib/types";
 
+type Panel = "target" | "body" | "weight" | "avoid" | "lang" | "backup" | "method";
+
 export default function ProfilePage() {
   const { goals } = useStore();
-  const { tr } = useLang();
+  const { tr, lang } = useLang();
   const [editing, setEditing] = useState(false);
+  const [open, setOpen] = useState<Panel | null>(null);
+  const [charOpen, setCharOpen] = useState(false);
+  const { look, save: saveLook } = useCharLook();
   const [saved, setSaved] = useState<string | null>(null);
   const flash = (t: string) => {
     setSaved(t);
     setTimeout(() => setSaved(null), 2500);
   };
+  const toggle = (k: Panel) => setOpen((o) => (o === k ? null : k));
+  // "Back up now" on Today links here with #backup: open that row.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (location.hash === "#backup") setOpen("backup");
+  }, []);
   const p = fillProfile(goals.profile) ?? EMPTY_PROFILE;
+  const plan = usesWeightGoal(p.reason) && !reasonProblem(p) ? weightPlan(p) : null;
+  const goalKg = plan && plan.direction !== "keep" ? p.targetWeightKg : null;
+  const facts = [
+    p.age ? `${p.age}` : null,
+    p.heightCm ? tr(`${p.heightCm} ซม.`, `${p.heightCm} cm`) : null,
+    p.weightKg ? tr(`${kg(p.weightKg)} กก.`, `${kg(p.weightKg)} kg`) : null,
+  ].filter(Boolean);
 
   return (
-    <main className="page space-y-5">
-      <h1 className="text-[26px] font-bold">{tr("โปรไฟล์", "Profile")}</h1>
+    <main className="page calm relative z-0 space-y-3">
+      <div className="calm-backdrop" aria-hidden />
       {saved && (
-        <p className="rounded-xl bg-olive-soft px-3 py-2 text-center text-[15px] text-olive-dark" role="status">{saved}</p>
+        <p className="glass px-3 py-2 text-center text-[15px]" role="status">{saved}</p>
       )}
       {editing ? (
         <EditProfile
@@ -66,19 +86,102 @@ export default function ProfilePage() {
         />
       ) : (
         <>
-          <TargetCard goals={goals} onSaved={() => flash(tr("บันทึกเป้าแล้ว", "Target saved"))} />
-          <WeightCard />
-          <InfoCard p={p} onEdit={() => setEditing(true)} />
-          {MILK_WARNING_ON && <AvoidCard />}
+          <header className="pb-3 pt-4 text-center" data-testid="profile-head">
+            <button
+              type="button"
+              className="mx-auto block active:scale-[0.97]"
+              onClick={() => setCharOpen(true)}
+              aria-label={tr("แต่งตัวน้อง", "Dress up")}
+            >
+              <CharacterPicture look={look} size={124} />
+            </button>
+            <h1 className="mt-1.5 text-[26px] font-light">{p.name || tr("โปรไฟล์", "Profile")}</h1>
+            {facts.length > 0 && <p className="text-[14px] text-muted">{facts.join(" · ")}</p>}
+          </header>
+
+          <button
+            type="button"
+            className="glass grid w-full grid-cols-[1fr_1px_1fr] py-4 text-center active:scale-[0.99]"
+            onClick={() => toggle("target")}
+            aria-expanded={open === "target"}
+            data-testid="profile-stats"
+          >
+            <span>
+              <span className="num block text-[32px] leading-tight">{fmtKcal(goals.targetKcal)}</span>
+              <span className="block text-[12px] text-muted">{tr("kcal ต่อวัน", "kcal a day")}</span>
+            </span>
+            <span className="bg-[rgba(43,39,36,0.12)]" />
+            <span>
+              <span className="num block text-[32px] leading-tight">{kg(goalKg ?? p.weightKg)}</span>
+              <span className="block text-[12px] text-muted">{goalKg != null ? tr("กก. เป้าหมาย", "kg goal") : tr("กก. ตอนนี้", "kg now")}</span>
+            </span>
+          </button>
+          {open === "target" && <TargetCard goals={goals} onSaved={() => flash(tr("บันทึกเป้าแล้ว", "Target saved"))} />}
+
+          <section className="glass px-5 py-1" data-testid="profile-list">
+            <ListRow first label={tr("ข้อมูลร่างกาย", "About me")} on={open === "body"} onClick={() => toggle("body")} testId="row-body">
+              <InfoDetails p={p} onEdit={() => setEditing(true)} />
+            </ListRow>
+            <ListRow label={tr("น้ำหนัก", "Weight")} on={open === "weight"} onClick={() => toggle("weight")} testId="row-weight">
+              <WeightCard />
+            </ListRow>
+            {MILK_WARNING_ON && (
+              <ListRow label={tr("อาหารที่เลี่ยง", "Foods I avoid")} on={open === "avoid"} onClick={() => toggle("avoid")}>
+                <AvoidCard />
+              </ListRow>
+            )}
+            <ListRow
+              label="ภาษา / Language"
+              hint={lang === "en" ? "English" : "ไทย"}
+              on={open === "lang"}
+              onClick={() => toggle("lang")}
+              testId="row-lang"
+            >
+              <LangToggle />
+            </ListRow>
+            <ListRow label={tr("สำรองข้อมูล", "Backup")} on={open === "backup"} onClick={() => toggle("backup")} testId="row-backup">
+              <BackupCard />
+            </ListRow>
+            <ListRow label={tr("วิธีคำนวณ", "How it is worked out")} on={open === "method"} onClick={() => toggle("method")} testId="row-method">
+              <Method />
+            </ListRow>
+          </section>
         </>
       )}
-      <section className="card space-y-2 p-5">
-        <h2 className="text-[17px] font-semibold">ภาษา / Language</h2>
-        <LangToggle />
-      </section>
-      {!editing && <BackupCard />}
-      <Method />
+      {charOpen && <CharacterMaker start={look} onClose={() => setCharOpen(false)} onSave={saveLook} />}
     </main>
+  );
+}
+
+/** One line in the settings list. Tap to open what is inside, right under it. */
+function ListRow({
+  label,
+  hint,
+  on,
+  onClick,
+  first,
+  testId,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  on: boolean;
+  onClick: () => void;
+  first?: boolean;
+  testId?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className={first ? "" : "border-t border-[rgba(43,39,36,0.08)]"}>
+      <button type="button" className="flex min-h-[54px] w-full items-center justify-between gap-3 text-left text-[16px]" onClick={onClick} aria-expanded={on} data-testid={testId}>
+        <span>{label}</span>
+        <span className="flex items-center gap-2 text-[14px] text-muted">
+          {hint}
+          <span className={`inline-block text-[20px] leading-none transition-transform ${on ? "rotate-90" : ""}`} aria-hidden>›</span>
+        </span>
+      </button>
+      {on && <div className="calm-open pb-4">{children}</div>}
+    </div>
   );
 }
 
@@ -162,22 +265,18 @@ function Row({ k, v }: { k: string; v: React.ReactNode }) {
   return (
     <div className="flex justify-between gap-3 py-2.5">
       <span className="text-muted">{k}</span>
-      <span className="text-right font-medium">{v}</span>
+      <span className="text-right">{v}</span>
     </div>
   );
 }
 
-function InfoCard({ p, onEdit }: { p: Profile; onEdit: () => void }) {
+function InfoDetails({ p, onEdit }: { p: Profile; onEdit: () => void }) {
   const { tr, lang } = useLang();
   const level = activityLevel(p.daily, p.exercise);
   const plan = usesWeightGoal(p.reason) && !reasonProblem(p) ? weightPlan(p) : null;
   return (
-    <section className="card p-5" data-testid="info-card">
-      <div className="mb-2 flex items-center justify-between">
-        <h2 className="text-[22px] font-semibold">{p.name || "—"}</h2>
-        <button className="btn-soft !min-h-[44px]" onClick={onEdit}>{tr("แก้ข้อมูล", "Edit")}</button>
-      </div>
-      <div className="divide-y divide-line text-[16px]">
+    <div data-testid="info-card">
+      <div className="divide-y divide-line text-[15px]">
         <Row k={tr("อายุ", "Age")} v={p.age ? tr(`${p.age} ปี`, `${p.age} years`) : "—"} />
         <Row
           k={tr("ส่วนสูง · น้ำหนัก", "Height · Weight")}
@@ -197,7 +296,8 @@ function InfoCard({ p, onEdit }: { p: Profile; onEdit: () => void }) {
           <PlanSummary p={p} plan={plan} onUseSafe={() => onEdit()} />
         </div>
       )}
-    </section>
+      <button className="btn-soft mt-3 w-full" onClick={onEdit}>{tr("แก้ข้อมูล", "Edit")}</button>
+    </div>
   );
 }
 
@@ -277,9 +377,8 @@ function Method() {
   const { lang } = useLang();
   if (lang === "en") return <MethodEn />;
   return (
-    <details className="card p-5 text-[14px] text-ink/80">
-      <summary className="min-h-[28px] cursor-pointer text-[17px] font-semibold text-ink">วิธีคำนวณและแหล่งอ้างอิง</summary>
-      <div className="mt-3 space-y-2">
+    <div className="text-[14px] text-ink/80">
+      <div className="space-y-2">
         <p><b>1. พลังงานขณะพัก (BMR)</b> — สมการ Mifflin–St Jeor: หญิง 10×กก. + 6.25×ซม. − 5×อายุ − 161 · ชาย … + 5<br />
           Mifflin MD, St Jeor ST, et al. Am J Clin Nutr. 1990;51(2):241–247.</p>
         <p><b>2. ระดับกิจกรรม</b> — รวมคำตอบเรื่องชีวิตประจำวันกับการออกกำลังกาย แล้วเลือกตัวคูณมาตรฐานที่ใกล้ที่สุด:{" "}
@@ -290,15 +389,14 @@ function Method() {
         <p><b>5. ขั้นต่ำเพื่อความปลอดภัย</b> — ไม่แนะนำต่ำกว่า 1,200 (หญิง) / 1,500 (ชาย) kcal/วัน หากไม่มีแพทย์ดูแล · NIH/NHLBI Clinical Guidelines on Overweight and Obesity in Adults, 1998.</p>
         <p className="text-muted">เป็นค่าประมาณเพื่อช่วยวางแผน ไม่ใช่คำแนะนำทางการแพทย์ ไม่ใช้กับผู้ที่อายุต่ำกว่า 18 ปี ตั้งครรภ์ หรือให้นม</p>
       </div>
-    </details>
+    </div>
   );
 }
 
 function MethodEn() {
   return (
-    <details className="card p-5 text-[14px] text-ink/80">
-      <summary className="min-h-[28px] cursor-pointer text-[17px] font-semibold text-ink">How it is worked out, and sources</summary>
-      <div className="mt-3 space-y-2">
+    <div className="text-[14px] text-ink/80">
+      <div className="space-y-2">
         <p><b>1. Resting energy (BMR)</b> — Mifflin–St Jeor equation: female 10×kg + 6.25×cm − 5×age − 161 · male … + 5<br />
           Mifflin MD, St Jeor ST, et al. Am J Clin Nutr. 1990;51(2):241–247.</p>
         <p><b>2. Activity level</b> — your daily life and exercise answers are combined, then the closest standard multiplier is used:{" "}
@@ -309,6 +407,6 @@ function MethodEn() {
         <p><b>5. Safe minimum</b> — not below 1,200 (female) / 1,500 (male) kcal/day without a doctor · NIH/NHLBI Clinical Guidelines on Overweight and Obesity in Adults, 1998.</p>
         <p className="text-muted">These are estimates to help you plan, not medical advice. Not for people under 18, pregnant, or breastfeeding.</p>
       </div>
-    </details>
+    </div>
   );
 }

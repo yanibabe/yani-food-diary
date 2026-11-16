@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
-import { Noto_Sans_Thai, Nunito } from "next/font/google";
+import { IBM_Plex_Sans_Thai, Noto_Sans_Thai, Nunito } from "next/font/google";
 import "./globals.css";
 import { DataProvider } from "./lib/store";
 import { LangProvider } from "./lib/lang";
@@ -19,6 +19,13 @@ const roundLatin = Nunito({
   variable: "--font-round-latin",
   subsets: ["latin"],
   weight: ["500", "600", "700", "800"],
+});
+
+// "Frosted Calm" look (Round 30+): thin, airy Thai + numbers.
+const calm = IBM_Plex_Sans_Thai({
+  variable: "--font-calm",
+  subsets: ["thai", "latin"],
+  weight: ["200", "300", "400", "500"],
 });
 
 export const metadata: Metadata = {
@@ -53,7 +60,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="th" className={`${thai.variable} ${roundLatin.variable} h-full antialiased`}>
+    <html lang="th" className={`${thai.variable} ${roundLatin.variable} ${calm.variable} h-full antialiased`}>
       <body className="min-h-full">
         <LangProvider>
           <DataProvider>
