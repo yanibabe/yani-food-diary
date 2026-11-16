@@ -38,6 +38,9 @@
 ## Made 6 samples (share picture + profile each): docs/design-round30/styles.html
 ##   1 Clean White · 2 Soft Pastel Blocks · 3 Big Numbers (Editorial) · 4 Receipt · 5 Night Mode · 6 Character Sticker
 ## View: food-diary dev server → /styles-preview.html (a copy in public/, NOT in git — kept out via .git/info/exclude).
+## Her answer to 1–6: "not quite — something cool, simple, cute, or like popular apps". So I made 6 MORE:
+##   docs/design-round30/styles-2.html (preview copy: /styles-preview-2.html, also not in git)
+##   7 Bento Grid · 8 Liquid Glass · 9 Color Pop · 10 Calm Minimal · 11 Cute Pills · 12 Sporty Mono
 ## WAITING for her pick (or a mix), then build share picture + profile in that style, then the rest of the app.
 ## Then: use them for the FEEL only (never copy), show 2–3 mockups to pick from (she likes minimal),
 ## keep her own brand character as-is, then build page by page. May need 2–3 rounds.

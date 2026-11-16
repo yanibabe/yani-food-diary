@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SnapCal styles 2</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=Prompt:wght@300;400;500;600;700;800&family=Noto+Sans+Thai:wght@300;400;500;600;700&family=Anuphan:wght@300;400;500;600;700&family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#ECEAE4;color:#222;font-family:"IBM Plex Sans Thai",sans-serif;padding:24px 16px 60px}
+h1{font-size:22px;font-weight:600;margin-bottom:4px}
+.lead{color:#666;font-size:14px;margin-bottom:28px}
+.style{margin:0 auto 44px;max-width:900px}
+.style h2{font-size:20px;font-weight:600;display:flex;gap:10px;align-items:center}
+.num{background:#222;color:#fff;border-radius:50%;width:30px;height:30px;display:grid;place-items:center;font-size:15px}
+.style p.why{color:#555;font-size:14px;margin:6px 0 14px 40px}
+.row{display:flex;gap:20px;flex-wrap:wrap;margin-left:40px}
+.cap{font-size:12px;color:#777;margin-bottom:6px;text-align:center}
+.screen{width:280px;border-radius:30px;overflow:hidden;background:var(--bg);color:var(--ink);font-family:var(--font);box-shadow:0 10px 30px rgba(0,0,0,.08);position:relative}
+.ch{display:block}
+.muted{color:var(--muted)}
+.mac{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.row2{display:flex;justify-content:space-between;align-items:baseline}
+.chev{color:var(--muted)}
+.glass{background:rgba(255,255,255,.55);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,.8);border-radius:22px}
+</style>
+</head>
+<body>
+<h1>SnapCal — 6 more style ideas (7–12)</h1>
+<p class="lead">New directions: cool, simple, cute — the looks popular apps use today. Same 2 screens each.</p>
+<div id="out"></div>
+
+<script>
+const CH = "../../public/character-lines.png";
+const meals = [
+  {slot:"เช้า", e:"☀", name:"โจ๊กหมูใส่ไข่", k:280, p:16, c:38, f:7},
+  {slot:"กลางวัน", e:"◐", name:"ข้าวกะเพราไก่ ไข่ดาว", k:560, p:32, c:62, f:20},
+  {slot:"เย็น", e:"☾", name:"สลัดอกไก่ น้ำใส", k:350, p:34, c:18, f:14},
+  {slot:"ของว่าง", e:"✦", name:"กรีกโยเกิร์ต + กล้วย", k:190, p:12, c:30, f:3},
+];
+const T = {k:1380, target:1600, p:94, c:148, f:44};
+const fmt = n => n.toLocaleString("en-US");
+const pct = Math.round(T.k / T.target * 100);
+const img = (s, extra="") => `<img class="ch" src="${CH}" width="${s}" height="${s}" style="${extra}" alt="">`;
+function ring(size, stroke, track, color, inner, frac=T.k/T.target){
+  const r=(size-stroke)/2, C=2*Math.PI*r, off=C*(1-frac);
+  return `<div style="position:relative;width:${size}px;height:${size}px;flex-shrink:0">
+  <svg width="${size}" height="${size}" style="transform:rotate(-90deg)"><circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${track}" stroke-width="${stroke}"/>
+  <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${color}" stroke-width="${stroke}" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${off}"/></svg>
+  <div style="position:absolute;inset:0;display:grid;place-items:center;text-align:center">${inner}</div></div>`;
+}
+const list = (items, sep, pad="11px 0") => items.map((t,i)=>`<div class="row2" style="padding:${pad};${i?`border-top:1px solid ${sep};`:""}font-size:14px"><span>${t}</span><span class="chev">›</span></div>`).join("");
+
+const S = [
+/* 7 Bento */ {
+ name:"Bento Grid", why:"Like iPhone widgets: tiles of different sizes, each with one number. Very trendy, tidy, almost no text.",
+ v:{bg:"#F2F2F4",ink:"#111",muted:"#8E8E93",font:"'Anuphan',sans-serif"},
+ share(){const t=(inner,st="")=>`<div style="background:#fff;border-radius:20px;padding:12px;${st}">${inner}</div>`;
+  return `<div style="padding:18px 14px">
+  <div class="row2" style="padding:0 4px 10px"><div><div style="font-size:18px;font-weight:700">วันนี้ของ Yani</div><div class="muted" style="font-size:12px">อา. 16 พ.ย.</div></div>${img(40)}</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+   ${t(`<div class="muted" style="font-size:11px">แคลอรี่</div><div style="font-size:36px;font-weight:700;line-height:1.05">${fmt(T.k)}</div><div class="muted" style="font-size:11px">จาก ${fmt(T.target)} · เหลือ ${fmt(T.target-T.k)}</div><div style="display:flex;gap:3px;margin-top:8px">${Array.from({length:20},(_, i)=>`<div style="flex:1;height:14px;border-radius:3px;background:${i<Math.round(pct/5)?"#FF7A45":"#F0F0F2"}"></div>`).join("")}</div>`,"grid-column:span 2")}
+   ${t(`<div style="font-size:11px;color:#B23C5A">โปรตีน</div><div style="font-size:24px;font-weight:700;color:#B23C5A">${T.p}<span style="font-size:12px">g</span></div>`,"background:#FFE3EA")}
+   ${t(`<div style="font-size:11px;color:#8A6200">คาร์บ</div><div style="font-size:24px;font-weight:700;color:#8A6200">${T.c}<span style="font-size:12px">g</span></div>`,"background:#FFF1C7")}
+   ${t(`<div style="font-size:11px;color:#22618A">ไขมัน</div><div style="font-size:24px;font-weight:700;color:#22618A">${T.f}<span style="font-size:12px">g</span></div>`,"background:#DDEFFC")}
+   ${t(`<div class="muted" style="font-size:11px">มื้อ</div><div style="font-size:24px;font-weight:700">4</div>`)}
+   ${t(meals.map((m,i)=>`<div class="row2" style="padding:6px 0;${i?"border-top:1px solid #F0F0F2;":""}font-size:13px"><span><span class="muted" style="font-size:11px;display:inline-block;width:46px">${m.slot}</span>${m.name}</span><b>${m.k}</b></div>`).join(""),"grid-column:span 2")}
+  </div><div class="muted" style="font-size:10px;text-align:center;margin-top:10px">SnapCal</div></div>`},
+ profile(){const t=(inner,st="")=>`<div style="background:#fff;border-radius:20px;padding:12px;${st}">${inner}</div>`;
+  return `<div style="padding:18px 14px">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+   ${t(`<div style="display:flex;align-items:center;gap:10px">${img(84,"background:#FFF4D6;border-radius:22px")}<div><div style="font-size:22px;font-weight:700">Yani</div><div class="muted" style="font-size:12px">28 ปี · 160 ซม.</div></div></div>`,"grid-column:span 2")}
+   ${t(`<div class="muted" style="font-size:11px">น้ำหนัก</div><div style="font-size:26px;font-weight:700">55<span style="font-size:12px"> กก.</span></div><div style="font-size:11px;color:#2E8B57">เป้า 52</div>`)}
+   ${t(`<div class="muted" style="font-size:11px">BMI</div><div style="font-size:26px;font-weight:700">21.5</div><div style="font-size:11px;color:#2E8B57">ปกติ</div>`)}
+   ${t(`<div class="row2"><div><div style="font-size:11px;color:#9A3D17">เป้าต่อวัน</div><div style="font-size:26px;font-weight:700;color:#9A3D17">1,600 <span style="font-size:12px">kcal</span></div></div><div style="font-size:11px;color:#9A3D17;text-align:right">ลด 0.25<br>กก./สัปดาห์</div></div>`,"grid-column:span 2;background:#FFE6D9")}
+   ${t(list(["อาหารที่เลี่ยง","ภาษา","สำรองข้อมูล"],"#F0F0F2","9px 0"),"grid-column:span 2;padding:4px 14px")}
+  </div></div>`}
+},
+/* 8 Liquid glass */ {
+ name:"Liquid Glass", why:"The new iPhone look: soft color clouds behind see-through frosted cards. Dreamy and modern, still easy to read.",
+ v:{bg:"#F6F1FA",ink:"#1F1A2B",muted:"#7A7288",font:"'Noto Sans Thai',sans-serif"},
+ share(){return `<div style="position:absolute;inset:0;background:radial-gradient(circle at 15% 10%,#FFC9DE 0,transparent 45%),radial-gradient(circle at 90% 30%,#C9DDFF 0,transparent 45%),radial-gradient(circle at 40% 95%,#FFE7B3 0,transparent 50%)"></div>
+  <div style="position:relative;padding:20px 16px">
+  <div style="display:flex;gap:10px;align-items:center">${img(48)}<div><div style="font-size:17px;font-weight:700">Yani · วันนี้</div><div class="muted" style="font-size:12px">16 พ.ย. 2026</div></div></div>
+  <div class="glass" style="padding:16px;margin:14px 0 10px;display:flex;gap:14px;align-items:center">${ring(96,10,"rgba(255,255,255,.7)","#B57BEA",`<div style="font-size:15px;font-weight:700">${pct}%</div>`)}<div><div style="font-size:32px;font-weight:700;line-height:1">${fmt(T.k)}</div><div class="muted" style="font-size:12px">/ ${fmt(T.target)} kcal</div></div></div>
+  <div class="mac">${[["โปรตีน",T.p],["คาร์บ",T.c],["ไขมัน",T.f]].map(([l,v])=>`<div class="glass" style="padding:10px;text-align:center;border-radius:18px"><div style="font-size:18px;font-weight:700">${v}g</div><div class="muted" style="font-size:11px">${l}</div></div>`).join("")}</div>
+  <div class="glass" style="padding:4px 14px;margin-top:10px">${meals.map((m,i)=>`<div class="row2" style="padding:9px 0;${i?"border-top:1px solid rgba(255,255,255,.9);":""}font-size:13px"><span><span class="muted" style="font-size:11px;display:block">${m.slot}</span>${m.name}</span><b>${m.k}</b></div>`).join("")}</div>
+  <div class="muted" style="font-size:10px;text-align:center;margin-top:10px">SnapCal</div></div>`},
+ profile(){return `<div style="position:absolute;inset:0;background:radial-gradient(circle at 80% 8%,#FFC9DE 0,transparent 45%),radial-gradient(circle at 10% 40%,#C9DDFF 0,transparent 45%),radial-gradient(circle at 70% 90%,#D9F5D0 0,transparent 50%)"></div>
+  <div style="position:relative;padding:20px 16px">
+  <div class="glass" style="padding:18px;text-align:center;border-radius:28px">${img(118,"margin:0 auto")}<div style="font-size:22px;font-weight:700">Yani</div><div class="muted" style="font-size:12px">55 → 52 กก.</div></div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0">${[["1,600","kcal/วัน"],["21.5","BMI"],["28","ปี"]].map(([v,l])=>`<div class="glass" style="padding:10px;text-align:center;border-radius:18px"><div style="font-size:17px;font-weight:700">${v}</div><div class="muted" style="font-size:10px">${l}</div></div>`).join("")}</div>
+  <div class="glass" style="padding:2px 14px">${list(["ข้อมูลร่างกาย","อาหารที่เลี่ยง","ภาษา","สำรองข้อมูล"],"rgba(255,255,255,.9)")}</div></div>`}
+},
+/* 9 Color pop */ {
+ name:"Color Pop", why:"One bold happy color fills the top, white cards below. Big rounded shapes, chunky font. Cool + cute, like fun popular apps.",
+ v:{bg:"#FFFFFF",ink:"#16161A",muted:"#8B8B95",font:"'Kanit',sans-serif"},
+ share(){return `<div style="background:#5B5BF7;color:#fff;padding:20px 18px 46px;border-radius:0 0 34px 34px">
+  <div class="row2"><div><div style="font-size:12px;opacity:.8">16 พ.ย. 2026</div><div style="font-size:18px;font-weight:500">Yani กินไปแล้ว</div></div><div style="background:#fff;border-radius:50%;padding:4px">${img(40)}</div></div>
+  <div style="font-size:56px;font-weight:600;line-height:1;margin-top:12px">${fmt(T.k)}<span style="font-size:15px;font-weight:300"> kcal</span></div>
+  <div style="height:10px;background:rgba(255,255,255,.25);border-radius:10px;margin-top:10px"><div style="width:${pct}%;height:100%;background:#C6FF5E;border-radius:10px"></div></div>
+  <div style="font-size:12px;opacity:.85;margin-top:6px">เป้า ${fmt(T.target)} · เหลือ ${fmt(T.target-T.k)}</div></div>
+  <div style="padding:0 16px 18px;margin-top:-28px">
+  <div class="mac">${[["โปรตีน",T.p],["คาร์บ",T.c],["ไขมัน",T.f]].map(([l,v])=>`<div style="background:#fff;border-radius:18px;padding:10px;text-align:center;box-shadow:0 4px 14px rgba(40,40,120,.12)"><div style="font-size:19px;font-weight:600">${v}g</div><div class="muted" style="font-size:11px">${l}</div></div>`).join("")}</div>
+  <div style="margin-top:12px">${meals.map(m=>`<div style="display:flex;gap:10px;align-items:center;padding:8px 0"><div style="width:34px;height:34px;border-radius:12px;background:#EEEEFF;color:#5B5BF7;display:grid;place-items:center">${m.e}</div><div style="flex:1;font-size:13px"><div class="muted" style="font-size:11px">${m.slot}</div>${m.name}</div><b style="font-size:14px">${m.k}</b></div>`).join("")}</div>
+  <div class="muted" style="font-size:10px;text-align:center;margin-top:6px">SnapCal</div></div>`},
+ profile(){return `<div style="background:#5B5BF7;color:#fff;padding:20px 18px 70px;border-radius:0 0 34px 34px;text-align:center">
+  <div style="font-size:13px;opacity:.85">โปรไฟล์</div></div>
+  <div style="padding:0 16px 18px;margin-top:-62px;text-align:center">
+  <div style="width:120px;height:120px;margin:0 auto;background:#fff;border-radius:40px;display:grid;place-items:center;box-shadow:0 6px 18px rgba(40,40,120,.18)">${img(104)}</div>
+  <div style="font-size:24px;font-weight:600;margin-top:8px">Yani</div>
+  <div style="display:inline-block;background:#C6FF5E;border-radius:99px;padding:2px 12px;font-size:12px;margin-top:2px">55 → 52 กก.</div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0">${[["1,600","kcal/วัน"],["21.5","BMI"],["160","ซม."]].map(([v,l])=>`<div style="background:#F4F4FF;border-radius:16px;padding:10px"><div style="font-size:17px;font-weight:600">${v}</div><div class="muted" style="font-size:10px">${l}</div></div>`).join("")}</div>
+  <div style="text-align:left">${list(["อาหารที่เลี่ยง","ภาษา","สำรองข้อมูล"],"#F0F0F5")}</div></div>`}
+},
+/* 10 Calm minimal */ {
+ name:"Calm Minimal", why:"Quiet and airy, like a Japanese notebook. Lots of empty space, thin lines, soft beige. Very grown-up and calm.",
+ v:{bg:"#F5F1EA",ink:"#2B2724",muted:"#9C948A",font:"'IBM Plex Sans Thai',sans-serif"},
+ share(){return `<div style="padding:26px 22px">
+  <div style="text-align:center">${img(56,"margin:0 auto")}<div style="font-size:12px;letter-spacing:3px;margin-top:6px" class="muted">16 · 11 · 2026</div></div>
+  <div style="text-align:center;margin:18px 0 6px"><div style="font-size:48px;font-weight:300;line-height:1">${fmt(T.k)}</div><div class="muted" style="font-size:12px;margin-top:4px">kcal · เป้า ${fmt(T.target)}</div></div>
+  <div style="height:2px;background:#E4DDD2;margin:14px 30px"><div style="width:${pct}%;height:100%;background:#2B2724"></div></div>
+  <div class="mac" style="text-align:center;margin:16px 0 18px">${[["โปรตีน",T.p],["คาร์บ",T.c],["ไขมัน",T.f]].map(([l,v])=>`<div><div style="font-size:18px;font-weight:400">${v}</div><div class="muted" style="font-size:11px">${l} g</div></div>`).join("")}</div>
+  ${meals.map(m=>`<div class="row2" style="padding:10px 0;border-top:1px solid #E4DDD2;font-size:13px;font-weight:300"><span><span class="muted" style="display:inline-block;width:56px;font-size:11px">${m.slot}</span>${m.name}</span><span>${m.k}</span></div>`).join("")}
+  <div class="muted" style="font-size:10px;text-align:center;margin-top:14px;letter-spacing:2px">SNAPCAL</div></div>`},
+ profile(){return `<div style="padding:30px 22px">
+  <div style="text-align:center">${img(120,"margin:0 auto")}<div style="font-size:24px;font-weight:300;margin-top:8px">Yani</div><div class="muted" style="font-size:12px">28 · 160 ซม. · 55 กก.</div></div>
+  <div style="display:grid;grid-template-columns:1fr 1px 1fr;margin:24px 0;text-align:center"><div><div style="font-size:26px;font-weight:300">1,600</div><div class="muted" style="font-size:11px">kcal ต่อวัน</div></div><div style="background:#E4DDD2"></div><div><div style="font-size:26px;font-weight:300">52</div><div class="muted" style="font-size:11px">กก. เป้าหมาย</div></div></div>
+  ${["ข้อมูลร่างกาย","อาหารที่เลี่ยง","ภาษา","สำรองข้อมูล"].map(t=>`<div class="row2" style="padding:12px 0;border-top:1px solid #E4DDD2;font-size:14px;font-weight:300"><span>${t}</span><span class="chev">›</span></div>`).join("")}</div>`}
+},
+/* 11 Cute pills */ {
+ name:"Cute Pills", why:"Clean white with round pastel 'pills' and little dots. Simple like a habit-tracker app, and cute without clutter.",
+ v:{bg:"#FFFFFF",ink:"#222",muted:"#A09CA6",font:"'Prompt',sans-serif"},
+ share(){const pill=(l,v,bg,ink)=>`<div style="background:${bg};color:${ink};border-radius:99px;padding:8px 12px;display:flex;justify-content:space-between;font-size:13px"><span>${l}</span><b style="font-weight:600">${v} g</b></div>`;
+  return `<div style="padding:22px 18px">
+  <div style="display:flex;align-items:center;gap:10px"><div style="background:#FFF3B8;border-radius:50%;padding:4px">${img(44)}</div><div><div style="font-size:16px;font-weight:600">วันนี้ของ Yani</div><div class="muted" style="font-size:12px">16 พ.ย.</div></div></div>
+  <div style="margin:18px 0 6px;display:flex;align-items:baseline;gap:6px"><span style="font-size:44px;font-weight:600;line-height:1">${fmt(T.k)}</span><span class="muted" style="font-size:13px">/ ${fmt(T.target)} kcal</span></div>
+  <div style="display:flex;gap:4px;margin-bottom:16px">${Array.from({length:16},(_, i)=>`<div style="width:12px;height:12px;border-radius:50%;background:${i<Math.round(pct/100*16)?"#FF9EB5":"#F3F0F5"}"></div>`).join("")}</div>
+  <div style="display:grid;gap:6px">${pill("โปรตีน",T.p,"#FFE4EC","#A33A5B")}${pill("คาร์บ",T.c,"#FFF3C4","#7D6000")}${pill("ไขมัน",T.f,"#E1F1FF","#1F5C8C")}</div>
+  <div style="margin-top:14px">${meals.map(m=>`<div style="display:flex;gap:10px;align-items:center;padding:7px 0;font-size:13px"><span style="width:8px;height:8px;border-radius:50%;background:#FF9EB5"></span><span style="flex:1"><span class="muted" style="font-size:11px">${m.slot}</span> ${m.name}</span><b style="font-weight:600">${m.k}</b></div>`).join("")}</div>
+  <div class="muted" style="font-size:10px;text-align:center;margin-top:12px">SnapCal ♡</div></div>`},
+ profile(){return `<div style="padding:22px 18px">
+  <div style="background:#FFF3B8;border-radius:32px;padding:16px;display:flex;align-items:center;gap:12px">${img(96,"background:#fff;border-radius:50%")}<div><div style="font-size:22px;font-weight:600">Yani</div><div style="font-size:12px;color:#7D6000">ลดน้ำหนักอย่างใจดี</div></div></div>
+  <div style="display:flex;flex-wrap:wrap;gap:6px;margin:14px 0">${[["28 ปี","#F3F0F5","#555"],["160 ซม.","#F3F0F5","#555"],["55 กก.","#F3F0F5","#555"],["BMI 21.5 ปกติ","#DDF5E4","#2D6A44"]].map(([t,b,c])=>`<span style="background:${b};color:${c};border-radius:99px;padding:5px 12px;font-size:12px">${t}</span>`).join("")}</div>
+  <div style="border:1.5px solid #F3F0F5;border-radius:24px;padding:14px"><div class="row2"><span class="muted" style="font-size:12px">เป้าต่อวัน</span><span style="font-size:22px;font-weight:600">1,600 kcal</span></div>
+  <div style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12px"><span>55</span><div style="flex:1;height:8px;background:#F3F0F5;border-radius:9px"><div style="width:40%;height:100%;background:#FF9EB5;border-radius:9px"></div></div><span>52 กก.</span></div></div>
+  <div style="margin-top:10px">${list(["อาหารที่เลี่ยง","ภาษา","สำรองข้อมูล"],"#F3F0F5")}</div></div>`}
+},
+/* 12 Black & lime sport */ {
+ name:"Sporty Mono", why:"Black-and-white with one bright lime color, like running and gym apps. Strong, cool, and it looks serious for a trainer.",
+ v:{bg:"#FFFFFF",ink:"#0E0E0E",muted:"#8A8A8A",font:"'Kanit',sans-serif"},
+ share(){return `<div style="padding:20px 16px">
+  <div class="row2"><span style="font-size:13px;font-weight:600;letter-spacing:1px">YANI · 16 NOV</span>${img(38)}</div>
+  <div style="background:#0E0E0E;color:#fff;border-radius:22px;padding:16px;margin:12px 0">
+   <div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:11px;opacity:.6">TOTAL</div><div style="font-size:44px;font-weight:600;line-height:1">${fmt(T.k)}</div><div style="font-size:11px;opacity:.6">/ ${fmt(T.target)} KCAL</div></div>${ring(78,9,"#2A2A2A","#D4FF3A",`<div style="font-size:14px;font-weight:600">${pct}%</div>`)}</div>
+   <div class="mac" style="margin-top:14px">${[["PRO",T.p],["CARB",T.c],["FAT",T.f]].map(([l,v])=>`<div style="background:#1C1C1C;border-radius:12px;padding:8px"><div style="font-size:10px;opacity:.6">${l}</div><div style="font-size:18px;font-weight:600;color:#D4FF3A">${v}g</div></div>`).join("")}</div></div>
+  ${meals.map(m=>`<div class="row2" style="padding:9px 2px;border-bottom:1px solid #EEE;font-size:13px"><span><span style="font-size:10px;font-weight:600;display:block;color:#8A8A8A">${m.slot}</span>${m.name}</span><span style="font-weight:600">${m.k}</span></div>`).join("")}
+  <div style="font-size:10px;text-align:center;margin-top:10px;font-weight:600;letter-spacing:2px">SNAPCAL</div></div>`},
+ profile(){return `<div style="padding:20px 16px">
+  <div style="background:#D4FF3A;border-radius:26px;padding:16px;display:flex;justify-content:space-between;align-items:flex-end"><div><div style="font-size:11px;font-weight:600">PROFILE</div><div style="font-size:30px;font-weight:600;line-height:1.1">Yani</div><div style="font-size:12px">28 ปี · 160 ซม.</div></div>${img(100,"margin:-10px -6px -8px 0")}</div>
+  <div style="background:#0E0E0E;color:#fff;border-radius:22px;padding:14px;margin:10px 0"><div class="row2"><span style="font-size:11px;opacity:.6">น้ำหนัก</span><span style="font-size:11px;opacity:.6">เป้า 52 กก.</span></div><div style="font-size:34px;font-weight:600;line-height:1.1">55<span style="font-size:13px;opacity:.6"> กก.</span></div>
+  <div style="display:flex;gap:3px;margin-top:8px">${Array.from({length:10},(_, i)=>`<div style="flex:1;height:8px;border-radius:3px;background:${i<4?"#D4FF3A":"#2A2A2A"}"></div>`).join("")}</div></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">${[["1,600","KCAL/วัน"],["21.5","BMI"]].map(([v,l])=>`<div style="border:1.5px solid #EEE;border-radius:16px;padding:10px"><div style="font-size:20px;font-weight:600">${v}</div><div class="muted" style="font-size:10px">${l}</div></div>`).join("")}</div>
+  <div style="margin-top:8px">${list(["อาหารที่เลี่ยง","ภาษา","สำรองข้อมูล"],"#EEE")}</div></div>`}
+},
+];
+
+document.getElementById("out").innerHTML = S.map((s,i)=>{
+  const vars = Object.entries(s.v).map(([k,v])=>`--${k}:${v}`).join(";");
+  return `<section class="style"><h2><span class="num">${i+7}</span>${s.name}</h2><p class="why">${s.why}</p>
+  <div class="row"><div><div class="cap">Picture for your trainer</div><div class="screen" style="${vars}">${s.share()}</div></div>
+  <div><div class="cap">Profile page</div><div class="screen" style="${vars}">${s.profile()}</div></div></div></section>`;
+}).join("");
+</script>
+</body>
+</html>
