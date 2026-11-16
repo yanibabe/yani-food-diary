@@ -6,7 +6,7 @@
 
 ---
 
-## LIVE (updated 2026-11-16; Round 31 whole app in Frosted Calm + richer share picture LIVE; Round 30 Frosted Calm share picture + Profile LIVE; Round 29 share my day with my trainer (picture) LIVE; Round 28 simpler "กินอะไรดี" (menu + recipe, no delivery) LIVE; Round 27 label numbers = no +15% LIVE; Round 26 grouped "what can I eat" LIVE; Round 25 "what can I eat" LIVE; Round 24 weight moved to Profile, steps removed)
+## LIVE (updated 2026-11-16; Round 32 line-only small character + % in tiles + food tip LIVE; Round 31 whole app in Frosted Calm + richer share picture LIVE; Round 30 Frosted Calm share picture + Profile LIVE; Round 29 share my day with my trainer (picture) LIVE; Round 28 simpler "กินอะไรดี" (menu + recipe, no delivery) LIVE; Round 27 label numbers = no +15% LIVE; Round 26 grouped "what can I eat" LIVE; Round 25 "what can I eat" LIVE; Round 24 weight moved to Profile, steps removed)
 
 - **App:** https://yani-food-diary.vercel.app  (Vercel, exm-labs account, free)
 - **Code:** https://github.com/yanibabe/yani-food-diary  (private; pushes auto-deploy)
@@ -30,10 +30,26 @@
    kcal, protein, fat, carbs (and totals). Easy to send (image and/or text via the iPhone share sheet).
    Ask her: picture, text, or both.
 
-## ▶ NEXT: she tries Round 31 on her iPhone (whole app in Frosted Calm + new share picture).
+## ▶ NEXT: she tries Round 32 on her iPhone (small line-only character, % inside the tiles, the tip line).
 ## Then ask what she wants next. Ideas: look over the pages not checked by eye yet (กินอะไรดี, recipe
 ## edit, barcode, welcome) for any leftover bright/odd bits; emoji left in a few spots (recipe 🍲 placeholder,
 ## empty recipes 🍳) could become thin line icons.
+
+## Round 32 (2026-11-16) — character = fixed small line logo; % in tiles; one-line food tip ✅ LIVE
+Her words: split box repeats the tiles?; no more dress-up (useless), logo too big; lines only, every white
+area see-through (spoon, fork, eye too); add advice like "protein not enough / carbs too much".
+- Character: `scripts/character-lines-only.mjs` rebuilds public/character-lines.png from character.png:
+  dark → black, every light pixel → see-through (0 white pixels left). Character.tsx is now just
+  `CharacterPicture({size})` (an <img>). Dress-up sheet REMOVED from Today + Profile; share picture draws
+  lines only. Today: 44px, centered above "วันนี้" (her pick "A" of 3 samples); greeting line removed with it.
+  Profile keeps 124px, no tap. (lib/character.ts + character-body.png are unused leftovers; backup key kept.)
+- Split: separate "สัดส่วนแคลอรี" box removed (it repeated the tiles). Each Today tile shows its % of kcal
+  under "จาก X g" (MacroCards `showSplit`; still sums to 100).
+- Tip: `app/lib/macroTip.ts` (no AI) → ONE line under the tiles (`MacroTipLine`, ui.tsx). Order: fat over
+  target → carbs over → protein behind the day's kcal progress (≥10 g short, >15 pts behind) → carbs far
+  ahead of kcal → "สัดส่วนวันนี้ดีแล้ว". Targets = macroTargets (her weight/height/goal from Profile).
+  Tests tests/macroTip.test.ts (103 total pass). Checked at phone size: Today, Profile, share picture.
+  NOT yet tried on her iPhone.
 
 ## Round 31b (2026-11-16) — calorie split on Today ✅ LIVE
 - Her wish: show how protein / carbs / fat share the calories, in %, always 100%, as a nice diagram.
