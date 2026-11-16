@@ -488,8 +488,8 @@ export async function readNutritionLabel(input: { image: string; lang: Lang }): 
 }
 
 // ---------------------------------------------------------------------------
-// "What can I eat with what's left": food ideas from 7-Eleven and from delivery
-// chain shops. Her own recipes are picked by the app, not the AI.
+// "What can I eat with what's left": food ideas from 7-Eleven, and menu ideas
+// she can cook (each with a short recipe). Her own recipes are picked by the app, not the AI.
 // The app (app/lib/suggest.ts) checks the numbers and keeps the best 3 per group.
 // ---------------------------------------------------------------------------
 
@@ -497,16 +497,17 @@ export const SuggestSchema = z.object({
   ideas: z
     .array(
       z.object({
-        place: z.enum(AI_PLACES).catch("7-eleven").describe("7-eleven = buy at 7-Eleven; delivery = a menu item from a chain shop, ordered on Grab / LINE MAN"),
-        shop: z.string().nullish().describe("delivery only: the chain shop's name, e.g. Subway; null for 7-eleven"),
-        name: z.string().describe("The product or menu item name, specific enough to find it"),
+        place: z.enum(AI_PLACES).catch("7-eleven").describe("7-eleven = buy at 7-Eleven; menu = a simple dish she can cook at home"),
+        name: z.string().describe("The product or dish name, the common name people search for"),
         amount: num.describe("How much, as a number"),
         unit: z.string().catch("").describe("Unit word, e.g. ชิ้น กล่อง ฟอง ซอง แก้ว ที่"),
-        kcal: num.describe("kcal for that amount; for a chain shop, the shop's own listed kcal if you know it"),
+        kcal: num.describe("kcal for that amount (for a menu: one serving of those ingredients)"),
         protein: num.describe("grams"),
         carbs: num.describe("grams"),
         fat: num.describe("grams"),
         why: z.string().catch("").describe("At most 4 friendly words why it's a good pick, e.g. โปรตีนสูง อิ่มนาน. No emoji."),
+        ingredients: z.array(z.string()).nullish().catch(null).describe("menu only: 3–8 ingredients for ONE serving, each with its amount, e.g. อกไก่ 150 g; null for 7-eleven"),
+        steps: z.array(z.string()).nullish().catch(null).describe("menu only: 3–6 short, easy cooking steps; null for 7-eleven"),
       }),
     )
     .catch([]),
@@ -523,17 +524,17 @@ export type SuggestInput = {
 };
 
 const SUGGEST_SYSTEM = (lang: Lang) => `You are a friendly nutrition helper inside a Thai food diary app in Thailand.
-The user asks: "I have this many kcal left today — what can I eat?" Give 8 ideas: 4 with place "7-eleven" and 4 with place "delivery".
+The user asks: "I have this many kcal left today — what can I eat?" Give 8 ideas: 4 with place "7-eleven" and 4 with place "menu".
 Rules:
 - Each idea must be ONE thing to eat now, sized so its kcal is AT MOST the "kcal room" given. Aim for about 50–85% of the room; never above it. The app adds a +${Math.round(AI_MARGIN * 100)}% safety margin to your numbers afterwards, so be realistic, not low.
 - 7-eleven: real products sold at 7-Eleven Thailand (e.g. boiled eggs, chicken breast packs, onigiri, steamed buns, ready meals, unsweetened soy milk, Greek yogurt).
-- delivery: ONLY menu items from well-known chain shops in Thailand that show calories on their own menu or app (e.g. Subway, McDonald's, Starbucks, KFC). Put the chain's name in "shop". Use the shop's own listed kcal when you know it. If you are not sure a chain lists calories, do not use it. Never invent a shop. Prefer different shops.
+- menu: simple, well-known dishes anyone can cook at home in a normal kitchen (about 20 minutes or less), with easy-to-buy ingredients. Use the common dish name so she can also search it. Give ONE serving: "ingredients" with amounts (grams or spoons) and 3–6 short "steps". The kcal must match those ingredients. Prefer different dishes.
 - She wants HIGH PROTEIN ideas: prefer eggs, chicken breast, fish, tofu, soy milk, lean meat. Try to help her reach the protein left.
 - Fit the meal and time of day (breakfast / lunch / dinner / snack).
 - Don't repeat what she already ate today.
 - If "light mode" is on, she is at or over her target: only suggest very light, filling things (each at most the room). Keep the "why" kind and gentle, never scolding.
 - No emoji anywhere.
-- ${lang === "en" ? "Write name, unit and why in simple English (Thai dish names may be in English)." : "Write unit and why in Thai. Name in Thai, but keep a chain's own menu name (often English) as the shop writes it."}
+- ${lang === "en" ? "Write name, unit, why, ingredients and steps in simple English (Thai dish names may be in English)." : "Write everything in simple Thai (a 7-Eleven product's own brand name may stay as printed)."}
 - Check: kcal ≈ protein×4 + carbs×4 + fat×9.
 Return ONLY a JSON object matching this JSON Schema:
 ${shapeOf(SuggestSchema)}`;
@@ -558,15 +559,24 @@ function suggestPrompt(input: SuggestInput, room: number, light: boolean): strin
     .join("\n");
 }
 
-// TEST MODE ONLY (AI_MOCK=1): fixed ideas. One is too big on purpose, so the filter can be seen working.
+// TEST MODE ONLY (AI_MOCK=1): fixed ideas. One is too big and one has no recipe on purpose, so the filter can be seen working.
 function mockSuggest(): z.infer<typeof SuggestSchema> {
   const ideas: RawIdea[] = [
     { place: "7-eleven", name: "ไข่ต้ม", amount: 2, unit: "ฟอง", kcal: 140, protein: 12, carbs: 1, fat: 10, why: "โปรตีนสูง อิ่มนาน" },
     { place: "7-eleven", name: "อกไก่นุ่ม รสพริกไทยดำ", amount: 1, unit: "ซอง", kcal: 100, protein: 22, carbs: 1, fat: 1, why: "โปรตีนสูง ไขมันน้อย" },
     { place: "7-eleven", name: "นมถั่วเหลืองไม่หวาน", amount: 1, unit: "กล่อง", kcal: 70, protein: 7, carbs: 3, fat: 3, why: "เบา มีโปรตีน" },
-    { place: "delivery", shop: "Subway", name: "Roasted Chicken Salad", amount: 1, unit: "ที่", kcal: 160, protein: 19, carbs: 10, fat: 4, why: "โปรตีนสูง ผักเยอะ" },
-    { place: "delivery", shop: "McDonald's", name: "ข้าวกะเพราไก่ทอด", amount: 1, unit: "ที่", kcal: 650, protein: 25, carbs: 80, fat: 25, why: "อิ่มจัด" },
-    { place: "delivery", shop: "Starbucks", name: "Chicken Wrap", amount: 1, unit: "ชิ้น", kcal: 300, protein: 20, carbs: 30, fat: 10, why: "อิ่มพอดี" },
+    {
+      place: "menu", name: "ยำอกไก่", amount: 1, unit: "จาน", kcal: 220, protein: 32, carbs: 10, fat: 5, why: "โปรตีนสูง สดชื่น",
+      ingredients: ["อกไก่ 150 g", "หอมแดง 2 หัว", "มะเขือเทศ 4 ลูก", "น้ำปลา 1 ช้อนโต๊ะ", "มะนาว 1 ลูก"],
+      steps: ["ต้มอกไก่ให้สุก แล้วฉีกเป็นชิ้น", "ซอยหอมแดง ผ่ามะเขือเทศ", "ผสมน้ำปลากับมะนาว", "คลุกทุกอย่างเข้ากัน"],
+    },
+    {
+      place: "menu", name: "ไข่ตุ๋น", amount: 1, unit: "ถ้วย", kcal: 150, protein: 13, carbs: 2, fat: 10, why: "นุ่ม ทำง่าย",
+      ingredients: ["ไข่ไก่ 2 ฟอง", "น้ำ 100 ml", "ซีอิ๊วขาว 1 ช้อนชา", "ต้นหอม เล็กน้อย"],
+      steps: ["ตีไข่กับน้ำและซีอิ๊ว", "เทใส่ถ้วย", "นึ่ง 12 นาที", "โรยต้นหอม"],
+    },
+    { place: "menu", name: "ข้าวผัดกุ้งจานใหญ่", amount: 1, unit: "จาน", kcal: 750, protein: 25, carbs: 100, fat: 25, why: "อิ่มจัด", ingredients: ["ข้าว 2 ถ้วย"], steps: ["ผัด"] },
+    { place: "menu", name: "เมนูไม่มีสูตร", amount: 1, unit: "จาน", kcal: 150, protein: 10, carbs: 10, fat: 5, why: "", ingredients: null, steps: null },
   ];
   return { ideas };
 }

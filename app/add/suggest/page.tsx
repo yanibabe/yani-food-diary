@@ -1,7 +1,8 @@
 "use client";
 // "What can I eat with what's left": food ideas in 3 groups that fit today's kcal left.
-// 1) her own recipes (real numbers, no AI), 2) 7-Eleven, 3) delivery chain shops (AI).
-// Tap an idea → the normal check sheet opens, so she can adjust before saving.
+// 1) her own recipes (real numbers, no AI), 2) 7-Eleven, 3) menu ideas to cook (AI).
+// Tap a recipe or 7-Eleven idea → the normal check sheet opens, so she can adjust before saving.
+// Tap a menu idea → its recipe (ingredients + steps) first; she can search the name or log it.
 
 import { type ReactNode, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -18,8 +19,9 @@ import { useStore } from "../../lib/store";
 import { recipeIdeas, type Idea, type RecipeOption } from "../../lib/suggest";
 import type { Entry } from "../../lib/types";
 
-const GRAB_URL = "https://food.grab.com/th/th/";
-const LINEMAN_URL = "https://lineman.line.me/";
+/** A web search for the dish name, so she can find other recipes or videos. */
+const searchUrl = (name: string, lang: string) =>
+  `https://www.google.com/search?q=${encodeURIComponent(`${name} ${lang === "en" ? "recipe" : "สูตร"}`)}`;
 
 function SuggestInner() {
   const router = useRouter();
@@ -29,10 +31,11 @@ function SuggestInner() {
   const aiReady = !!ai && (ai.configured || ai.mock);
   const today = thaiDateKey();
 
-  const [step, setStep] = useState<"ideas" | "review">("ideas");
+  const [step, setStep] = useState<"ideas" | "cook" | "review">("ideas");
   const [loading, setLoading] = useState(true);
   const [seven, setSeven] = useState<Idea[]>([]);
-  const [delivery, setDelivery] = useState<Idea[]>([]);
+  const [menu, setMenu] = useState<Idea[]>([]);
+  const [cooking, setCooking] = useState<Idea | null>(null);
   const [light, setLight] = useState(false);
   const [mock, setMock] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -75,10 +78,10 @@ function SuggestInner() {
       if (!res.ok || !data?.result) {
         setError(data?.message ?? `${tr("เซิร์ฟเวอร์ตอบกลับ", "Server replied")} ${res.status}`);
         setSeven([]);
-        setDelivery([]);
+        setMenu([]);
       } else {
         setSeven((data.result.seven ?? []) as Idea[]);
-        setDelivery((data.result.delivery ?? []) as Idea[]);
+        setMenu((data.result.menu ?? []) as Idea[]);
         setLight(Boolean(data.result.light));
         setMock(Boolean(data.mock));
       }
@@ -100,12 +103,12 @@ function SuggestInner() {
     setPicked({
       idea,
       draft: {
-        title: idea.shop ? `${idea.name} (${idea.shop})` : idea.name,
+        title: idea.name,
         slot: guessSlot(),
         items: [
           {
             id: newId("it"),
-            name: idea.shop ? `${idea.name} (${idea.shop})` : idea.name,
+            name: idea.name,
             amount: idea.amount > 0 ? idea.amount : 1,
             unit: idea.place === "recipe" ? tr("เสิร์ฟ", "serving") : idea.unit,
             kcal: idea.kcal,
@@ -160,7 +163,7 @@ function SuggestInner() {
     return (
       <main className="page">
         <header className="mb-4 flex items-center gap-3">
-          <button className="h-11 w-11 rounded-full bg-paper text-[20px]" onClick={() => setStep("ideas")} aria-label={tr("กลับ", "Back")}>
+          <button className="h-11 w-11 rounded-full bg-paper text-[20px]" onClick={() => setStep(picked.idea.place === "menu" ? "cook" : "ideas")} aria-label={tr("กลับ", "Back")}>
             ‹
           </button>
           <h1 className="text-[22px] font-semibold">{tr("ตรวจก่อนบันทึก", "Check before saving")}</h1>
@@ -173,15 +176,88 @@ function SuggestInner() {
           chatEnabled={aiReady}
           chatDisabledReason={tr("ยังไม่ได้ตั้งค่า AI (OpenRouter) — แตะรายการเพื่อแก้เองได้", "The AI (OpenRouter) is not set up — tap an item to edit it yourself")}
           onSave={save}
-          onCancel={() => setStep("ideas")}
+          onCancel={() => setStep(picked.idea.place === "menu" ? "cook" : "ideas")}
         />
       </main>
     );
   }
 
+  if (step === "cook" && cooking) {
+    const c = cooking;
+    const macro = (label: string, v: number) => (
+      <span className="flex-1 rounded-xl bg-cream px-2 py-2 text-center">
+        <span className="num block text-[17px] font-semibold">{Math.round(v)}</span>
+        <span className="block text-[12px] text-muted">{label} g</span>
+      </span>
+    );
+    return (
+      <main className="page space-y-4" data-testid="suggest-cook">
+        <header className="flex items-center gap-3">
+          <button className="h-11 w-11 shrink-0 rounded-full bg-paper text-[20px]" onClick={() => setStep("ideas")} aria-label={tr("กลับ", "Back")}>
+            ‹
+          </button>
+          <h1 className="min-w-0 text-[22px] font-semibold leading-snug">{c.name}</h1>
+        </header>
+
+        <section className="card px-5 py-4">
+          <p className="text-center">
+            <b className="num text-[28px]">{fmtKcal(c.kcal)}</b> <span className="text-muted">kcal · {tr("1 ที่", "1 serving")}</span>
+          </p>
+          <div className="mt-3 flex gap-2">
+            {macro(tr("โปรตีน", "Protein"), c.protein)}
+            {macro(tr("คาร์บ", "Carbs"), c.carbs)}
+            {macro(tr("ไขมัน", "Fat"), c.fat)}
+          </div>
+        </section>
+
+        <section>
+          <h2 className="mb-1.5 px-1 text-[14px] font-semibold text-muted">{tr("วัตถุดิบ", "Ingredients")}</h2>
+          <ul className="card overflow-hidden" data-testid="cook-ingredients">
+            {c.ingredients.map((x, n) => (
+              <li key={n} className="border-t border-line px-4 py-2.5 text-[16px] first:border-t-0">{x}</li>
+            ))}
+          </ul>
+        </section>
+
+        <section>
+          <h2 className="mb-1.5 px-1 text-[14px] font-semibold text-muted">{tr("วิธีทำ", "How to make it")}</h2>
+          <ol className="card overflow-hidden" data-testid="cook-steps">
+            {c.steps.map((x, n) => (
+              <li key={n} className="flex gap-3 border-t border-line px-4 py-2.5 text-[16px] first:border-t-0">
+                <span className="num shrink-0 font-semibold text-muted">{n + 1}.</span>
+                <span>{x}</span>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        <p className="px-1 text-[13px] text-muted">
+          {tr("สูตรและแคลอรี่จาก AI เป็นค่าประมาณ (บวกเผื่อไว้ 15% แล้ว)", "The recipe and kcal come from the AI and are estimates (15% already added to be safe)")}
+        </p>
+
+        <button className="btn-primary w-full" onClick={() => pick(c)} data-testid="cook-log">
+          {tr("กินเมนูนี้ · บันทึก", "I ate this · Log it")}
+        </button>
+        <a className="btn-soft flex w-full" href={searchUrl(c.name, lang)} target="_blank" rel="noreferrer" data-testid="cook-search">
+          {tr("ค้นหาสูตรอื่นของเมนูนี้", "Search other recipes for this")}
+        </a>
+      </main>
+    );
+  }
+
   const row = (i: Idea, sub: string) => (
-    <li key={`${i.shop ?? ""}|${i.name}`} className="border-t border-line first:border-t-0">
-      <button className="flex w-full items-center gap-3 px-4 py-3 text-left active:bg-cream" onClick={() => pick(i)} data-testid="suggest-idea">
+    <li key={i.name} className="border-t border-line first:border-t-0">
+      <button
+        className="flex w-full items-center gap-3 px-4 py-3 text-left active:bg-cream"
+        onClick={() => {
+          if (i.place === "menu") {
+            setCooking(i);
+            setStep("cook");
+            window.scrollTo(0, 0);
+          } else pick(i);
+        }}
+        data-testid="suggest-idea"
+      >
         <span className="min-w-0 flex-1">
           <span className="block text-[16px] font-semibold leading-snug">{i.name}</span>
           <span className="block text-[13px] text-muted">{sub}</span>
@@ -271,28 +347,12 @@ function SuggestInner() {
 
       {group("seven", "bg-mint", "7-Eleven", aiBody(seven, (i) => `${amount(i)}${protein(i)}`))}
 
-      {group(
-        "delivery",
-        "bg-sky",
-        tr("สั่ง delivery", "Delivery"),
-        aiBody(
-          delivery,
-          (i) => `${i.shop} · ${protein(i)}`,
-          <div className="flex gap-2 border-t border-line px-4 py-3">
-            <a className="rounded-full border border-line px-3 py-1.5 text-[14px] active:bg-cream" href={GRAB_URL} target="_blank" rel="noreferrer" data-testid="open-grab">
-              {tr("เปิด Grab", "Open Grab")}
-            </a>
-            <a className="rounded-full border border-line px-3 py-1.5 text-[14px] active:bg-cream" href={LINEMAN_URL} target="_blank" rel="noreferrer" data-testid="open-lineman">
-              {tr("เปิด LINE MAN", "Open LINE MAN")}
-            </a>
-          </div>,
-        ),
-      )}
+      {group("menu", "bg-sky", tr("เมนูทำเอง", "Cook it yourself"), aiBody(menu, (i) => `${i.why ? `${i.why} · ` : ""}${protein(i)}`))}
 
       <p className="px-1 text-[13px] text-muted">
         {tr(
-          "แตะเมนูเพื่อดูและแก้ก่อนบันทึก · เลขของ 7-Eleven และร้านเป็นค่าประมาณ เช็คในแอปร้านอีกที",
-          "Tap an idea to check and adjust it before saving · 7-Eleven and shop numbers are estimates; check the shop's app",
+          "แตะเมนูทำเองเพื่อดูสูตร · แตะอย่างอื่นเพื่อตรวจและแก้ก่อนบันทึก · เลขจาก AI เป็นค่าประมาณ",
+          "Tap a cook-it-yourself idea to see its recipe · tap others to check and adjust before saving · AI numbers are estimates",
         )}
       </p>
 

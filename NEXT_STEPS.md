@@ -6,7 +6,7 @@
 
 ---
 
-## LIVE (updated 2026-11-16; Round 27 label numbers = no +15% LIVE; Round 26 grouped "what can I eat" LIVE; Round 25 "what can I eat" LIVE; Round 24 weight moved to Profile, steps removed)
+## LIVE (updated 2026-11-16; Round 28 simpler "กินอะไรดี" (menu + recipe, no delivery) LIVE; Round 27 label numbers = no +15% LIVE; Round 26 grouped "what can I eat" LIVE; Round 25 "what can I eat" LIVE; Round 24 weight moved to Profile, steps removed)
 
 - **App:** https://yani-food-diary.vercel.app  (Vercel, exm-labs account, free)
 - **Code:** https://github.com/yanibabe/yani-food-diary  (private; pushes auto-deploy)
@@ -21,15 +21,32 @@
 ## ▶ HER 3 NEW WISHES (2026-11-16) — one round each, in this order unless she picks another
 
 1. ~~Round 27 — real label numbers, no +15%~~ ✅ DONE (see Round 27 below). Next = Round 28.
-2. **Round 28 — "กินอะไรดี" simpler.** Remove the delivery group (+ Grab / LINE MAN buttons): she finds it too much.
+2. ~~Round 28 — "กินอะไรดี" simpler~~ ✅ DONE (see Round 28 below). Next = Round 29.
+   (old wish text:) **Round 28 — "กินอะไรดี" simpler.** Remove the delivery group (+ Grab / LINE MAN buttons): she finds it too much.
    Instead: suggested menu names; tap one → recipe (ingredients + steps) + kcal, so people can cook it,
    or just search the name. Keep "my recipes" group. 7-Eleven group: ask her if it stays.
 3. **Round 29 — share my day with my trainer.** One-tap share of a whole day: every food eaten +
    kcal, protein, fat, carbs (and totals). Easy to send (image and/or text via the iPhone share sheet).
    Ask her: picture, text, or both.
 
-## ▶ NEXT: Round 28 (simpler "กินอะไรดี", see wishes above). Also: she tries Round 27 on her iPhone — photo a snack pack
-## with its nutrition label visible → item should show "ตามฉลาก" and no +15%.
+## ▶ NEXT: Round 29 (share my day with my trainer). First question to ask her: picture, text, or both?
+## Also: she tries Rounds 27 + 28 on her iPhone with the REAL AI (label photo; open a "เมนูทำเอง" idea —
+## does the recipe look right and easy? does "ค้นหาสูตรอื่น" open Google on iPhone?).
+
+## Round 28 (2026-11-16) — "กินอะไรดี" simpler: delivery out, cook-it-yourself menus in ✅ LIVE
+
+Her answers: remove delivery (+ Grab / LINE MAN); 7-Eleven group STAYS.
+- `app/lib/suggest.ts`: place "delivery" → "menu"; `shop` removed; ideas carry `ingredients` + `steps`
+  (empty for non-menu). Menu ideas without ingredients or steps are dropped. AiGroups = { seven, menu }.
+- `app/lib/server/ai.ts`: AI asked for 4 7-Eleven + 4 simple home dishes (≤ ~20 min), ONE serving,
+  3–8 ingredients with amounts, 3–6 short steps, common dish name (so it can be searched). All text Thai in th.
+- `app/add/suggest/page.tsx`: groups = สูตรของฉัน / 7-Eleven / เมนูทำเอง (sky dot). Tapping a menu idea opens a
+  recipe view (kcal, protein/carbs/fat, ingredients, numbered steps, "+15% included" note) with
+  "กินเมนูนี้ · บันทึก" (→ normal check page; back returns to the recipe) and "ค้นหาสูตรอื่นของเมนูนี้"
+  (Google search "<name> สูตร", new tab). Recipe + 7-Eleven taps still go straight to the check page.
+- Tests: `tests/suggest.test.ts` delivery test → menu test. 90/90 pass, tsc, eslint, build OK.
+- Checked at iPhone size with the test AI: 3 groups, recipe view, search link, log → check page. No console errors.
+- NOT yet tried with the REAL AI.
 
 ## (older) she tries Round 26 (grouped ideas) on her iPhone with the real AI
 

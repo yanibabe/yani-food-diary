@@ -22,18 +22,22 @@ test("AI ideas get the +15% margin, then ideas that no longer fit are dropped", 
   assert.equal(seven[0].margin, true);
 });
 
-test("ideas are split into 7-Eleven and delivery; delivery must name a shop", () => {
+test("ideas are split into 7-Eleven and menu; a menu idea needs ingredients and steps", () => {
   const out = fitAiIdeas(
     [
-      idea("ไข่ต้ม", 70, 6),
-      idea("Chicken Salad", 160, 19, { place: "delivery", shop: " Subway " }),
-      idea("mystery bowl", 200, 20, { place: "delivery", shop: null }),
+      idea("ไข่ต้ม", 70, 6, { ingredients: ["should be dropped"], steps: ["x"] }),
+      idea("ยำอกไก่", 220, 32, { place: "menu", ingredients: [" อกไก่ 150 g ", ""], steps: ["ต้ม", "คลุก"] }),
+      idea("no recipe", 200, 20, { place: "menu", ingredients: null, steps: null }),
+      idea("no steps", 200, 20, { place: "menu", ingredients: ["ไข่"], steps: [] }),
     ],
     800,
   );
   assert.deepEqual(out.seven.map((i) => i.name), ["ไข่ต้ม"]);
-  assert.equal(out.seven[0].shop, null);
-  assert.deepEqual(out.delivery.map((i) => [i.shop, i.name]), [["Subway", "Chicken Salad"]]);
+  assert.deepEqual(out.seven[0].ingredients, []);
+  assert.deepEqual(out.menu.map((i) => i.name), ["ยำอกไก่"]);
+  assert.deepEqual(out.menu[0].ingredients, ["อกไก่ 150 g"]);
+  assert.deepEqual(out.menu[0].steps, ["ต้ม", "คลุก"]);
+  assert.equal(out.menu[0].margin, true);
 });
 
 test("drops zero kcal and duplicates, most protein first, at most 3 per group", () => {
