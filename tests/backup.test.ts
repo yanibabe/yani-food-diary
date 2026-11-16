@@ -90,3 +90,18 @@ test("a broken buddy in a backup is refused", () => {
   const b = makeBackup({ ...data, buddy: "[]" }, {}, 1);
   assert.equal(parseBackup(JSON.stringify(b)).ok, false);
 });
+
+import { restoreAction } from "../app/lib/backup.ts";
+
+test("restore keeps the CURRENT custom ingredients and usual picks when the backup has none (old backups)", () => {
+  assert.equal(restoreAction("customIngredients", null), "keep");
+  assert.equal(restoreAction("ingredientPrefs", null), "keep");
+  // a backup that does carry them replaces them
+  assert.equal(restoreAction("customIngredients", "[]"), "set");
+  assert.equal(restoreAction("ingredientPrefs", "[{}]"), "set");
+  // every other part still follows the backup exactly (empty in the backup = cleared)
+  for (const part of ["entries", "recipes", "goals", "body", "water", "labelFixes", "buddy", "lang"] as const) {
+    assert.equal(restoreAction(part, null), "remove");
+    assert.equal(restoreAction(part, "x"), "set");
+  }
+});

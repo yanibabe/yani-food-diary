@@ -66,7 +66,7 @@ Order: accuracy first, THEN Healthy Recipe Library, personalized meal ideas, wee
 
 ## ▶ NEXT — Round 42 "Smart Ingredient Search & Simplified UX" is APPROVED TO START (brief saved)
 - Her full brief (2 messages) is in `docs/round42-brief.md`. Read it first. Nothing is built yet.
-- FIRST: ask her what went wrong when she tried Round 41 on her iPhone (she wrote "ลองแล้ว แต่…" and it was
+- Round 41 question settled: her "ลองแล้ว แต่…" was a typo, no problem.
   cut off). Fix any real Round 41 problem before Round 42.
 - Do not deploy Round 42 automatically; report in Thai and ask approval first.
 - Fresh chat: she types `continue yani-food-diary`.
@@ -80,7 +80,7 @@ Order: accuracy first, THEN Healthy Recipe Library, personalized meal ideas, wee
   1) My recipes → edit → ingredient "ข้าวสวย" 150 g → "ค้นหาค่าใน USDA" → cooked white rice ~130 kcal/100 g → ใช้อันนี้ → ~195 kcal + USDA badge.
   2) Add a meal by text → tap an item → "ใช้ค่าจาก USDA" → pick → grams → USDA badge; others still ประมาณ; undo works.
   3) Airplane mode → open the USDA panel → friendly error + "ลองอีกครั้ง"; close it and the meal still saves.
-- Her earlier message cut off at "Do not …" — still unknown; ask once.
+- Her cut-off message was just a typo (she confirmed 2026-11-16): Round 41 has no known problem.
 - Do NOT start Round 42 (Mahidol) or the Recipe Library until she says.
 
 ## ▶ NEXT — Round 40 is LIVE (2026-11-16)
@@ -1218,3 +1218,12 @@ Built and tested on the Mac:
 
 - Auto ingredient image search · allergy warnings · detailed health settings ·
   weekly charts. Also: backup/export of local data.
+
+## Round 42 (2026-11-16) — Smart Ingredient Search ✅ BUILT, committed locally, NOT pushed/deployed
+Design: docs/round42-design.md. Search-first sheet `app/components/AddIngredientSheet.tsx` (search → pick → amount → Add;
+"+ สร้างวัตถุดิบเอง" always visible). Logic: app/lib/ingredientSearch.ts, customIngredients.ts, ingredientUsda.ts.
+Saved custom ingredients (yfd:v1:customIngredients) + usual picks (yfd:v1:ingredientPrefs) are in backup; restore keeps
+current ones if the file has none. Old USDA/AI buttons moved under "ตัวเลือกขั้นสูง" in each ingredient card (nothing deleted).
+Checks: 261 tests pass, tsc clean, lint 0 errors (2 old warnings), build OK, mock browser check at phone width OK.
+NOT verified: real USDA/passcode flow, real iPhone, "weight of one piece"/"density" questions in the sheet.
+Next: she tries it (mock first or after her OK to deploy), then Recipe Library. Do not push without her clear OK.

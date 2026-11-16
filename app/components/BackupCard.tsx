@@ -11,6 +11,7 @@ import {
   backupFileName,
   makeBackup,
   parseBackup,
+  restoreAction,
   type Backup,
   type BackupPart,
 } from "../lib/backup";
@@ -132,7 +133,9 @@ export function BackupCard({ restoreOnly = false }: { restoreOnly?: boolean }) {
         string,
       ][]) {
         const v = b.data[k];
-        if (v == null) localStorage.removeItem(key);
+        const what = restoreAction(k, v);
+        if (what === "keep") continue; // old backup: keep her saved custom ingredients / usual picks
+        if (what === "remove" || v == null) localStorage.removeItem(key);
         else localStorage.setItem(key, v);
       }
       // Start the app again so every screen reads the restored data.

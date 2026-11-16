@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { aiFetch } from "../../../lib/aiFetch";
 import { useParams, useRouter } from "next/navigation";
 import { Badge, EnergyHint, MissingNote, NumberField, ProvenanceBadge, StoredPhoto } from "../../../components/ui";
@@ -15,6 +15,7 @@ import { Icon } from "../../../components/Icon";
 import { IngredientScan } from "../../../components/IngredientScan";
 import { UsdaPicker, useUsdaReady } from "../../../components/UsdaPicker";
 import { toSnap } from "../../../lib/food/usdaNutrients";
+import { AddIngredientSheet, saveTypedAsCustom } from "../../../components/AddIngredientSheet";
 
 function blankIngredient(): Ingredient {
   return { id: newId("ing"), name: "", amount: 0, unit: "g", label: null, gramsPerUnit: null, photoId: null };
@@ -26,6 +27,42 @@ async function pickPhoto(file: File | undefined, maxSide: number, badImageMessag
   const id = newId("ph");
   await savePhoto(id, data);
   return id;
+}
+
+/** Round 42: keep a typed ingredient for next time. It then shows first in the search. Her numbers stay "typed by you". */
+function SaveCustomRow({ ing }: { ing: Ingredient }) {
+  const { tr } = useLang();
+  const [state, setState] = useState<"idle" | "saved" | "duplicate" | "bad">("idle");
+  const l = ing.label;
+  if (!l || l.via !== "typed" || !ing.name.trim()) return null;
+  const miss = l.missing ?? [];
+  const perVolume = unitKind(ing.unit) === "volume";
+  function save() {
+    if (!l) return;
+    const r = saveTypedAsCustom({
+      name: ing.name,
+      basis: l.basis,
+      per: l.per ?? (perVolume ? "ml" : "g"),
+      kcal: l.kcal,
+      protein: miss.includes("protein") ? null : l.protein,
+      carbs: miss.includes("carbs") ? null : l.carbs,
+      fat: miss.includes("fat") ? null : l.fat,
+      gramsPerUnit: ing.gramsPerUnit,
+      gPerMl: ing.gPerMl ?? null,
+      unit: ing.unit,
+    });
+    setState(r.ok ? "saved" : r.error === "duplicate" ? "duplicate" : "bad");
+  }
+  return (
+    <div className="space-y-1" data-testid="save-custom">
+      <button type="button" className="min-h-[44px] text-[14px] font-medium text-olive-dark disabled:text-muted" onClick={save} disabled={state === "saved"} data-testid="save-custom-btn">
+        {state === "saved" ? tr("✓ บันทึกไว้แล้ว", "✓ Saved") : tr("บันทึกไว้ใช้ครั้งหน้า", "Save for future use")}
+      </button>
+      {state === "saved" && <p className="text-[12px] text-muted">{tr("ครั้งหน้าค้นหาชื่อนี้ก็เจอ (แก้/ลบได้ใน “จัดการ”)", "Next time, searching this name finds it (edit or delete in “Manage”)")}</p>}
+      {state === "duplicate" && <p className="text-[12px] text-warn-ink">{tr("มีชื่อนี้บันทึกไว้แล้ว — แก้ได้ใน “จัดการ” ในช่องค้นหา", "This name is already saved — edit it in “Manage” in the search sheet")}</p>}
+      {state === "bad" && <p className="text-[12px] text-warn-ink">{tr("ตัวเลขยังไม่ครบ ตรวจแคลอรี่อีกครั้ง", "A number is missing. Check the calories.")}</p>}
+    </div>
+  );
 }
 
 function IngredientCard({
@@ -79,6 +116,11 @@ function IngredientCard({
       setLooking(null);
     }
   }
+  const ambiguous = !res.ok && res.reason === "ambiguous";
+  // Round 42: one quiet "Advanced" fold holds the AI + USDA lookups (nothing was removed).
+  const showAiBtn = !ing.label && !hasAi && !usdaOn && !looking && !!trimmed;
+  const showUsdaBtn = usdaReady && !ing.label && !usdaOn && !showUsda && !looking && !!trimmed;
+  const hasAdvanced = showAiBtn || showUsdaBtn;
   const isCount = unitKind(ing.unit) === "count";
   /** Does the AI's "weight of one" already fit this unit? */
   const aiFitsUnit = (u: IngredientUnit) =>
@@ -103,7 +145,7 @@ function IngredientCard({
   const setLabel = (p: Partial<LabelInfo>) => set({ label: { ...ing.label!, ...p, via: "typed" } });
 
   return (
-    <div className="card space-y-3 p-4" data-testid="ingredient-card">
+    <div className="card space-y-3 p-4" data-testid="ingredient-card" data-ing={ing.id}>
       <IngredientScan ing={ing} onPatch={onPatch} />
       <div className="flex items-start gap-3">
         <div className="flex-1 space-y-2">
@@ -196,6 +238,7 @@ function IngredientCard({
             </div>
           )}
           <EnergyHint m={ing.label} missing={ing.label.missing} />
+          <SaveCustomRow ing={ing} />
         </div>
       )}
 
@@ -217,14 +260,6 @@ function IngredientCard({
                 <span className="ml-1 num text-muted">{fmtKcal(f.per100.kcal)}/100 g</span>
               </button>
             ))}
-            {usdaReady && !showUsda && (
-              <button type="button" className="min-h-[40px] rounded-full px-3 text-[14px] font-medium text-olive-dark" onClick={() => setShowUsda(true)} data-testid="usda-open">
-                {tr("ค้นหาใน USDA", "Search USDA")}
-              </button>
-            )}
-            <button type="button" className="min-h-[40px] rounded-full px-3 text-[14px] font-medium text-olive-dark" onClick={() => void lookUp()}>
-              <Icon name="sparkle" className="mr-1 inline-block h-4 w-4 align-[-3px]" />{tr("ไม่ใช่ทั้งหมด — ให้ AI หา", "None of these — ask the AI")}
-            </button>
           </div>
         </div>
       )}
@@ -310,15 +345,23 @@ function IngredientCard({
               )}
             </span>
           )}
-          {!ing.label && !hasAi && !usdaOn && !looking && trimmed && !(!res.ok && res.reason === "ambiguous") && (
-            <button className="mt-1 block min-h-[36px] text-[14px] font-medium text-olive-dark" onClick={() => void lookUp()}>
-              <Icon name="sparkle" className="mr-1 inline-block h-4 w-4 align-[-3px]" />{tr("ให้ AI หาค่าสารอาหาร", "Let the AI look up the nutrition")}
-            </button>
-          )}
-          {usdaReady && !ing.label && !usdaOn && !showUsda && !looking && trimmed && !(!res.ok && res.reason === "ambiguous") && (
-            <button className="mt-1 block min-h-[36px] text-[14px] font-medium text-olive-dark" onClick={() => setShowUsda(true)} data-testid="usda-open">
-              {tr("ค้นหาค่าใน USDA", "Look it up in USDA")}
-            </button>
+          {hasAdvanced && (
+            // Round 42: the AI and USDA lookups are still here, but tucked away so the main flow stays calm.
+            <details className="mt-1" data-testid="advanced-fold">
+              <summary className="min-h-[36px] cursor-pointer py-1.5 text-[14px] text-muted">{tr("ตัวเลือกขั้นสูง", "Advanced")}</summary>
+              <div className="flex flex-col items-start pb-1">
+                {showAiBtn && (
+                  <button type="button" className="min-h-[36px] text-[14px] font-medium text-olive-dark" onClick={() => void lookUp()} data-testid="ai-lookup">
+                    <Icon name="sparkle" className="mr-1 inline-block h-4 w-4 align-[-3px]" />{ambiguous ? tr("ไม่ใช่ทั้งหมด — ให้ AI หา", "None of these — ask the AI") : tr("ให้ AI หาค่าสารอาหาร", "Let the AI look up the nutrition")}
+                  </button>
+                )}
+                {showUsdaBtn && (
+                  <button type="button" className="min-h-[36px] text-[14px] font-medium text-olive-dark" onClick={() => setShowUsda(true)} data-testid="usda-open">
+                    {tr("ค้นหาค่าใน USDA", "Look it up in USDA")}
+                  </button>
+                )}
+              </div>
+            </details>
           )}
         </div>
         <button className="shrink-0 px-2 py-2 text-[14px] text-danger" onClick={onRemove}>{tr("ลบ", "Delete")}</button>
@@ -347,13 +390,24 @@ function RecipeForm({ initial, onSave, onCancel }: { initial: Recipe | null; onS
   const [name, setName] = useState(initial?.name ?? "");
   const [servings, setServings] = useState<number | null>(initial?.servings ?? 1);
   const [cooked, setCooked] = useState<number | null>(initial?.cookedWeight ?? null);
-  const [ings, setIngs] = useState<Ingredient[]>(initial?.ingredients ?? [blankIngredient()]);
+  const [ings, setIngs] = useState<Ingredient[]>(initial?.ingredients ?? []);
+  const [sheet, setSheet] = useState(false);
+  const [focusId, setFocusId] = useState<string | null>(null);
   const [steps, setSteps] = useState<string[]>(initial?.steps ?? []);
   const [cover, setCover] = useState<string | null>(initial?.coverPhotoId ?? null);
   const [category, setCategory] = useState<RecipeCategory | null>(initial?.category ?? null);
   const [err, setErr] = useState<string | null>(null);
   const coverRef = useRef<HTMLInputElement>(null);
   const { tr, lang } = useLang();
+
+  // Bring a new manual card into view.
+  useEffect(() => {
+    if (!focusId) return;
+    document.querySelector(`[data-ing="${focusId}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [focusId]);
+
+  /** Blank leftovers (old empty cards) are dropped when something real is added. */
+  const withoutBlanks = (list: Ingredient[]) => list.filter((x) => x.name.trim() || x.amount || x.label);
 
   const totals = useMemo(() => recipeTotals(ings, servings ?? 1, cooked, lang), [ings, servings, cooked, lang]);
 
@@ -457,7 +511,22 @@ function RecipeForm({ initial, onSave, onCancel }: { initial: Recipe | null; onS
             onRemove={() => setIngs((p) => p.filter((x) => x.id !== ing.id))}
           />
         ))}
-        <button className="btn-soft w-full" onClick={() => setIngs((p) => [...p, blankIngredient()])}>+ {tr("เพิ่มวัตถุดิบ", "Add ingredient")}</button>
+        <button className="btn-soft w-full" onClick={() => setSheet(true)} data-testid="add-ingredient">+ {tr("เพิ่มวัตถุดิบ", "Add ingredient")}</button>
+        <AddIngredientSheet
+          open={sheet}
+          onClose={() => setSheet(false)}
+          onAdd={(ing) => {
+            setIngs((p) => [...withoutBlanks(p), ing]);
+            setFocusId(ing.id);
+          }}
+          onCreateCustom={(typed) => {
+            // The existing manual editor, with the typed name and the "label numbers" box already open (unknown = left empty).
+            const card: Ingredient = { ...blankIngredient(), name: typed, label: { basis: "per100", kcal: 0, protein: 0, carbs: 0, fat: 0, via: "typed", missing: ["protein", "carbs", "fat"] } };
+            setIngs((p) => [...withoutBlanks(p), card]);
+            setFocusId(card.id);
+            setSheet(false);
+          }}
+        />
       </section>
 
       <section className="space-y-3">

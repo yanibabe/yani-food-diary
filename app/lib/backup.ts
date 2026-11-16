@@ -13,9 +13,14 @@ export const BACKUP_KEYS = {
   labelFixes: "yfd:v1:labelFixes",
   buddy: "yfd:v1:buddy",
   lang: "yfd:v1:lang",
+  // Round 42: her saved custom ingredients + the foods she usually picks (names and numbers only).
+  customIngredients: "yfd:v1:customIngredients",
+  ingredientPrefs: "yfd:v1:ingredientPrefs",
 } as const;
 
 export type BackupPart = keyof typeof BACKUP_KEYS;
+/** Parts added after the first backups. Older callers / files may leave them out (read as "nothing saved"). */
+type NewerPart = "customIngredients" | "ingredientPrefs";
 
 export type Backup = {
   app: "snapcal";
@@ -27,8 +32,22 @@ export type Backup = {
   photos: Record<string, string>;
 };
 
-export function makeBackup(data: Record<BackupPart, string | null>, photos: Record<string, string>, now = Date.now()): Backup {
-  return { app: "snapcal", version: 1, savedAt: now, data, photos };
+export function makeBackup(data: Record<Exclude<BackupPart, NewerPart>, string | null> & Partial<Record<NewerPart, string | null>>, photos: Record<string, string>, now = Date.now()): Backup {
+  return { app: "snapcal", version: 1, savedAt: now, data: { ...data, customIngredients: data.customIngredients ?? null, ingredientPrefs: data.ingredientPrefs ?? null }, photos };
+}
+
+/** Parts that older backup files do not have. Restoring such a file must not wipe what is on the phone now. */
+export const KEEP_IF_ABSENT: readonly BackupPart[] = ["customIngredients", "ingredientPrefs"];
+
+/**
+ * What restore does with ONE saved part:
+ *  "set"    – write the backup's text,
+ *  "remove" – the backup says nothing was saved: clear it (like before),
+ *  "keep"   – leave what is on the phone now (old backups without Round 42's ingredient memory).
+ */
+export function restoreAction(part: BackupPart, value: string | null): "set" | "remove" | "keep" {
+  if (value != null) return "set";
+  return KEEP_IF_ABSENT.includes(part) ? "keep" : "remove";
 }
 
 /** File name like "snapcal-backup-2026-11-13.json". */
@@ -79,7 +98,7 @@ export function parseBackup(text: string, lang: Lang = "th"): { ok: true; backup
     try {
       const parsed = k === "lang" ? raw : JSON.parse(raw);
       if (k === "lang" && raw !== "th" && raw !== "en") return bad;
-      if ((k === "entries" || k === "recipes" || k === "body" || k === "water" || k === "labelFixes") && !Array.isArray(parsed)) return bad;
+      if ((k === "entries" || k === "recipes" || k === "body" || k === "water" || k === "labelFixes" || k === "customIngredients" || k === "ingredientPrefs") && !Array.isArray(parsed)) return bad;
       if ((k === "goals" || k === "buddy") && (typeof parsed !== "object" || parsed === null || Array.isArray(parsed))) return bad;
     } catch {
       return bad;
