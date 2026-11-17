@@ -203,7 +203,7 @@ function TodayInner() {
     <main className="page space-y-5">
       <header data-testid="home-header">
         <div className="flex items-center justify-between">
-          <span className="text-[21px] font-medium tracking-wide" data-testid="app-name">
+          <span className="text-[21px] font-light tracking-[0.14em]" data-testid="app-name">
             SnapCal
           </span>
           <div className="flex items-center gap-2">
@@ -221,7 +221,7 @@ function TodayInner() {
           </div>
         </div>
         <div className="mt-1 flex flex-wrap items-baseline gap-x-2" data-testid="home-date">
-          <h1 className="text-[26px] font-medium">{date === today ? tr("วันนี้", "Today") : tr("ย้อนดู", "Looking back")}</h1>
+          <h1 className="text-[26px] font-light">{date === today ? tr("วันนี้", "Today") : tr("ย้อนดู", "Looking back")}</h1>
           <p className="text-[14px] text-muted">{thaiDateLabel(date, lang)}</p>
         </div>
       </header>

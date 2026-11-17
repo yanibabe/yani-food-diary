@@ -63,11 +63,11 @@ export default function ProfilePage() {
   const p = fillProfile(goals.profile) ?? EMPTY_PROFILE;
   const plan = usesWeightGoal(p.reason) && !reasonProblem(p) ? weightPlan(p) : null;
   const goalKg = plan && plan.direction !== "keep" ? p.targetWeightKg : null;
-  const facts = [
-    p.age ? `${p.age}` : null,
-    p.heightCm ? tr(`${p.heightCm} ซม.`, `${p.heightCm} cm`) : null,
-    p.weightKg ? tr(`${kg(p.weightKg)} กก.`, `${kg(p.weightKg)} kg`) : null,
-  ].filter(Boolean);
+  const bodyFacts = [
+    p.age ? { value: `${p.age}`, label: tr("อายุ", "Age") } : null,
+    p.heightCm ? { value: `${p.heightCm}`, label: tr("ซม.", "cm") } : null,
+    p.weightKg ? { value: kg(p.weightKg), label: tr("กก.", "kg") } : null,
+  ].filter((x): x is { value: string; label: string } => x !== null);
 
   return (
     <main className="page space-y-3">
@@ -86,12 +86,30 @@ export default function ProfilePage() {
         />
       ) : (
         <>
-          <header className="pb-3 pt-4 text-center" data-testid="profile-head">
-            <div className="mx-auto w-fit">
-              <CharacterPicture size={64} />
+          <header className="glass px-4 py-4" data-testid="profile-head">
+            <div className="flex items-center gap-3.5">
+              <span className="grid h-[62px] w-[62px] shrink-0 place-items-center rounded-full bg-protein" data-testid="profile-avatar">
+                <CharacterPicture size={44} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <h1 className="truncate text-[24px] font-light">{p.name || tr("โปรไฟล์", "Profile")}</h1>
+                {p.reason && (
+                  <span className="mt-0.5 inline-block rounded-full bg-protein px-3 py-0.5 text-[13px] text-protein-ink" data-testid="profile-goal">
+                    {REASON_LABEL[p.reason][lang]}
+                  </span>
+                )}
+              </div>
             </div>
-            <h1 className="mt-1.5 text-[26px] font-light">{p.name || tr("โปรไฟล์", "Profile")}</h1>
-            {facts.length > 0 && <p className="text-[14px] text-muted">{facts.join(" · ")}</p>}
+            {bodyFacts.length > 0 && (
+              <div className="mt-3.5 grid grid-flow-col auto-cols-fr border-t border-line pt-3 text-center" data-testid="profile-facts">
+                {bodyFacts.map((f) => (
+                  <div key={f.label}>
+                    <div className="num text-[20px] leading-tight">{f.value}</div>
+                    <div className="text-[12px] text-muted">{f.label}</div>
+                  </div>
+                ))}
+              </div>
+            )}
           </header>
 
           <button

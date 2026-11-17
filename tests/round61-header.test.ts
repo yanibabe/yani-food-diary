@@ -23,8 +23,8 @@ test("chat header shows the character", () => {
   assert.ok(src.includes("<CharacterPicture size={30}"));
 });
 
-test("profile picture is small (64), not the old 124", () => {
+test("profile picture is small (44 inside a round tile), not the old 124", () => {
   const src = read("../app/profile/page.tsx");
-  assert.ok(src.includes("<CharacterPicture size={64}"));
+  assert.ok(src.includes("<CharacterPicture size={44}"));
   assert.equal(src.includes("size={124}"), false);
 });

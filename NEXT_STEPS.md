@@ -1409,3 +1409,12 @@ Files: app/page.tsx (header), app/components/FoodChat.tsx (header), app/profile/
 NOT verified: real iPhone, English text, a very long date label on a narrow phone (it wraps under "วันนี้" by design), the share picture (still draws the character, untouched).
 OPEN (she asked, not started): replace the phone home-screen icon (public/apple-touch-icon.png 180, icon-192, icon-512 — now a generic plate with a leaf) with her own logo. Waiting for her file: square PNG, 1024×1024 or more, full-bleed, NOT transparent (iOS fills transparent with black), symbol centred with margin. After deploy she must remove the app from the home screen and add it again (iOS caches the icon); back up first on the Profile page.
 Round 61 DEPLOYED (2026-11-17, 4101de8): Vercel build succeeded; the new header (app-name / home-date) is in the live bundle. Next: she tries the home, chat and profile screens on her iPhone. Phone-icon swap still waiting for her logo file.
+
+## Round 62 (2026-11-17) — lighter home name/title + profile card (built, NOT deployed)
+Her feedback on Round 61: "SnapCal" and "วันนี้" looked too dark/heavy and did not match the style; the profile top felt plain and not professional. I measured: the app's calm look uses weight 200 (big numbers) and 300 (body, profile name), but my header used 500.
+Home: "SnapCal" and "วันนี้" now weight 300 (wordmark letter-spacing wider, 0.14em). Meal titles (มื้อเช้า…) are still 500 — not touched, ask her if she wants those lighter too.
+Profile (she picked "P2, profile card"): one glass card — round peach tile with the character (44 px), name (24 px light), goal pill (REASON_LABEL, e.g. ลดน้ำหนัก), then a row age / height / weight (only values she has). The old facts line under the name is gone. The stats card below (kcal / target weight) is unchanged.
+Files: app/page.tsx, app/profile/page.tsx, tests/round62-style.test.ts (3 new), tests/round61-header.test.ts (profile size check updated 64 → 44).
+388 tests pass, tsc clean, lint 0 errors, build OK. Mock browser (phone size): home looks light, profile card shows avatar, "Test", ลดน้ำหนัก, 34 / 160 / 60.
+NOT verified: real iPhone (top safe-area spacing on the profile card), English labels, a very long name (truncates), a profile with no reason or no body values.
+Still open: phone home-screen icon swap — waiting for her logo file (see Round 61 note).
