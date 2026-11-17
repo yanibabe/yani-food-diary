@@ -100,12 +100,26 @@ export function AddIngredientSheet({
   const { tr } = useLang();
   return (
     <Sheet open={open} onClose={onClose} keyboardSafe title={tr("เพิ่มวัตถุดิบ", "Add ingredient")}>
-      {open && <SheetBody onClose={onClose} onAdd={onAdd} onCreateCustom={onCreateCustom} />}
+      {open && <IngredientSearch onClose={onClose} onAdd={onAdd} onCreateCustom={onCreateCustom} />}
     </Sheet>
   );
 }
 
-function SheetBody({ onClose, onAdd, onCreateCustom }: { onClose: () => void; onAdd: (ing: Ingredient) => void; onCreateCustom: (name: string) => void }) {
+/**
+ * The search-first body. Used inside the recipe's sheet, and (Round 44) on the full "Search food" page
+ * (`food` = the words say "food", not "ingredient"; `onClose` is not needed there).
+ */
+export function IngredientSearch({
+  onClose,
+  onAdd,
+  onCreateCustom,
+  food = false,
+}: {
+  onClose?: () => void;
+  onAdd: (ing: Ingredient) => void;
+  onCreateCustom: (name: string) => void;
+  food?: boolean;
+}) {
   const { tr, lang } = useLang();
   const online = useSyncExternalStore(subscribeOnline, readOnline, () => true);
   const usdaReady = useUsdaReady();
@@ -243,7 +257,7 @@ function SheetBody({ onClose, onAdd, onCreateCustom }: { onClose: () => void; on
       savePrefs(next);
     }
     onAdd(quote.ingredient);
-    onClose();
+    onClose?.();
   }
 
   // ---- manage (custom ingredients + usual picks) ----
@@ -270,8 +284,8 @@ function SheetBody({ onClose, onAdd, onCreateCustom }: { onClose: () => void; on
             setQuery(e.target.value);
             setSel(null);
           }}
-          placeholder={tr("ค้นหาวัตถุดิบ เช่น ไข่, egg, ข้าวสวย", "Search an ingredient, e.g. egg, ไข่, rice")}
-          aria-label={tr("ค้นหาวัตถุดิบ", "Search ingredient")}
+          placeholder={food ? tr("ค้นหาอาหาร เช่น ไข่, egg, ข้าวสวย", "Search a food, e.g. egg, ไข่, rice") : tr("ค้นหาวัตถุดิบ เช่น ไข่, egg, ข้าวสวย", "Search an ingredient, e.g. egg, ไข่, rice")}
+          aria-label={food ? tr("ค้นหาอาหาร", "Search food") : tr("ค้นหาวัตถุดิบ", "Search ingredient")}
           autoComplete="off"
           autoCorrect="off"
           spellCheck={false}

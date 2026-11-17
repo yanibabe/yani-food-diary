@@ -1253,3 +1253,10 @@ does not cover); used by AddIngredientSheet, search box is sticky at the top. Br
 NOT verified on a real iPhone keyboard. Needs her OK before push.
 
 ### Keyboard fix DEPLOYED (2026-11-17, f74e979, Vercel success) with her OK. Live code has the new visualViewport sheet. She tries on iPhone.
+
+## Round 44 (2026-11-17) — "ค้นหาอาหาร" tile: add ONE food straight to the diary ✅ BUILT, committed locally, NOT deployed
+New tile in Today's Add food sheet → /add/search (reuses IngredientSearch from AddIngredientSheet) → Add → normal MealReview → save.
+app/lib/searchFood.ts converts Ingredient→FoodItem (saved as kind "manual"). Buffer only when the unit is a counted one
+(AI guessed piece weight); typed g/ml = no buffer (her Round 40 rule). 277 tests, tsc, lint 0 errors, build OK, mock browser OK.
+Not verified: iPhone/real keyboard, AI/USDA rows by hand. Add-food sheet has an empty cell (6–7 tiles).
+NEXT WISH (not started): "ask first" chat — type a food, get kcal + advice, add to diary only if she wants. Ask her design questions one at a time.

@@ -3,6 +3,7 @@ import { aiDairy } from "../../lib/dairy";
 import { aiFetch } from "../../lib/aiFetch";
 import { Suspense, useRef, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { IngredientSearch } from "../../components/AddIngredientSheet";
 import { BarcodeLookup } from "../../components/BarcodeLookup";
 import { MealReview, type MealDraft } from "../../components/MealReview";
 import { useAiStatus, WaitPopup } from "../../components/ui";
@@ -16,15 +17,16 @@ import { foodToItem } from "../../lib/food/toItem";
 import { provFromAi } from "../../lib/provenance";
 import { cleanBufferPct, startBuffer } from "../../lib/calorieBuffer";
 import type { Food } from "../../lib/food/provider";
-import type { FoodItem } from "../../lib/types";
+import { ingredientToItem } from "../../lib/searchFood";
+import type { FoodItem, Ingredient } from "../../lib/types";
 import { Icon } from "../../components/Icon";
 
-type Mode = "photo" | "text" | "manual" | "barcode";
+type Mode = "photo" | "text" | "manual" | "barcode" | "search";
 
 function AddInner() {
   const params = useParams<{ mode: string }>();
   const mode: Mode =
-    params.mode === "text" ? "text" : params.mode === "manual" ? "manual" : params.mode === "barcode" ? "barcode" : "photo";
+    params.mode === "text" ? "text" : params.mode === "manual" ? "manual" : params.mode === "barcode" ? "barcode" : params.mode === "search" ? "search" : "photo";
   const search = useSearchParams();
   const date = search.get("date") || thaiDateKey();
   const router = useRouter();
@@ -120,6 +122,23 @@ function AddInner() {
     setStep("review");
   }
 
+  // Round 44: one searched food → the normal review screen (nothing is saved until she saves there).
+  function pickSearched(ing: Ingredient) {
+    const item = ingredientToItem(ing, newId("it"), lang, cleanBufferPct(goals.calorieBuffer));
+    if (!item) return;
+    setDraft((d) => ({ ...d, title: item.name, items: [item] }));
+    setStartEdit(null);
+    setStep("review");
+  }
+
+  /** "+ Add custom ingredient": the same manual editor, with the typed name already in. */
+  function createCustomFood(name: string) {
+    const first = { ...blankItem(defaultUnit), name: name.trim() };
+    setDraft((d) => ({ ...d, title: first.name, items: [first] }));
+    setStartEdit(first.id);
+    setStep("review");
+  }
+
   function goManual() {
     const first = blankItem(defaultUnit);
     setDraft((d) => ({ ...d, items: [first] }));
@@ -149,7 +168,8 @@ function AddInner() {
       slot: d.slot,
       title: d.title,
       items: d.items,
-      source: mode,
+      // "Search food" is a diary entry she made by hand: it uses the existing "manual" kind (no new saved kind).
+      source: mode === "search" ? "manual" : mode,
       photoId,
       ...(saved.length > 1 ? { extraPhotoIds: saved.slice(1) } : {}),
       recipe: null,
@@ -166,7 +186,9 @@ function AddInner() {
         ? tr("พิมพ์ให้ AI ช่วย", "Type it, AI helps")
         : mode === "barcode"
           ? tr("บาร์โค้ด", "Barcode")
-          : tr("กรอกเอง", "Enter it myself");
+          : mode === "search"
+            ? tr("ค้นหาอาหาร", "Search food")
+            : tr("กรอกเอง", "Enter it myself");
 
   return (
     <main className="page">
@@ -179,7 +201,9 @@ function AddInner() {
 
       {step === "input" && mode === "barcode" && <BarcodeLookup onPick={pickBarcode} onManual={goManual} />}
 
-      {(step === "input" || step === "loading") && mode !== "barcode" && (
+      {step === "input" && mode === "search" && <IngredientSearch food onAdd={pickSearched} onCreateCustom={createCustomFood} />}
+
+      {(step === "input" || step === "loading") && mode !== "barcode" && mode !== "search" && (
         <div className="space-y-5">
           {mode === "photo" && (
             <div className="card overflow-hidden">
@@ -293,7 +317,7 @@ function AddInner() {
 
       {step === "review" && (
         <MealReview
-          entrySource={mode}
+          entrySource={mode === "search" ? "manual" : mode}
           photo={mode === "photo" ? photo : null}
           initial={draft}
           mockBadge={mock}

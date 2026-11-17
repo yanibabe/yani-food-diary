@@ -28,6 +28,7 @@ const ADD_ICONS: Record<string, IconName> = {
   recipes: "book-open",
   manual: "pencil-simple",
   barcode: "barcode",
+  search: "magnifying-glass",
   again: "arrows-clockwise",
 };
 
@@ -296,6 +297,7 @@ function TodayInner() {
             { href: `/recipes${q}`, icon: "recipes", dot: "bg-fat-dot", label: tr("เลือกสูตรของฉัน", "From my recipes") },
             { href: `/add/manual${q}`, icon: "manual", dot: "bg-water", label: tr("กรอกเอง", "Enter it myself") },
             { href: `/add/barcode${q}`, icon: "barcode", dot: "bg-protein-dot", label: tr("บาร์โค้ด", "Barcode") },
+            { href: `/add/search${q}`, icon: "search", dot: "bg-carbs-dot", label: tr("ค้นหาอาหาร", "Search food") },
           ].map((o) => (
             <Link
               key={o.href}
