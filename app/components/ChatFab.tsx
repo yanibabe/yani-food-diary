@@ -210,7 +210,7 @@ export function ChatFab() {
             type="button"
             className="grid place-items-center rounded-full border border-white/90 bg-[rgba(250,246,240,0.78)] shadow-[0_4px_16px_rgba(43,39,36,0.14)] backdrop-blur-[18px]"
             style={{ width: FAB_SIZE, height: FAB_SIZE, touchAction: "none", userSelect: "none", WebkitUserSelect: "none", WebkitTouchCallout: "none", cursor: dragging ? "grabbing" : "pointer" }}
-            aria-label={tr("ถามก่อนกิน / Ask before eating", "ถามก่อนกิน / Ask before eating")}
+            aria-label={tr("ถามผู้ช่วย", "Ask AI")}
             data-testid="chat-fab"
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
