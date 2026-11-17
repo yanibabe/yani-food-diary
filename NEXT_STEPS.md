@@ -1282,3 +1282,5 @@ only when she taps Add (hand-off via sessionStorage `sheetHandoff`, 10 min expir
 now "สูตรของฉัน" has a switch สูตร | วัตถุดิบ with search, edit, delete (CustomIngredientList shared with Manage). (3) From 2 typed chars ONE pinned row
 "ให้ AI คำนวณ “…”" → /add/text?q=…&auto → analysis starts on its own (never before the tap). In the sheet the single-ingredient AI-estimate row is hidden (only one AI button);
 it still exists on /add/search. 310 tests, tsc, lint 0 errors, build OK, mock browser OK. Not verified: real iPhone keyboard, real USDA in sheet.
+
+### Round 47 DEPLOYED (2026-11-17, 9b2f26a, Vercel success) with her OK. Live: home 200, recipes?tab=ingredients 200, new sheet code present. She tries on iPhone.
