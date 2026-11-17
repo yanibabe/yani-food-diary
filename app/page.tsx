@@ -123,6 +123,17 @@ function TodayInner() {
     ev.preventDefault();
     leave(key, () => router.push(href));
   };
+  // The moment the sheet opens, warm up the pages it can lead to, so a tap switches at once (no waiting, no fade).
+  useEffect(() => {
+    if (!addOpen) return;
+    for (const p of ["/add/text", "/add/search", "/add/photo", "/add/barcode", "/add/manual", "/recipes"]) {
+      try {
+        router.prefetch(`${p}${q}`);
+      } catch {
+        /* fine: it just loads on tap */
+      }
+    }
+  }, [addOpen, q, router]);
   const opening = tr("กำลังเปิด…", "Opening…");
   const spin = <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-ink/20 border-t-ink" aria-hidden data-testid="nav-spinner" />;
   // The ONE hand-over: the chosen food (with its amount) goes to the review page; nothing is saved yet.

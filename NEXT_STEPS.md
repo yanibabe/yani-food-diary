@@ -1318,3 +1318,10 @@ when supported (fallback stays for unsupported browsers); reduced-motion off. Ad
 Barcode route once took ~1 s in prod build (cause not found). Plan B if still not smooth: show the destination inside the same sheet (no route change).
 
 ### Round 51 DEPLOYED (2026-11-17, b69e8cc, Vercel success) with her OK. Live: main pages 200, `page-melt` transition code present. She tries on iPhone (iOS 18.2+ expected for the full effect).
+
+## Round 52 (2026-11-17) — ROLLED BACK the fades; instant switching again ✅ committed locally, NOT deployed
+Her feedback on Round 51: still slow; the bottom tab bar felt SLOWER than before (my global <ViewTransition> wrapper covered every page). She wants instant
+"ฟึบ" switching like the tab bar, NO fade/ghost image at all. Reverted Round 50 + 51 (git revert of b69e8cc and a49f6d6: no .page-enter, .sheet-leaving, PageTransition, view transitions).
+Kept from the earlier rounds: sheet stays open until the route changes (no Today flash) + spinner/double-tap guard (Round 49). Added back ONLY router.prefetch of the 6 destinations
+when the Add food sheet opens (so taps switch immediately). RULE: never add page-level animations app-wide again; keep tab bar untouched.
+If it is still not instant enough: Plan B = show the AI/review screen inside the same sheet (no route change).
