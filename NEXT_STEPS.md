@@ -1299,3 +1299,5 @@ Her iPhone feedback on Round 48: tapping "ให้ AI คำนวณ" still fl
 before router.push. Now the sheet stays up with a spinner ("กำลังเปิด…") until the route changes; double taps ignored (app/lib/navGuard.ts).
 Also: Sheet has a `header` slot outside the scroll area (title + search box fixed; results scroll below, no overlap). 320 tests, tsc, lint 0 errors, build OK.
 Not verified: real iPhone, recipe Add-ingredient sheet in browser. /add/search page's own box now scrolls away with the page.
+
+### Round 49 DEPLOYED (2026-11-17, 5f7ece4, Vercel success) with her OK. Live: home 200, new "กำลังเปิด…" code present. She tries on iPhone.
