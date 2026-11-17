@@ -2,6 +2,7 @@
 // Pure data (no drawing), so it can be tested.
 
 import { fmtAmount, pickMacros, sumMacros } from "./nutrition.ts";
+import { macroSplit, type Split } from "./macroSplit.ts";
 import { SLOTS, type Entry, type Macros, type MealSlot } from "./types.ts";
 
 export type ShareMeal = {
@@ -15,7 +16,7 @@ export type ShareMeal = {
 
 export type ShareSlot = { slot: MealSlot; m: Macros; meals: ShareMeal[] };
 
-export type ShareDay = { total: Macros; slots: ShareSlot[]; count: number };
+export type ShareDay = { total: Macros; slots: ShareSlot[]; count: number; /** P/C/F share of the day's calories (same maths as the Today tiles), or null when nothing was eaten. */ split: Split | null };
 
 /** Round to whole numbers so the picture and the totals always agree. */
 function roundM(m: Macros): Macros {
@@ -35,10 +36,18 @@ export function buildShareDay(entries: Entry[], date: string): ShareDay {
       }));
     return { slot, meals, m: roundM(sumMacros(meals.map((x) => x.m))) };
   });
-  return { slots, total: roundM(sumMacros(slots.map((s) => s.m))), count: day.length };
+  // Same input as the Today tiles (the unrounded day total), so the percents match Today exactly.
+  const split = macroSplit(sumMacros(day.flatMap((e) => e.items.map(pickMacros))));
+  return { slots, total: roundM(sumMacros(slots.map((s) => s.m))), count: day.length, split };
 }
 
 /** File name for the picture, e.g. "snapcal-2026-11-16.png". */
 export function shareFileName(date: string): string {
   return `snapcal-${date}.png`;
+}
+
+/** The texts for the three percents ("35%"), or null when there is nothing to show (empty / all-zero day). */
+export function splitTexts(split: Split | null): { protein: string; carbs: string; fat: string } | null {
+  if (!split) return null;
+  return { protein: `${split.protein}%`, carbs: `${split.carbs}%`, fat: `${split.fat}%` };
 }

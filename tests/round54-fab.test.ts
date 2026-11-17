@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { clampX, clampY, defaultFab, dragPos, fabAllowedOn, fabVisible, fabX, FAB_MARGIN, FAB_SIZE, isDrag, parseFab, placeFab, releaseFab, serializeFab, snapSide, yRange } from "../app/lib/chatFab.ts";
+import { clampX, clampY, defaultFab, dragPos, fabAllowedOn, fabVisible, fabX, FAB_MARGIN, FAB_SIZE, FAB_TOTAL_H, isDrag, parseFab, placeFab, releaseFab, serializeFab, snapSide, yRange } from "../app/lib/chatFab.ts";
 
 const ins = { top: 47, bottom: 83 };
 const VW = 390;
@@ -9,7 +9,7 @@ const VH = 844;
 test("y is kept clear of the status bar and the tab bar", () => {
   const { min, max } = yRange(VH, ins);
   assert.equal(min, 47 + FAB_MARGIN);
-  assert.equal(max, VH - 83 - FAB_SIZE - FAB_MARGIN);
+  assert.equal(max, VH - 83 - FAB_TOTAL_H - FAB_MARGIN);
   assert.equal(clampY(-500, VH, ins), min);
   assert.equal(clampY(5000, VH, ins), max);
   assert.equal(clampY(300, VH, ins), 300);

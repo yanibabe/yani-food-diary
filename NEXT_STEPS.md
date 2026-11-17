@@ -1350,3 +1350,8 @@ Her ask: a ChatGPT-like chat to use BEFORE eating (e.g. "ข้าวหน้�
 Mock reply wording "-819 kcal left" is mock-only.
 
 ### Round 54 DEPLOYED (2026-11-17, 5e89331, Vercel success) with her OK. Live: main pages 200, /api/status ok (not mock), /api/chat 401 without passcode, fab + chat code present. She tries on iPhone (real AI + passcode untested by me).
+
+## Round 55 (2026-11-17) — caption under the chat button + macro % on the share-day picture ✅ BUILT, committed locally, NOT deployed
+(1) Tiny caption "ถามผู้ช่วย / Ask AI" under the floating character button (same wrapper: moves/snaps/hides with it; counts in position clamp above the tab bar).
+(2) Share-day picture: each P/C/F tile now shows its % of the day's calories (macroSplit, same numbers as Today tiles; hidden on an all-zero day).
+353 tests, tsc, lint 0 errors, build OK, mock browser OK. Not verified: real iPhone, very long day, caption on a dark background, share picture on an empty day (button hidden there).

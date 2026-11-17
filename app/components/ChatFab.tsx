@@ -17,7 +17,7 @@ import { newId } from "../lib/nutrition";
 import { cleanBufferPct } from "../lib/calorieBuffer";
 import { suggestionToItem, type Suggestion } from "../lib/foodChat";
 import type { FoodItem } from "../lib/types";
-import { dragPos, FAB_KEY, FAB_SIZE, isDrag, parseFab, placeFab, releaseFab, serializeFab, fabVisible, type FabStored, type Insets } from "../lib/chatFab";
+import { dragPos, FAB_CAPTION_H, FAB_KEY, FAB_SIZE, isDrag, parseFab, placeFab, releaseFab, serializeFab, fabVisible, type FabStored, type Insets } from "../lib/chatFab";
 
 const HISTORY_KEY = "yfdChat";
 
@@ -205,24 +205,33 @@ export function ChatFab() {
   return (
     <>
       {visible && pos && (
-        <button
-          type="button"
-          className="fixed left-0 top-0 z-40 grid place-items-center rounded-full border border-white/90 bg-[rgba(250,246,240,0.78)] shadow-[0_4px_16px_rgba(43,39,36,0.14)] backdrop-blur-[18px]"
-          style={{ width: FAB_SIZE, height: FAB_SIZE, transform: `translate3d(${pos.x}px, ${pos.y}px, 0)`, touchAction: "none", userSelect: "none", WebkitUserSelect: "none", WebkitTouchCallout: "none", cursor: dragging ? "grabbing" : "pointer" }}
-          aria-label={tr("ถามก่อนกิน / Ask before eating", "ถามก่อนกิน / Ask before eating")}
-          data-testid="chat-fab"
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={(e) => finish(e, false)}
-          onPointerCancel={(e) => finish(e, true)}
-          onContextMenu={(e) => e.preventDefault()}
-          onClick={(e) => {
-            // Mouse/touch taps are handled on pointer-up (so a drag never counts as a tap). A keyboard press has detail 0.
-            if (e.detail === 0) openChat();
-          }}
-        >
-          <CharacterPicture size={34} />
-        </button>
+        <div className="fixed left-0 top-0 z-40" style={{ width: FAB_SIZE, height: FAB_SIZE + FAB_CAPTION_H, transform: `translate3d(${pos.x}px, ${pos.y}px, 0)` }} data-testid="chat-fab-wrap">
+          <button
+            type="button"
+            className="grid place-items-center rounded-full border border-white/90 bg-[rgba(250,246,240,0.78)] shadow-[0_4px_16px_rgba(43,39,36,0.14)] backdrop-blur-[18px]"
+            style={{ width: FAB_SIZE, height: FAB_SIZE, touchAction: "none", userSelect: "none", WebkitUserSelect: "none", WebkitTouchCallout: "none", cursor: dragging ? "grabbing" : "pointer" }}
+            aria-label={tr("ถามก่อนกิน / Ask before eating", "ถามก่อนกิน / Ask before eating")}
+            data-testid="chat-fab"
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={(e) => finish(e, false)}
+            onPointerCancel={(e) => finish(e, true)}
+            onContextMenu={(e) => e.preventDefault()}
+            onClick={(e) => {
+              // Mouse/touch taps are handled on pointer-up (so a drag never counts as a tap). A keyboard press has detail 0.
+              if (e.detail === 0) openChat();
+            }}
+          >
+            <CharacterPicture size={34} />
+          </button>
+          <span
+            className="pointer-events-none absolute left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-[rgba(250,246,240,0.7)] px-1.5 text-[11px] leading-4 text-muted backdrop-blur-[10px]"
+            style={{ top: FAB_SIZE + 2, userSelect: "none", WebkitUserSelect: "none" }}
+            data-testid="chat-fab-caption"
+          >
+            {tr("ถามผู้ช่วย", "Ask AI")}
+          </span>
+        </div>
       )}
       {depth >= 1 && <FoodChat onBack={back} onAdd={openReview} />}
       {depth >= 2 && review && (

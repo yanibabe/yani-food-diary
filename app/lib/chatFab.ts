@@ -6,6 +6,10 @@
 export const FAB_KEY = "yfd:v1:chatFab";
 export const FAB_SIZE = 52;
 export const FAB_MARGIN = 8;
+/** Round 55: the tiny caption under the button ("Ask AI"): 2px gap + a 16px line. It moves with the button. */
+export const FAB_CAPTION_H = 18;
+/** Everything that must stay on screen: the button + its caption. */
+export const FAB_TOTAL_H = FAB_SIZE + FAB_CAPTION_H;
 /** Moving less than this (in px) is still a tap. */
 export const DRAG_THRESHOLD = 6;
 
@@ -19,7 +23,7 @@ const num = (v: unknown, fallback: number): number => (typeof v === "number" && 
 /** The lowest and highest top edge the button may have. */
 export function yRange(vh: number, insets: Insets): { min: number; max: number } {
   const min = Math.max(0, num(insets.top, 0)) + FAB_MARGIN;
-  const max = vh - Math.max(0, num(insets.bottom, 0)) - FAB_SIZE - FAB_MARGIN;
+  const max = vh - Math.max(0, num(insets.bottom, 0)) - FAB_TOTAL_H - FAB_MARGIN;
   return { min, max: Math.max(min, max) };
 }
 

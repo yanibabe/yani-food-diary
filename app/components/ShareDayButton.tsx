@@ -6,7 +6,7 @@ import { Sheet } from "./ui";
 import { useLang } from "../lib/lang";
 import { thaiDateLabel } from "../lib/date";
 import { fmtKcal } from "../lib/nutrition";
-import { buildShareDay, shareFileName, type ShareDay } from "../lib/shareDay";
+import { buildShareDay, shareFileName, splitTexts, type ShareDay } from "../lib/shareDay";
 import { getPhoto } from "../lib/photos";
 import { GLASS_ML } from "../lib/water";
 import { SLOT_LABEL, type Entry } from "../lib/types";
@@ -203,11 +203,12 @@ function paint(ctx: CanvasRenderingContext2D, info: Info, fam: string, draw: boo
   y += 26;
   const gap = 24;
   const tw = (R - L - gap * 2) / 3;
-  const TH = 236;
+  const pct = splitTexts(day.split);
+  const TH = pct ? 288 : 236;
   const macros = [
-    { label: tr("โปรตีน", "Protein"), g: day.total.protein, of: info.macroTargets.protein, color: C.protein },
-    { label: tr("คาร์บ", "Carbs"), g: day.total.carbs, of: info.macroTargets.carbs, color: C.carbs },
-    { label: tr("ไขมัน", "Fat"), g: day.total.fat, of: info.macroTargets.fat, color: C.fat },
+    { label: tr("โปรตีน", "Protein"), g: day.total.protein, of: info.macroTargets.protein, color: C.protein, pct: pct?.protein },
+    { label: tr("คาร์บ", "Carbs"), g: day.total.carbs, of: info.macroTargets.carbs, color: C.carbs, pct: pct?.carbs },
+    { label: tr("ไขมัน", "Fat"), g: day.total.fat, of: info.macroTargets.fat, color: C.fat, pct: pct?.fat },
   ];
   macros.forEach((mc, i) => {
     const x = L + i * (tw + gap);
@@ -221,6 +222,10 @@ function paint(ctx: CanvasRenderingContext2D, info: Info, fam: string, draw: boo
     font(25, 300);
     text(`${tr("จาก", "of")} ${Math.round(mc.of)} g`, x + tw / 2, y + 190, C.muted, "center");
     bar(x + 40, y + 208, tw - 80, mc.of > 0 ? mc.g / mc.of : 0, mc.color);
+    if (mc.pct) {
+      font(38, 300);
+      text(mc.pct, x + tw / 2, y + 258, C.ink, "center");
+    }
   });
   y += TH;
 
