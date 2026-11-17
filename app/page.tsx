@@ -10,7 +10,7 @@ import { ShareDayButton } from "./components/ShareDayButton";
 import { CharacterPicture } from "./components/Character";
 import { guessSlot, shiftDateKey, shortDayLabel, thaiDateKey, thaiDateLabel } from "./lib/date";
 import { buildAddUrlWith, cleanPrefill, showWholeDishRow } from "./lib/addSheet";
-import { closeAddLayerAction, layerAfterPop, layerHistoryState, openAddLayer, type AddLayer } from "./lib/addLayer";
+import { closeAddLayerAction, layerAfterPop, layerHistoryState, layerMode, openAddLayer, type AddLayer } from "./lib/addLayer";
 import { AddFlow } from "./components/AddFlow";
 import { useReportOverlay } from "./lib/overlayFlag";
 import { beginNav, endNav, IDLE_NAV, isPending, NAV_GIVE_UP_MS, type NavState } from "./lib/navGuard";
@@ -128,7 +128,7 @@ function TodayInner() {
   // The moment the sheet opens, warm up the pages it can lead to, so a tap switches at once (no waiting, no fade).
   useEffect(() => {
     if (!addOpen) return;
-    for (const p of ["/add/text", "/add/search", "/add/photo", "/add/barcode", "/add/manual", "/recipes"]) {
+    for (const p of ["/add/text", "/add/search", "/recipes"]) {
       try {
         router.prefetch(`${p}${q}`);
       } catch {
@@ -473,18 +473,20 @@ function TodayInner() {
           <>
           <div className="grid grid-cols-2 gap-3">
             {[
-              { href: `/add/photo${q}`, icon: "photo", label: tr("ถ่ายรูป", "Take a photo") },
-              { href: `/add/barcode${q}`, icon: "barcode", label: tr("บาร์โค้ด", "Barcode") },
+              { href: `/add/photo${q}`, icon: "photo", kind: "photo" as const, label: tr("ถ่ายรูป", "Take a photo") },
+              { href: `/add/barcode${q}`, icon: "barcode", kind: "barcode" as const, label: tr("บาร์โค้ด", "Barcode") },
             ].map((o) => (
               <Link
                 key={o.href}
                 href={o.href}
-                onClick={tap(o.icon, o.href)}
-                aria-busy={isPending(nav, o.icon)}
+                onClick={(ev) => {
+                  ev.preventDefault();
+                  openLayer({ kind: o.kind }); // Round 58: in place, at once (the link still works if opened in a new tab)
+                }}
                 className="flex min-h-[112px] flex-col items-center justify-center gap-2 rounded-[22px] border border-white/90 bg-white/60 text-[16px] active:scale-[0.98]"
               >
-                {isPending(nav, o.icon) ? <span className="h-8 w-8 animate-spin rounded-full border-[3px] border-ink/20 border-t-ink" aria-hidden data-testid="nav-spinner" /> : <AddIcon name={o.icon} />}
-                {isPending(nav, o.icon) ? opening : o.label}
+                <AddIcon name={o.icon} />
+                {o.label}
               </Link>
             ))}
           </div>
@@ -497,8 +499,15 @@ function TodayInner() {
             <Link href={`/recipes${q}`} onClick={tap("recipes", `/recipes${q}`)} className="flex min-h-[44px] items-center gap-1.5 underline-offset-2 active:opacity-60">
               {isPending(nav, "recipes") ? <>{spin} {opening}</> : tr("สูตรของฉัน", "My recipes")}
             </Link>
-            <Link href={`/add/manual${q}`} onClick={tap("manual", `/add/manual${q}`)} className="flex min-h-[44px] items-center gap-1.5 underline-offset-2 active:opacity-60">
-              {isPending(nav, "manual") ? <>{spin} {opening}</> : tr("กรอกเอง", "Enter it myself")}
+            <Link
+              href={`/add/manual${q}`}
+              onClick={(ev) => {
+                ev.preventDefault();
+                openLayer({ kind: "manual" });
+              }}
+              className="flex min-h-[44px] items-center gap-1.5 underline-offset-2 active:opacity-60"
+            >
+              {tr("กรอกเอง", "Enter it myself")}
             </Link>
           </div>
           </>
@@ -511,7 +520,7 @@ function TodayInner() {
         <div className="add-layer fixed inset-0 z-[70] overflow-y-auto overscroll-contain" data-testid="add-layer">
           <AddFlow
             embedded
-            mode={layer.kind === "ai" ? "text" : "search"}
+            mode={layerMode(layer)}
             date={date}
             dateParam={dateParam}
             prefill={layer.kind === "ai" ? layer.text : ""}

@@ -4,8 +4,27 @@
 import { cleanPrefill } from "./addSheet.ts";
 import type { Ingredient } from "./types.ts";
 
-/** What the layer shows: the AI check of typed words, or the review of one chosen food. null = no layer. */
-export type AddLayer = { kind: "ai"; text: string } | { kind: "review"; ing: Ingredient } | null;
+/** What the layer shows: the AI check of typed words, the review of one chosen food, or (Round 58) the photo / barcode /
+ *  enter-it-myself screens. null = no layer. */
+export type AddLayer =
+  | { kind: "ai"; text: string }
+  | { kind: "review"; ing: Ingredient }
+  | { kind: "photo" }
+  | { kind: "barcode" }
+  | { kind: "manual" }
+  | null;
+
+/** Which AddFlow screen each layer kind shows. */
+export function layerMode(l: NonNullable<AddLayer>): "text" | "search" | "photo" | "barcode" | "manual" {
+  switch (l.kind) {
+    case "ai":
+      return "text";
+    case "review":
+      return "search";
+    default:
+      return l.kind;
+  }
+}
 
 /** The mark we put on our one history step, so Back can tell it is ours. */
 export const LAYER_HISTORY_KEY = "yfdAddLayer";

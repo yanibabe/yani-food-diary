@@ -1376,3 +1376,9 @@ If the real AI misbehaves: tune the chat system prompt in app/lib/server/ai.ts (
 ### Round 57 DEPLOYED (2026-11-17, 003b209, Vercel success) with her OK. Live: main pages 200, status not mock, /api/chat 401 without passcode, quickReplies code present. She tries with the REAL AI and sends screenshots; tune the prompt in app/lib/server/ai.ts if needed.
 
 ✅ Round 57 tried on her iPhone with the real AI (2026-11-17): she said "perfect ดีเยี่ยม ดีเลิศ" (works great). Chat flow (status → style chips → 3 options → no repeats) accepted.
+
+## Round 58 (2026-11-17) — photo / barcode / enter-it-myself open instantly, in place (built, NOT deployed)
+The three remaining Add food sheet buttons (ถ่ายรูป, บาร์โค้ด, กรอกเอง) now open as the same full-screen layer as the AI flow: a state change, no page change, no spinner. Back / swipe-back closes it (one history step). Links keep their /add/... href, so a new tab or bookmark still works. "สูตรของฉัน" still goes to its own page (it is a whole page, not a flow).
+Files: app/lib/addLayer.ts (new kinds photo/barcode/manual + layerMode()), app/page.tsx (tiles + layer mode), tests/round58-layers.test.ts (4 new).
+371 tests pass, tsc clean, lint 0 errors (3 old warnings), build OK, mock browser check OK (layer there in ~40 ms, path stays "/", Back closes each one, no console errors).
+NOT verified: real iPhone camera/gallery inside the layer, real barcode camera, saving a meal from the manual layer by hand, swipe-back on iPhone. Nutrition-data work (Health Dept table, Thai dish set, FOOD_REF origin check) is on hold on purpose until the Health Dept email is answered.
