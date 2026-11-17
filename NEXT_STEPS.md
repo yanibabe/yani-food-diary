@@ -1333,3 +1333,5 @@ Her feedback on Round 52: spinner on the AI row, then the big AI page (with a se
 app/components/AddFlow.tsx = body of /add/[mode] (route page is a thin wrapper; direct links, photo/barcode/manual/recipes tiles unchanged); app/lib/addLayer.ts (+history push so Back/swipe-back closes it);
 app/page.tsx opens the layer in the same commit that closes the sheet. AI row auto-starts and shows only the waiting popup (no note box). Double-save guarded. 326 tests, tsc, lint 0 errors, build OK, mock browser OK.
 Not verified: real iPhone (swipe-back, keyboard, safe areas), Cancel + date-shifted case in the layer, reload while layer open (one extra history step).
+
+### Round 53 DEPLOYED (2026-11-17, a9c822c, Vercel success) with her OK. Live: main pages 200, `add-layer` code present. She tries on iPhone.
