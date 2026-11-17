@@ -1293,3 +1293,9 @@ Her iPhone screenshots: (1) white rectangle around the search box (sticky strip 
 
 ### Round 48 DEPLOYED (2026-11-17, 83c5d6e, Vercel success) with her OK. Live: home 200, new "ดูผลใกล้เคียงอื่น" code present. She tries on iPhone.
 Open idea (she said "not now"): email Mahidol INMU for Thai Food Composition permission. App has no Thai dish database (39 basic ingredients; AI covers dishes).
+
+## Round 49 (2026-11-17) — no home-page flash + fixed search header ✅ BUILT, committed locally, NOT deployed
+Her iPhone feedback on Round 48: tapping "ให้ AI คำนวณ" still flashed Today before the text page. Cause: handlers closed the sheet (setAddOpen(false))
+before router.push. Now the sheet stays up with a spinner ("กำลังเปิด…") until the route changes; double taps ignored (app/lib/navGuard.ts).
+Also: Sheet has a `header` slot outside the scroll area (title + search box fixed; results scroll below, no overlap). 320 tests, tsc, lint 0 errors, build OK.
+Not verified: real iPhone, recipe Add-ingredient sheet in browser. /add/search page's own box now scrolls away with the page.

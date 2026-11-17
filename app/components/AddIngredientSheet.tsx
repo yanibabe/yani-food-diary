@@ -98,10 +98,40 @@ export function AddIngredientSheet({
   /** "+ create my own": the page opens the manual editor with this name. */
   onCreateCustom: (name: string) => void;
 }) {
+  if (!open) return null;
+  return <IngredientSheetInner onClose={onClose} onAdd={onAdd} onCreateCustom={onCreateCustom} />;
+}
+
+/** Round 49: the search box lives in the sheet's fixed header; only the results scroll below it. */
+function IngredientSheetInner({ onClose, onAdd, onCreateCustom }: { onClose: () => void; onAdd: (ing: Ingredient) => void; onCreateCustom: (name: string) => void }) {
   const { tr } = useLang();
+  const [text, setText] = useState("");
   return (
-    <Sheet open={open} onClose={onClose} keyboardSafe title={tr("เพิ่มวัตถุดิบ", "Add ingredient")}>
-      {open && <IngredientSearch onClose={onClose} onAdd={onAdd} onCreateCustom={onCreateCustom} />}
+    <Sheet
+      open
+      onClose={onClose}
+      keyboardSafe
+      title={tr("เพิ่มวัตถุดิบ", "Add ingredient")}
+      header={
+        <div className="relative">
+          <Icon name="magnifying-glass" className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-muted" />
+          <input
+            className="field !pl-11 !bg-white/95"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder={tr("ค้นหาวัตถุดิบ เช่น ไข่, egg, ข้าวสวย", "Search an ingredient, e.g. egg, ไข่, rice")}
+            aria-label={tr("ค้นหาวัตถุดิบ", "Search ingredient")}
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
+            enterKeyHint="search"
+            data-testid="ai-search"
+            autoFocus
+          />
+        </div>
+      }
+    >
+      <IngredientSearch query={text} onClose={onClose} onAdd={onAdd} onCreateCustom={onCreateCustom} />
     </Sheet>
   );
 }
@@ -303,7 +333,7 @@ export function IngredientSearch({
   return (
     <div className="space-y-3 pb-5" data-testid="add-ingredient-sheet">
       {controlledQuery === undefined && (
-      <div className="sticky top-0 z-10 -mx-1 px-1 pb-1 pt-1">
+      <div className="relative -mx-1 px-1 pb-1 pt-1">
         <Icon name="magnifying-glass" className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-muted" />
         <input
           className="field !pl-11 !bg-white/95"

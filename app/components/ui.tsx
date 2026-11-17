@@ -16,6 +16,7 @@ export function Sheet({
   title,
   children,
   keyboardSafe = false,
+  header,
 }: {
   open: boolean;
   onClose: () => void;
@@ -23,6 +24,8 @@ export function Sheet({
   children: React.ReactNode;
   /** For sheets with a typing box: fixed height inside the part of the screen NOT covered by the phone keyboard. */
   keyboardSafe?: boolean;
+  /** Round 49: stays fixed at the top, under the title (e.g. a search box). Only `children` scroll, in their own area below it. */
+  header?: React.ReactNode;
 }) {
   const { tr } = useLang();
   const [vv, setVv] = useState<{ top: number; height: number } | null>(null);
@@ -59,18 +62,23 @@ export function Sheet({
     >
       <button className="absolute inset-0 bg-ink/30" aria-label={tr("ปิด", "Close")} onClick={onClose} />
       <div
-        className={`relative w-full max-w-[560px] overflow-y-auto sheet rounded-t-[28px] px-5 pt-3 safe-bottom shadow-2xl ${keyboardSafe ? "h-[92%]" : "max-h-[88dvh]"}`}
+        className={`relative flex w-full max-w-[560px] flex-col overflow-hidden sheet rounded-t-[28px] shadow-2xl ${keyboardSafe ? "h-[92%]" : "max-h-[88dvh]"}`}
       >
-        <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-line" />
-        {title && (
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-[20px] font-medium">{title}</h2>
-            <button onClick={onClose} className="h-10 w-10 rounded-full bg-white/70 text-[20px] text-muted grid place-items-center" aria-label={tr("ปิด", "Close")}>
-              <Icon name="x" className="h-5 w-5" />
-            </button>
-          </div>
-        )}
-        {children}
+        <div className="shrink-0 px-5 pt-3">
+          <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-line" />
+          {title && (
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-[20px] font-medium">{title}</h2>
+              <button onClick={onClose} className="h-10 w-10 rounded-full bg-white/70 text-[20px] text-muted grid place-items-center" aria-label={tr("ปิด", "Close")}>
+                <Icon name="x" className="h-5 w-5" />
+              </button>
+            </div>
+          )}
+          {header && <div className="pb-3" data-testid="sheet-header">{header}</div>}
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 safe-bottom" data-testid="sheet-scroll">
+          {children}
+        </div>
       </div>
     </div>
   );
