@@ -1391,3 +1391,4 @@ Now: "lose weight" → protein 1.4 g/kg/day (middle of 1.2–1.6 g/kg/day, 2026 
 Tests: tests/round59-protein.test.ts (6) + updated tests/logic.test.ts. 377 pass, tsc clean, lint 0 errors, build OK. Mock browser: Today shows 84 / 231 / 60 g for a 60 kg "lose" profile on 1,800 kcal; Profile card shows "โปรตีน 84 g (1.4 g/กก.)".
 NOT verified: the 2026 ISSN numbers come from a search summary (full text not opened); Thai DRI values not found; the 35% ceiling is from memory (not checked); real iPhone; the welcome-page protein line by hand.
 Also in this stretch: chat button hidden label fixed to "ถามผู้ช่วย / Ask AI" (commit 6699b77, deployed with the next push).
+Round 59 DEPLOYED (2026-11-17, 2c367a5): Vercel build succeeded. Includes the chat button label fix (6699b77). Next: she checks the protein/carb/fat numbers on her iPhone (profile "lose weight" → protein = 1.4 g × kg).
