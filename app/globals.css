@@ -268,6 +268,14 @@ select {
   border: 1px solid rgba(255, 255, 255, 0.9);
   border-bottom: 0;
 }
+/* Round 53: the full-screen layer on Today (Add food -> AI check / review). Opaque, same cream + soft clouds as the page. */
+.add-layer {
+  background:
+    radial-gradient(circle at 18% 10%, #f3d9c8 0, transparent 42%),
+    radial-gradient(circle at 88% 52%, #e3e0f2 0, transparent 45%),
+    radial-gradient(circle at 28% 96%, #e6eedd 0, transparent 45%),
+    #f4efe7;
+}
 /* Bottom tab bar: frosted glass. */
 .tabbar {
   background: rgba(250, 246, 240, 0.72);

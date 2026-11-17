@@ -1327,3 +1327,9 @@ when the Add food sheet opens (so taps switch immediately). RULE: never add page
 If it is still not instant enough: Plan B = show the AI/review screen inside the same sheet (no route change).
 
 ### Round 52 DEPLOYED (2026-11-17, b4efe6a, Vercel success) with her OK. Live: main pages 200; no page-melt / page-enter code on the live site. She tries on iPhone.
+
+## Round 53 (2026-11-17) — instant in-place layer for "ให้ AI คำนวณ" and food-pick → review ✅ BUILT, committed locally, NOT deployed
+Her feedback on Round 52: spinner on the AI row, then the big AI page (with a second search box) felt double and slow. Now both flows open as a full-screen layer ON Today (state change, no route change, no animation):
+app/components/AddFlow.tsx = body of /add/[mode] (route page is a thin wrapper; direct links, photo/barcode/manual/recipes tiles unchanged); app/lib/addLayer.ts (+history push so Back/swipe-back closes it);
+app/page.tsx opens the layer in the same commit that closes the sheet. AI row auto-starts and shows only the waiting popup (no note box). Double-save guarded. 326 tests, tsc, lint 0 errors, build OK, mock browser OK.
+Not verified: real iPhone (swipe-back, keyboard, safe areas), Cancel + date-shifted case in the layer, reload while layer open (one extra history step).

@@ -1,5 +1,5 @@
 "use client";
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { MacroCards, MacroTipLine, Sheet, StoredPhoto } from "./components/ui";
@@ -9,8 +9,9 @@ import { WaterCard } from "./components/WaterCard";
 import { ShareDayButton } from "./components/ShareDayButton";
 import { CharacterPicture } from "./components/Character";
 import { guessSlot, shiftDateKey, shortDayLabel, thaiDateKey, thaiDateLabel } from "./lib/date";
-import { buildAddUrlWith, buildReviewUrl, cleanPrefill, showWholeDishRow } from "./lib/addSheet";
-import { putHandoff } from "./lib/sheetHandoff";
+import { buildAddUrlWith, cleanPrefill, showWholeDishRow } from "./lib/addSheet";
+import { closeAddLayerAction, layerAfterPop, layerHistoryState, openAddLayer, type AddLayer } from "./lib/addLayer";
+import { AddFlow } from "./components/AddFlow";
 import { beginNav, endNav, IDLE_NAV, isPending, NAV_GIVE_UP_MS, type NavState } from "./lib/navGuard";
 import { IngredientSearch } from "./components/AddIngredientSheet";
 import type { Ingredient } from "./lib/types";
@@ -136,19 +137,47 @@ function TodayInner() {
   }, [addOpen, q, router]);
   const opening = tr("กำลังเปิด…", "Opening…");
   const spin = <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-ink/20 border-t-ink" aria-hidden data-testid="nav-spinner" />;
-  // The ONE hand-over: the chosen food (with its amount) goes to the review page; nothing is saved yet.
-  const handOver = (ing: Ingredient) => {
-    let store: Storage | null = null;
-    try {
-      store = window.sessionStorage;
-    } catch {
-      store = null;
+  // Round 53: "Let AI calculate" and "pick a food → Add" open their next screen IN PLACE, as a full-screen layer on
+  // top of Today (a state change: there at once, no page change). Back / swipe-back closes it (one history step).
+  const [layer, setLayer] = useState<AddLayer>(null);
+  const layerRef = useRef<AddLayer>(null);
+  const scrollYRef = useRef(0);
+  const openLayer = (next: NonNullable<AddLayer>) => {
+    const r = openAddLayer(layerRef.current, next);
+    if (!r.layer || layerRef.current !== null) return; // blank text, or a layer is already up (double tap)
+    layerRef.current = r.layer; // closes the door on a second tap in the same frame
+    scrollYRef.current = window.scrollY;
+    (document.activeElement as HTMLElement | null)?.blur?.();
+    if (r.push) {
+      try {
+        window.history.pushState(layerHistoryState(), "", window.location.href);
+      } catch {
+        /* the layer still works; only Back would leave the page */
+      }
     }
-    leave("pick", () => {
-      if (putHandoff(store, ing, Date.now())) router.push(buildReviewUrl(dateParam));
-      else router.push(buildAddUrlWith("search", dateParam, ing.name, {}));
-    });
+    setLayer(r.layer);
+    setAddOpen(false); // same frame as the layer: Today never shows through
   };
+  const closeLayer = () => {
+    if (closeAddLayerAction(layerRef.current) === "none") return;
+    window.history.back(); // the popstate below does the closing
+  };
+  useEffect(() => {
+    if (layer === null) return;
+    const onPop = () => {
+      layerRef.current = layerAfterPop();
+      setLayer(layerRef.current);
+    };
+    window.addEventListener("popstate", onPop);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden"; // Today stays still under the layer
+    const y = scrollYRef.current;
+    return () => {
+      window.removeEventListener("popstate", onPop);
+      document.body.style.overflow = prevOverflow;
+      if (window.scrollY !== y) window.scrollTo(0, y); // Today is where she left it
+    };
+  }, [layer]);
   const openAdd = () => {
     setAgainView(false);
     setAgainQuery("");
@@ -350,7 +379,7 @@ function TodayInner() {
               )}
             </div>
           </form>
-              {(isPending(nav, "pick") || isPending(nav, "create")) && (
+              {isPending(nav, "create") && (
                 <p className="mt-2 flex items-center gap-2 px-1 text-[14px] text-muted" role="status" data-testid="nav-opening">
                   {spin} {opening}
                 </p>
@@ -416,22 +445,24 @@ function TodayInner() {
               food
               compact
               query={typed}
-              onAdd={handOver}
+              onAdd={(ing: Ingredient) => openLayer({ kind: "review", ing })}
               onCreateCustom={(name) => leave("create", () => router.push(buildAddUrlWith("search", dateParam, name, { create: true })))}
               topSlot={
                 showWholeDishRow(typed) ? (
                   <Link
                     href={buildAddUrlWith("text", dateParam, typed, { auto: true })}
-                    onClick={tap("ai", buildAddUrlWith("text", dateParam, typed, { auto: true }))}
-                    aria-busy={isPending(nav, "ai")}
+                    onClick={(ev) => {
+                      ev.preventDefault();
+                      openLayer({ kind: "ai", text: typed });
+                    }}
                     className="flex min-h-[52px] w-full items-center gap-2.5 rounded-2xl border border-ink/20 bg-white/80 px-4 py-2 text-left text-[15px] active:scale-[0.99]"
                     data-testid="ai-whole-dish-pinned"
                   >
                     <Icon name="sparkle" className="h-5 w-5 shrink-0" />
                     <span className="min-w-0 flex-1 break-words">
-                      {isPending(nav, "ai") ? opening : <>{tr("ให้ AI คำนวณ", "Let AI calculate")} “{typed}”</>}
+                      {tr("ให้ AI คำนวณ", "Let AI calculate")} “{typed}”
                     </span>
-                    {isPending(nav, "ai") ? spin : <Icon name="caret-right" className="h-4 w-4 shrink-0 text-muted" />}
+                    <Icon name="caret-right" className="h-4 w-4 shrink-0 text-muted" />
                   </Link>
                 ) : null
               }
@@ -473,6 +504,23 @@ function TodayInner() {
         </div>
         )}
       </Sheet>
+
+      {layer && (
+        <div className="add-layer fixed inset-0 z-[70] overflow-y-auto overscroll-contain" data-testid="add-layer">
+          <AddFlow
+            embedded
+            mode={layer.kind === "ai" ? "text" : "search"}
+            date={date}
+            dateParam={dateParam}
+            prefill={layer.kind === "ai" ? layer.text : ""}
+            auto={layer.kind === "ai"}
+            handoff={layer.kind === "review" ? layer.ing : null}
+            onBack={closeLayer}
+            onCancel={closeLayer}
+            onSaved={closeLayer}
+          />
+        </div>
+      )}
     </main>
   );
 }
