@@ -1284,3 +1284,9 @@ now "สูตรของฉัน" has a switch สูตร | วัตถุ
 it still exists on /add/search. 310 tests, tsc, lint 0 errors, build OK, mock browser OK. Not verified: real iPhone keyboard, real USDA in sheet.
 
 ### Round 47 DEPLOYED (2026-11-17, 9b2f26a, Vercel success) with her OK. Live: home 200, recipes?tab=ingredients 200, new sheet code present. She tries on iPhone.
+
+## Round 48 (2026-11-17) — no white frame around the search box + tidier USDA results ✅ BUILT, committed locally, NOT deployed
+Her iPhone screenshots: (1) white rectangle around the search box (sticky strip colour ≠ sheet) → strip now transparent, box fill bg-white/95.
+(2) Thai dish "ข้าวผัดกะเพรา" showed many English USDA "fried rice" rows marked "name differs" (USDA has no Thai dishes; AI row is the right answer for dishes)
+→ non-close rows go behind one link "ดูผลใกล้เคียงอื่น (N)", identical name+numbers de-duplicated; close/custom/recent/reference rows never hidden.
+317 tests, tsc, lint 0 errors, build OK, mock browser OK. Not verified: real iPhone, real USDA, sticky box with a long scrolled list.

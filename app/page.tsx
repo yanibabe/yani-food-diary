@@ -312,7 +312,7 @@ function TodayInner() {
         ) : (
         <div className="pb-3" data-testid="add-sheet-search-first">
           <form
-            className="sticky top-0 z-10 -mx-1 mb-3 px-1 pb-1 pt-1 backdrop-blur-md"
+            className="sticky top-0 z-10 -mx-1 mb-3 px-1 pb-1 pt-1"
             onSubmit={(ev) => {
               // No page jump: the results are already live below. Enter just tucks the keyboard away.
               ev.preventDefault();
@@ -323,7 +323,7 @@ function TodayInner() {
               <Icon name="magnifying-glass" className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted" />
               <input
                 type="text"
-                className="w-full rounded-full border border-white/90 bg-white/70 py-3.5 pl-12 pr-12 text-[16px] outline-none placeholder:text-muted"
+                className="w-full rounded-full border border-white/90 bg-white/95 py-3.5 pl-12 pr-12 text-[16px] outline-none placeholder:text-muted"
                 placeholder={tr("ค้นหาหรือพิมพ์ว่ากินอะไร", "Search or type what you ate")}
                 aria-label={tr("ค้นหาหรือพิมพ์ว่ากินอะไร", "Search or type what you ate")}
                 value={addText}

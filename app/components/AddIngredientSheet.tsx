@@ -27,6 +27,7 @@ import {
 import {
   askAi,
   mergeSuggestions,
+  splitResults,
   pickOf,
   quoteIngredient,
   searchLocal,
@@ -203,7 +204,11 @@ export function IngredientSearch({
     const merged = mergeSuggestions(local.items, usdaWanted && usdaHere ? usdaHere.rows : [], 16);
     return aiHere?.row ? [...merged, aiHere.row] : merged;
   }, [local.items, usdaWanted, usdaHere, aiHere]);
-  const hasUsdaRow = rows.some((r) => r.kind === "usda");
+  const [showOther, setShowOther] = useState<string | null>(null);
+  const split = useMemo(() => splitResults(rows), [rows]);
+  const otherOpen = showOther === qKey;
+  const shown = otherOpen ? rows : split.main;
+  const hasUsdaRow = shown.some((r) => r.kind === "usda");
   const offerAi = !topSlot && q.length >= 2 && !usdaLoading && !aiHere?.row && showAiRow(q, rows);
 
   function pick(s: Suggestion) {
@@ -298,10 +303,10 @@ export function IngredientSearch({
   return (
     <div className="space-y-3 pb-5" data-testid="add-ingredient-sheet">
       {controlledQuery === undefined && (
-      <div className="sticky top-0 z-10 -mx-1 bg-[rgba(250,246,240,0.96)] px-1 pb-1 pt-1">
+      <div className="sticky top-0 z-10 -mx-1 px-1 pb-1 pt-1">
         <Icon name="magnifying-glass" className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-muted" />
         <input
-          className="field !pl-11"
+          className="field !pl-11 !bg-white/95"
           value={query}
           onChange={(e) => setOwnQuery(e.target.value)}
           placeholder={food ? tr("ค้นหาอาหาร เช่น ไข่, egg, ข้าวสวย", "Search a food, e.g. egg, ไข่, rice") : tr("ค้นหาวัตถุดิบ เช่น ไข่, egg, ข้าวสวย", "Search an ingredient, e.g. egg, ไข่, rice")}
@@ -320,9 +325,9 @@ export function IngredientSearch({
 
       {showEmptyHeading && <p className="px-1 text-[13px] text-muted">{tr("ของฉัน และที่ใช้ล่าสุด", "Yours and recent")}</p>}
 
-      {rows.length > 0 && (
+      {shown.length > 0 && (
         <ul className="space-y-2" data-testid="ai-results">
-          {rows.map((s) => {
+          {shown.map((s) => {
             const on = sel?.id === s.id;
             return (
               <li key={s.id}>
@@ -447,6 +452,12 @@ export function IngredientSearch({
             );
           })}
         </ul>
+      )}
+
+      {split.other.length > 0 && (
+        <button type="button" className="min-h-[44px] px-1 text-[14px] text-muted underline decoration-ink/20 underline-offset-4" onClick={() => setShowOther(otherOpen ? null : qKey)} aria-expanded={otherOpen} data-testid="ai-other-toggle">
+          {otherOpen ? tr("ซ่อนผลใกล้เคียงอื่น", "Hide other results") : tr(`ดูผลใกล้เคียงอื่น (${split.other.length})`, `Show other results (${split.other.length})`)}
+        </button>
       )}
 
       {/* quiet one-line states */}

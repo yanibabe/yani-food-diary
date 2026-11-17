@@ -438,8 +438,38 @@ export function usdaSuggestions(results: (UsdaFood & { differences?: Difference[
 /** Local rows first, then USDA rows (never above her own foods). The same food appears once. */
 export function mergeSuggestions(local: Suggestion[], usda: Suggestion[], limit = 16): Suggestion[] {
   const seen = new Set(local.map((s) => s.id));
-  const extra = usda.filter((s) => !seen.has(s.id)).sort(orderBy);
+  const extra = dedupeUsda(usda.filter((s) => !seen.has(s.id)).sort(orderBy));
   return [...local, ...extra].slice(0, limit);
+}
+
+/** Round 48: USDA rows with the same name AND the same numbers are one row (the first, best-ranked, stays). Different numbers = different foods, both stay. */
+export function dedupeUsda(rows: Suggestion[]): Suggestion[] {
+  const seen = new Set<string>();
+  const out: Suggestion[] = [];
+  for (const s of rows) {
+    if (s.kind !== "usda") {
+      out.push(s);
+      continue;
+    }
+    const m = s.per100;
+    const key = [normalizeName(s.name), s.per, m ? `${m.kcal}|${m.protein}|${m.carbs}|${m.fat}` : ""].join("#");
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(s);
+  }
+  return out;
+}
+
+/**
+ * Round 48: the list she sees. USDA rows that are NOT a close match (name differs, state conflicts) go to `other`,
+ * shown behind one quiet link. Everything else (her own foods, recent, reference, close USDA, the AI row) stays in `main`.
+ * Nothing is removed or picked for her; order is kept.
+ */
+export function splitResults(rows: Suggestion[]): { main: Suggestion[]; other: Suggestion[] } {
+  const main: Suggestion[] = [];
+  const other: Suggestion[] = [];
+  for (const s of rows) (s.kind === "usda" && !s.close ? other : main).push(s);
+  return { main, other };
 }
 
 export const MIN_USDA_CHARS = 2;
