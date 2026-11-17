@@ -418,7 +418,10 @@ export function ShareDayButton({
   name,
   macroTargets,
   water,
+  tile = false,
 }: {
+  /** Round 60: true = a small tile in the home row (icon + short label) instead of the wide button. */
+  tile?: boolean;
   entries: Entry[];
   date: string;
   target: number;
@@ -470,7 +473,11 @@ export function ShareDayButton({
   return (
     <>
       <button
-        className="glass flex min-h-[52px] w-full items-center justify-center gap-2 !rounded-full text-[16px] active:scale-[0.98]"
+        className={
+          tile
+            ? "flex min-h-[84px] w-full flex-col items-center justify-center gap-1.5 rounded-[22px] border border-white/90 bg-white/60 px-2 text-[15px] active:scale-[0.98]"
+            : "glass flex min-h-[52px] w-full items-center justify-center gap-2 !rounded-full text-[16px] active:scale-[0.98]"
+        }
         onClick={() => {
           setPic(null);
           setError(null);
@@ -479,7 +486,7 @@ export function ShareDayButton({
         data-testid="share-day-button"
       >
         <Icon name="export" className="h-5 w-5" />
-        {tr("แชร์สรุปวันนี้", "Share this day")}
+        {tile ? tr("แชร์วันนี้", "Share day") : tr("แชร์สรุปวันนี้", "Share this day")}
       </button>
       <Sheet open={open} onClose={() => setOpen(false)} title={tr("สรุปวันนี้", "This day")}>
         <div className="space-y-3 pb-4" data-testid="share-day-sheet">

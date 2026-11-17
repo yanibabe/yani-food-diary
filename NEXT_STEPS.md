@@ -1392,3 +1392,10 @@ Tests: tests/round59-protein.test.ts (6) + updated tests/logic.test.ts. 377 pass
 NOT verified: the 2026 ISSN numbers come from a search summary (full text not opened); Thai DRI values not found; the 35% ceiling is from memory (not checked); real iPhone; the welcome-page protein line by hand.
 Also in this stretch: chat button hidden label fixed to "ถามผู้ช่วย / Ask AI" (commit 6699b77, deployed with the next push).
 Round 59 DEPLOYED (2026-11-17, 2c367a5): Vercel build succeeded. Includes the chat button label fix (6699b77). Next: she checks the protein/carb/fat numbers on her iPhone (profile "lose weight" → protein = 1.4 g × kg).
+
+## Round 60 (2026-11-17) — home page: one slim row of tiles (built, NOT deployed)
+Her complaint: the water card and the week chart sat between Add food and the meals (long scroll), and Share day was last. She picked layout "B, three tiles".
+Now: Add food → one row of three small tiles (Water n/goal with a quick +1 glass button, This week with the average kcal, Share day) → the four meals. Tap the Water tile → the full water card (glasses, −, goal) in a sheet; tap This week → the full chart in a sheet (tapping a bar closes it and goes to that day). Share day is the 3rd tile only on a day with meals (otherwise two tiles). Meals start ~300 px higher than before. The ring card is still tall (not touched, on purpose).
+Files: app/components/HomeTiles.tsx (new), app/components/ShareDayButton.tsx (`tile` prop), app/page.tsx (order), tests/round60-home-order.test.ts (4).
+381 tests pass, tsc clean, lint 0 errors, build OK. Mock browser (phone size): tiles row works, +1 glass updates the tile, both sheets open and close, chart shows 7 bars, old cards gone from the page.
+NOT verified: real iPhone, the two-tile case on an empty day by eye, English text, dark/long numbers in a tile (e.g. 12/12 glasses, avg 10,000), the Share sheet opened from the tile.

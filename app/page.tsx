@@ -4,8 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { MacroCards, MacroTipLine, Sheet, StoredPhoto } from "./components/ui";
 import { BackupReminder } from "./components/BackupReminder";
-import { WeekKcalChart } from "./components/WeekKcalChart";
-import { WaterCard } from "./components/WaterCard";
+import { HomeTiles } from "./components/HomeTiles";
 import { ShareDayButton } from "./components/ShareDayButton";
 import { CharacterPicture } from "./components/Character";
 import { guessSlot, shiftDateKey, shortDayLabel, thaiDateKey, thaiDateLabel } from "./lib/date";
@@ -275,9 +274,28 @@ function TodayInner() {
         + {tr("เพิ่มอาหาร", "Add food")}
       </button>
 
-      {ready && <WaterCard date={date} />}
-
-      {ready && <WeekKcalChart entries={entries} date={date} today={today} target={target} onPick={go} />}
+      {ready && (
+        <HomeTiles
+          date={date}
+          today={today}
+          entries={entries}
+          target={target}
+          onPickDay={go}
+          share={
+            dayEntries.length > 0 ? (
+              <ShareDayButton
+                tile
+                entries={entries}
+                date={date}
+                target={target}
+                name={goals.profile?.name ?? ""}
+                macroTargets={macroTargets(target, proteinTargetG(goals.profile, target))}
+                water={{ glasses: glassesOn(waterLogs, date), goal: waterGoal(goals.waterGoal) }}
+              />
+            ) : null
+          }
+        />
+      )}
 
       {SLOTS.map((slot, i) => {
         const list = dayEntries.filter((e) => e.slot === slot);
@@ -303,17 +321,6 @@ function TodayInner() {
           </section>
         );
       })}
-
-      {ready && dayEntries.length > 0 && (
-        <ShareDayButton
-          entries={entries}
-          date={date}
-          target={target}
-          name={goals.profile?.name ?? ""}
-          macroTargets={macroTargets(target, proteinTargetG(goals.profile, target))}
-          water={{ glasses: glassesOn(waterLogs, date), goal: waterGoal(goals.waterGoal) }}
-        />
-      )}
 
       {added && (
         <div
