@@ -1335,3 +1335,5 @@ app/page.tsx opens the layer in the same commit that closes the sheet. AI row au
 Not verified: real iPhone (swipe-back, keyboard, safe areas), Cancel + date-shifted case in the layer, reload while layer open (one extra history step).
 
 ### Round 53 DEPLOYED (2026-11-17, a9c822c, Vercel success) with her OK. Live: main pages 200, `add-layer` code present. She tries on iPhone.
+
+✅ Round 53 tried on her iPhone (2026-11-17): she said "ลงแล้วใช้ได้เลยนะ" (works). Photo/barcode tiles still normal navigation (could get the same in-place layer if she asks).
