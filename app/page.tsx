@@ -9,6 +9,7 @@ import { WaterCard } from "./components/WaterCard";
 import { ShareDayButton } from "./components/ShareDayButton";
 import { CharacterPicture } from "./components/Character";
 import { guessSlot, shiftDateKey, shortDayLabel, thaiDateKey, thaiDateLabel } from "./lib/date";
+import { buildAddUrl, cleanPrefill } from "./lib/addSheet";
 import { copyMeal, recentMeals, searchMeals } from "./lib/repeat";
 import { macroTargets, proteinTargetG } from "./lib/energy";
 import { fmtKcal, pickMacros, sumMacros } from "./lib/nutrition";
@@ -71,6 +72,7 @@ function TodayInner() {
   const [added, setAdded] = useState<Entry | null>(null);
   const [againView, setAgainView] = useState(false);
   const [againQuery, setAgainQuery] = useState("");
+  const [addText, setAddText] = useState("");
   const { tr, lang } = useLang();
 
   const dayEntries = useMemo(() => entries.filter((e) => e.date === date).sort((a, b) => a.createdAt - b.createdAt), [entries, date]);
@@ -85,6 +87,7 @@ function TodayInner() {
   const openAdd = () => {
     setAgainView(false);
     setAgainQuery("");
+    setAddText("");
     setAddOpen(true);
   };
 
@@ -238,7 +241,7 @@ function TodayInner() {
       )}
 
 
-      <Sheet open={addOpen} onClose={() => setAddOpen(false)} title={tr("เพิ่มอาหาร", "Add food")}>
+      <Sheet open={addOpen} keyboardSafe onClose={() => setAddOpen(false)} title={tr("เพิ่มอาหาร", "Add food")}>
         {againView ? (
           <div className="pb-4" data-testid="eat-again">
             <button className="mb-3 flex items-center gap-1 px-1 text-[16px] font-medium text-olive-dark" onClick={() => setAgainView(false)} data-testid="eat-again-back">
@@ -290,36 +293,68 @@ function TodayInner() {
             )}
           </div>
         ) : (
-        <div className="grid grid-cols-2 gap-3 pb-3">
-          {[
-            { href: `/add/photo${q}`, icon: "photo", dot: "bg-protein-dot", label: tr("ถ่ายรูป", "Take a photo") },
-            { href: `/add/text${q}`, icon: "text", dot: "bg-carbs-dot", label: tr("พิมพ์ให้ AI ช่วย", "Type it, AI helps") },
-            { href: `/recipes${q}`, icon: "recipes", dot: "bg-fat-dot", label: tr("เลือกสูตรของฉัน", "From my recipes") },
-            { href: `/add/manual${q}`, icon: "manual", dot: "bg-water", label: tr("กรอกเอง", "Enter it myself") },
-            { href: `/add/barcode${q}`, icon: "barcode", dot: "bg-protein-dot", label: tr("บาร์โค้ด", "Barcode") },
-            { href: `/add/search${q}`, icon: "search", dot: "bg-carbs-dot", label: tr("ค้นหาอาหาร", "Search food") },
-          ].map((o) => (
-            <Link
-              key={o.href}
-              href={o.href}
-              className="relative flex min-h-[112px] flex-col items-center justify-center gap-2 rounded-[22px] border border-white/90 bg-white/60 text-[16px] active:scale-[0.98]"
-            >
-              <span className={`absolute right-4 top-4 h-2 w-2 rounded-full ${o.dot}`} aria-hidden />
-              <AddIcon name={o.icon} />
-              {o.label}
-            </Link>
-          ))}
-          {recent.length > 0 && (
+        <div className="pb-3" data-testid="add-sheet-search-first">
+          <form
+            className="relative mb-4"
+            onSubmit={(ev) => {
+              ev.preventDefault();
+              const text = cleanPrefill(addText);
+              if (!text) return;
+              setAddOpen(false);
+              router.push(buildAddUrl("search", date === today ? null : date, text));
+            }}
+          >
+            <Icon name="magnifying-glass" className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted" />
+            <input
+              type="text"
+              className="w-full rounded-full border border-white/90 bg-white/70 py-3.5 pl-12 pr-14 text-[16px] outline-none placeholder:text-muted"
+              placeholder={tr("ค้นหาหรือพิมพ์ว่ากินอะไร", "Search or type what you ate")}
+              aria-label={tr("ค้นหาหรือพิมพ์ว่ากินอะไร", "Search or type what you ate")}
+              value={addText}
+              onChange={(ev) => setAddText(ev.target.value)}
+              enterKeyHint="search"
+              autoComplete="off"
+              autoCorrect="off"
+              data-testid="add-search-input"
+            />
             <button
-              className="relative flex min-h-[112px] flex-col items-center justify-center gap-2 rounded-[22px] border border-white/90 bg-white/60 text-[16px] active:scale-[0.98]"
-              onClick={() => setAgainView(true)}
-              data-testid="eat-again-tile"
+              type="submit"
+              className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-ink text-paper disabled:opacity-30"
+              disabled={!addText.trim()}
+              aria-label={tr("ค้นหา", "Search")}
+              data-testid="add-search-go"
             >
-              <span className="absolute right-4 top-4 h-2 w-2 rounded-full bg-carbs-dot" aria-hidden />
-              <AddIcon name="again" />
-              {tr("กินซ้ำ", "Eat again")}
+              <Icon name="caret-right" className="h-4 w-4" />
             </button>
-          )}
+          </form>
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { href: `/add/photo${q}`, icon: "photo", label: tr("ถ่ายรูป", "Take a photo") },
+              { href: `/add/barcode${q}`, icon: "barcode", label: tr("บาร์โค้ด", "Barcode") },
+            ].map((o) => (
+              <Link
+                key={o.href}
+                href={o.href}
+                className="flex min-h-[112px] flex-col items-center justify-center gap-2 rounded-[22px] border border-white/90 bg-white/60 text-[16px] active:scale-[0.98]"
+              >
+                <AddIcon name={o.icon} />
+                {o.label}
+              </Link>
+            ))}
+          </div>
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-1 text-[14px] text-muted" data-testid="add-sheet-links">
+            {recent.length > 0 && (
+              <button className="min-h-[44px] underline-offset-2 active:opacity-60" onClick={() => setAgainView(true)} data-testid="eat-again-tile">
+                {tr("กินซ้ำ", "Eat again")}
+              </button>
+            )}
+            <Link href={`/recipes${q}`} className="flex min-h-[44px] items-center underline-offset-2 active:opacity-60">
+              {tr("สูตรของฉัน", "My recipes")}
+            </Link>
+            <Link href={`/add/manual${q}`} className="flex min-h-[44px] items-center underline-offset-2 active:opacity-60">
+              {tr("กรอกเอง", "Enter it myself")}
+            </Link>
+          </div>
         </div>
         )}
       </Sheet>

@@ -1268,3 +1268,8 @@ After "+ สร้างวัตถุดิบเอง" the manual editor has
 Saved ones come first in later searches (search page + recipe sheet, "ของฉัน" tag, Manage to edit/delete). Duplicate name → "use the one I already have".
 In the create-custom flow protein/carbs/fat now start as unknown. 289 tests, tsc, lint 0 errors, build OK. Not verified: Manage edit/delete clicks, iPhone.
 NEXT (she picked layout A, 2026-11-17): simplify Add food sheet — one search box on top (typing → /add/search with the text), 2 big tiles (ถ่ายรูป, บาร์โค้ด), small links "กินซ้ำ · สูตรของฉัน · กรอกเอง". The old "พิมพ์ให้ AI ช่วย" tile goes away; it becomes the last row in search results when nothing is found (the AI row already exists).
+
+## Round 46 (2026-11-17) — Add food sheet = layout A (search first) ✅ BUILT, committed locally, NOT deployed
+Search box + go arrow (→ /add/search?q=), 2 tiles (ถ่ายรูป, บาร์โค้ด), small links กินซ้ำ · สูตรของฉัน · กรอกเอง. Old "พิมพ์ให้ AI ช่วย"
+and "ค้นหาอาหาร" tiles removed; /add/text kept and reached via "ให้ AI ดูทั้งจาน" link in search results (prefilled). Sheet is keyboardSafe.
+294 tests, tsc, lint 0 errors, build OK, mock browser OK. Not verified: iPhone keyboard, English text. Rounds 45+46 deploy together after her OK.

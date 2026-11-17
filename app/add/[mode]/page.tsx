@@ -21,6 +21,8 @@ import type { Food } from "../../lib/food/provider";
 import { ingredientToItem } from "../../lib/searchFood";
 import type { FoodItem, Ingredient } from "../../lib/types";
 import { Icon } from "../../components/Icon";
+import Link from "next/link";
+import { buildAddUrl, cleanPrefill } from "../../lib/addSheet";
 
 type Mode = "photo" | "text" | "manual" | "barcode" | "search";
 
@@ -38,7 +40,8 @@ function AddInner() {
 
   const [photos, setPhotos] = useState<string[]>([]);
   const photo = photos[0] ?? null; // the cover
-  const [note, setNote] = useState("");
+  const prefill = cleanPrefill(search.get("q"));
+  const [note, setNote] = useState(mode === "text" ? prefill : "");
   const [step, setStep] = useState<"input" | "loading" | "review">(mode === "manual" ? "review" : "input");
   const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState<MealDraft>(() => {
@@ -205,7 +208,23 @@ function AddInner() {
 
       {step === "input" && mode === "barcode" && <BarcodeLookup onPick={pickBarcode} onManual={goManual} />}
 
-      {step === "input" && mode === "search" && <IngredientSearch food onAdd={pickSearched} onCreateCustom={createCustomFood} />}
+      {step === "input" && mode === "search" && (
+        <IngredientSearch
+          food
+          initialQuery={prefill}
+          onAdd={pickSearched}
+          onCreateCustom={createCustomFood}
+          footer={(typed) =>
+            typed.length >= 2 ? (
+              <p className="px-1 text-[13px]">
+                <Link href={buildAddUrl("text", search.get("date"), typed)} className="inline-flex min-h-[40px] items-center text-olive-dark underline-offset-2" data-testid="ai-whole-dish">
+                  {tr("ให้ AI ดูทั้งจาน", "Let AI look at the whole dish")}
+                </Link>
+              </p>
+            ) : null
+          }
+        />
+      )}
 
       {(step === "input" || step === "loading") && mode !== "barcode" && mode !== "search" && (
         <div className="space-y-5">

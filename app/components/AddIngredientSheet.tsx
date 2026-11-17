@@ -3,6 +3,7 @@
 // Every source (her own foods, usual picks, reference foods, USDA, AI) sits behind the one box.
 // Nothing is picked for her. Missing numbers are shown as "?", never 0. Her own numbers are never "verified".
 
+import type { ReactNode } from "react";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { aiFetch } from "../lib/aiFetch";
 import { useLang } from "../lib/lang";
@@ -114,17 +115,23 @@ export function IngredientSearch({
   onAdd,
   onCreateCustom,
   food = false,
+  initialQuery = "",
+  footer,
 }: {
   onClose?: () => void;
   onAdd: (ing: Ingredient) => void;
   onCreateCustom: (name: string) => void;
   food?: boolean;
+  /** Round 46: words to search for right away (from the Add food sheet). */
+  initialQuery?: string;
+  /** Round 46: one quiet extra line at the bottom, given the words typed so far. */
+  footer?: (query: string) => ReactNode;
 }) {
   const { tr, lang } = useLang();
   const online = useSyncExternalStore(subscribeOnline, readOnline, () => true);
   const usdaReady = useUsdaReady();
 
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery);
   const [custom, setCustom] = useState<CustomIngredient[]>(() => loadCustom());
   const [prefs, setPrefs] = useState<IngredientPrefPick[]>(() => loadPrefs());
   const [sel, setSel] = useState<Suggestion | null>(null);
@@ -461,6 +468,8 @@ export function IngredientSearch({
           {tr("+ สร้างวัตถุดิบเอง", "+ Add custom ingredient")}
         </button>
       </div>
+
+      {footer?.(q)}
 
       <ManageFold custom={custom} prefs={prefs} onCustom={changeCustom} onPrefs={changePrefs} onForgetCustom={(c) => changePrefs(forgetPickEverywhere(prefs, { kind: "custom", id: c.id, name: c.name }))} />
     </div>
