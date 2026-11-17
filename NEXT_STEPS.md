@@ -1372,3 +1372,5 @@ kcal + P/C/F, each with its own "เพิ่มลงบันทึก"; "anyt
 Context also carries carbs + fat targets (omitted if missing). Reply schema: suggestions[] + quickReplies[] (old single `suggestion` and old saved chats still load). Mock: app/lib/server/chatMock.ts.
 367 tests, tsc, lint 0 errors (3 warnings, 2 in tests/old files), build OK, mock browser OK. NOT verified: real AI following the new prompt, iPhone chip wrapping/keyboard.
 If the real AI misbehaves: tune the chat system prompt in app/lib/server/ai.ts (steps A-D above), not the UI.
+
+### Round 57 DEPLOYED (2026-11-17, 003b209, Vercel success) with her OK. Live: main pages 200, status not mock, /api/chat 401 without passcode, quickReplies code present. She tries with the REAL AI and sends screenshots; tune the prompt in app/lib/server/ai.ts if needed.
