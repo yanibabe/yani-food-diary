@@ -1374,3 +1374,5 @@ Context also carries carbs + fat targets (omitted if missing). Reply schema: sug
 If the real AI misbehaves: tune the chat system prompt in app/lib/server/ai.ts (steps A-D above), not the UI.
 
 ### Round 57 DEPLOYED (2026-11-17, 003b209, Vercel success) with her OK. Live: main pages 200, status not mock, /api/chat 401 without passcode, quickReplies code present. She tries with the REAL AI and sends screenshots; tune the prompt in app/lib/server/ai.ts if needed.
+
+✅ Round 57 tried on her iPhone with the real AI (2026-11-17): she said "perfect ดีเยี่ยม ดีเลิศ" (works great). Chat flow (status → style chips → 3 options → no repeats) accepted.
