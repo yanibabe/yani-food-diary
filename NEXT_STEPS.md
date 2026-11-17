@@ -1240,3 +1240,7 @@ Photo add page: up to 4 photos (camera adds one at a time, gallery multi-select)
 Entry.photoId = cover; others in optional `extraPhotoIds` (helpers in app/lib/mealPhotos.ts). Delete/eat-again handle extras.
 268 tests pass, tsc clean, lint 0 errors, build OK, mock browser check OK. NOT verified: real camera/gallery, real AI with
 several photos, backup+restore with extras. Needs her OK before pushing.
+
+### Round 43 DEPLOYED (2026-11-17, b3ab42e, Vercel success) with her OK
+Live: home 200, status ok, /api/analyze 401 without passcode, live add-photo code has extraPhotoIds + multi inputs.
+She tries on iPhone: pick 3 photos from album, remove one, analyze, save, view extras; one photo still shows labels.
