@@ -6,7 +6,6 @@ import { MacroCards, MacroTipLine, Sheet, StoredPhoto } from "./components/ui";
 import { BackupReminder } from "./components/BackupReminder";
 import { HomeTiles } from "./components/HomeTiles";
 import { ShareDayButton } from "./components/ShareDayButton";
-import { CharacterPicture } from "./components/Character";
 import { guessSlot, shiftDateKey, shortDayLabel, thaiDateKey, thaiDateLabel } from "./lib/date";
 import { buildAddUrlWith, cleanPrefill, showWholeDishRow } from "./lib/addSheet";
 import { closeAddLayerAction, layerAfterPop, layerHistoryState, layerMode, openAddLayer, type AddLayer } from "./lib/addLayer";
@@ -202,28 +201,29 @@ function TodayInner() {
 
   return (
     <main className="page space-y-5">
-      {date === today && (
-        // Yani's own brand character: small, fixed, her black lines only (her pick "A").
-        <div className="-mb-2 flex justify-center" data-testid="character">
-          <CharacterPicture size={44} />
+      <header data-testid="home-header">
+        <div className="flex items-center justify-between">
+          <span className="text-[21px] font-medium tracking-wide" data-testid="app-name">
+            SnapCal
+          </span>
+          <div className="flex items-center gap-2">
+            <button className="glass grid h-11 w-11 place-items-center !rounded-full" onClick={() => go(shiftDateKey(date, -1))} aria-label={tr("วันก่อนหน้า", "Previous day")}>
+              <Icon name="caret-left" className="h-5 w-5" />
+            </button>
+            <button
+              className="glass grid h-11 w-11 place-items-center !rounded-full disabled:opacity-30"
+              onClick={() => go(shiftDateKey(date, 1))}
+              disabled={date >= today}
+              aria-label={tr("วันถัดไป", "Next day")}
+            >
+              <Icon name="caret-right" className="h-5 w-5" />
+            </button>
+          </div>
         </div>
-      )}
-      <header className="flex items-center justify-between">
-        <button className="glass grid h-11 w-11 place-items-center !rounded-full" onClick={() => go(shiftDateKey(date, -1))} aria-label={tr("วันก่อนหน้า", "Previous day")}>
-          <Icon name="caret-left" className="h-5 w-5" />
-        </button>
-        <div className="text-center">
+        <div className="mt-1 flex flex-wrap items-baseline gap-x-2" data-testid="home-date">
           <h1 className="text-[26px] font-medium">{date === today ? tr("วันนี้", "Today") : tr("ย้อนดู", "Looking back")}</h1>
           <p className="text-[14px] text-muted">{thaiDateLabel(date, lang)}</p>
         </div>
-        <button
-          className="glass grid h-11 w-11 place-items-center !rounded-full disabled:opacity-30"
-          onClick={() => go(shiftDateKey(date, 1))}
-          disabled={date >= today}
-          aria-label={tr("วันถัดไป", "Next day")}
-        >
-          <Icon name="caret-right" className="h-5 w-5" />
-        </button>
       </header>
 
       {saveError && (

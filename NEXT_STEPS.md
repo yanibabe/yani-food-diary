@@ -1400,3 +1400,11 @@ Files: app/components/HomeTiles.tsx (new), app/components/ShareDayButton.tsx (`t
 381 tests pass, tsc clean, lint 0 errors, build OK. Mock browser (phone size): tiles row works, +1 glass updates the tile, both sheets open and close, chart shows 7 bars, old cards gone from the page.
 NOT verified: real iPhone, the two-tile case on an empty day by eye, English text, dark/long numbers in a tile (e.g. 12/12 glasses, avg 10,000), the Share sheet opened from the tile.
 Round 60 DEPLOYED (2026-11-17, d0481fd): Vercel build succeeded; the tile code (home-water-plus) is in the live bundle. Next: she tries the home page on her iPhone.
+
+## Round 61 (2026-11-17) — name instead of logo on home, character moved (built, NOT deployed)
+Her complaint: the small logo above the home title felt cluttered. She picked "style 2" (name on the left).
+Home: "SnapCal" (left) + the two day arrows (right) in one row, then "วันนี้ · date" under it. The character picture is gone from home. Chat screen: the character sits in the header next to "ถามผู้ช่วย / Ask AI". Profile: character shrunk 124 → 64 px. The floating chat button keeps the character (34 px).
+Files: app/page.tsx (header), app/components/FoodChat.tsx (header), app/profile/page.tsx (size), tests/round61-header.test.ts (4).
+385 tests pass, tsc clean, lint 0 errors, build OK. Mock browser (phone size): header looks right, prev/next day work, chat header shows the character, profile shows it at 64 px.
+NOT verified: real iPhone, English text, a very long date label on a narrow phone (it wraps under "วันนี้" by design), the share picture (still draws the character, untouched).
+OPEN (she asked, not started): replace the phone home-screen icon (public/apple-touch-icon.png 180, icon-192, icon-512 — now a generic plate with a leaf) with her own logo. Waiting for her file: square PNG, 1024×1024 or more, full-bleed, NOT transparent (iOS fills transparent with black), symbol centred with margin. After deploy she must remove the app from the home screen and add it again (iOS caches the icon); back up first on the Profile page.

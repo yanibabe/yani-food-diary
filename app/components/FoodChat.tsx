@@ -2,6 +2,7 @@
 // Round 54: "ask before eating". A chat with the AI, used BEFORE eating. Nothing is logged unless she taps
 // "Add to my day" on a suggestion and saves in the review step. The layer itself (history, review) is owned by ChatFab.
 
+import { CharacterPicture } from "./Character";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { aiFetch } from "../lib/aiFetch";
 import { buildChatContext, cleanSuggestions, cleanQuickReplies, buildChatRequest, CHAT_EXAMPLES, CHAT_PRIVACY, toggleInfo, CHAT_KEY, MAX_TEXT, parseChat, serializeChat, type ChatMsg, type Suggestion } from "../lib/foodChat";
@@ -146,6 +147,7 @@ export function FoodChat({ onBack, onAdd }: { onBack: () => void; onAdd: (s: Sug
         <button className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-paper" onClick={onBack} aria-label={tr("กลับ", "Back")} data-testid="chat-back">
           <Icon name="caret-left" className="h-5 w-5" />
         </button>
+        <CharacterPicture size={30} />
         <h1 className="min-w-0 flex-1 truncate text-[20px] font-semibold">{tr("ถามผู้ช่วย", "Ask AI")}</h1>
         {msgs.length > 0 && (
           <button className="shrink-0 rounded-full bg-white/60 px-3 py-1.5 text-[12.5px] text-muted" onClick={() => setConfirmNew(true)} data-testid="chat-new">

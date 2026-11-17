@@ -88,7 +88,7 @@ export default function ProfilePage() {
         <>
           <header className="pb-3 pt-4 text-center" data-testid="profile-head">
             <div className="mx-auto w-fit">
-              <CharacterPicture size={124} />
+              <CharacterPicture size={64} />
             </div>
             <h1 className="mt-1.5 text-[26px] font-light">{p.name || tr("โปรไฟล์", "Profile")}</h1>
             {facts.length > 0 && <p className="text-[14px] text-muted">{facts.join(" · ")}</p>}
