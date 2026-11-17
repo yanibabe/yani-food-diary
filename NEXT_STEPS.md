@@ -1273,3 +1273,5 @@ NEXT (she picked layout A, 2026-11-17): simplify Add food sheet — one search b
 Search box + go arrow (→ /add/search?q=), 2 tiles (ถ่ายรูป, บาร์โค้ด), small links กินซ้ำ · สูตรของฉัน · กรอกเอง. Old "พิมพ์ให้ AI ช่วย"
 and "ค้นหาอาหาร" tiles removed; /add/text kept and reached via "ให้ AI ดูทั้งจาน" link in search results (prefilled). Sheet is keyboardSafe.
 294 tests, tsc, lint 0 errors, build OK, mock browser OK. Not verified: iPhone keyboard, English text. Rounds 45+46 deploy together after her OK.
+
+### Rounds 45 + 46 DEPLOYED (2026-11-17, 85561d2, Vercel success) with her OK. Live: home 200, /add/search 200, new sheet text present. She tries on iPhone.
