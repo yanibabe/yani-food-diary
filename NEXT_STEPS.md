@@ -1309,3 +1309,10 @@ Not verified: real iPhone feel (desktop sampling showed smooth 0→1 ramp, no To
 Recipes page now fades in too (Profile/Today unchanged). If a blank beat shows on iPhone: consider a shorter delay or <ViewTransition>.
 
 ### Round 50 DEPLOYED (2026-11-17, a49f6d6, Vercel success) with her OK. Live: home 200, `.page-enter` CSS present. She tries on iPhone.
+
+## Round 51 (2026-11-17) — real View Transitions (buttery page change) ✅ BUILT, committed locally, NOT deployed
+Her feedback on Round 50: still not "ชุบๆ". Now app/layout.tsx wraps pages in app/components/PageTransition.tsx (React 19.3 <ViewTransition default="page-melt">,
+no next.config option needed in Next 16.3+). Old screen stays until the new one is ready, then ~300 ms cross-fade; html[data-vt] switches off the Round 50 .page-enter fade
+when supported (fallback stays for unsupported browsers); reduced-motion off. Add food sheet prefetches /add/text|search|photo|barcode|manual|recipes on open (app/lib/viewTransition.ts).
+323 tests, tsc, lint 0 errors, build OK. Verified in desktop browser: startViewTransition on every trip, no blank frame. NOT verified: real iPhone (Safari 18.2+ expected; 18.0/18.1 may switch instantly).
+Barcode route once took ~1 s in prod build (cause not found). Plan B if still not smooth: show the destination inside the same sheet (no route change).

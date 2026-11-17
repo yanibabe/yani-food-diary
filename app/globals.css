@@ -294,3 +294,19 @@ select {
 @media (prefers-reduced-motion: reduce) {
   .page-enter, .sheet-leaving { animation: none; }
 }
+
+/* Round 51: real View Transitions. The old screen is frozen as a picture until the new page is ready, then the two
+   cross-fade (about 300 ms). When this works (html[data-vt]) the old .page-enter fade is switched off, so there is
+   never a fade on top of a fade. Browsers without it keep .page-enter exactly as in Round 50. */
+html[data-vt] .page-enter { animation: none; }
+::view-transition-group(.page-melt),
+::view-transition-group(root) { animation-duration: 300ms; animation-timing-function: ease; }
+::view-transition-old(.page-melt),
+::view-transition-new(.page-melt),
+::view-transition-old(root),
+::view-transition-new(root) { animation-duration: 300ms; animation-timing-function: ease; }
+/* Let taps reach the live page while the picture fades. */
+::view-transition { pointer-events: none; }
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation-duration: 0s !important; animation-delay: 0s !important; }
+}

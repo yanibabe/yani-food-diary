@@ -10,6 +10,7 @@ import { ShareDayButton } from "./components/ShareDayButton";
 import { CharacterPicture } from "./components/Character";
 import { guessSlot, shiftDateKey, shortDayLabel, thaiDateKey, thaiDateLabel } from "./lib/date";
 import { buildAddUrlWith, buildReviewUrl, cleanPrefill, showWholeDishRow } from "./lib/addSheet";
+import { addSheetPrefetchUrls } from "./lib/viewTransition";
 import { putHandoff } from "./lib/sheetHandoff";
 import { beginNav, endNav, IDLE_NAV, isPending, NAV_GIVE_UP_MS, type NavState } from "./lib/navGuard";
 import { IngredientSearch } from "./components/AddIngredientSheet";
@@ -123,6 +124,17 @@ function TodayInner() {
     ev.preventDefault();
     leave(key, () => router.push(href));
   };
+  // Round 51: the moment the sheet opens, warm up the pages it can lead to, so the chunk is already loaded at tap time.
+  useEffect(() => {
+    if (!addOpen) return;
+    for (const u of addSheetPrefetchUrls(q)) {
+      try {
+        router.prefetch(u);
+      } catch {
+        /* fine: it just loads on tap */
+      }
+    }
+  }, [addOpen, q, router]);
   const opening = tr("กำลังเปิด…", "Opening…");
   const spin = <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-ink/20 border-t-ink" aria-hidden data-testid="nav-spinner" />;
   // The ONE hand-over: the chosen food (with its amount) goes to the review page; nothing is saved yet.
