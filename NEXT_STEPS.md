@@ -1362,3 +1362,5 @@ Mock reply wording "-819 kcal left" is mock-only.
 Her ask: chat easy to approach, no cluttered text, see at a glance what can be asked. Empty state: title "ถามผู้ช่วย / Ask AI", one heading "อยากกินอะไรวันนี้?", one helper line,
 3 icon chips (tap = send), short placeholder, round arrow-up send. The two "AI เห็น: …" lines are now ONE card behind the ⓘ button (same meaning, TH+EN). "New chat" only when there are messages.
 356 tests, tsc, lint 0 errors, build OK, mock browser OK (TH + EN). Not verified: real iPhone keyboard/touch. FAB aria-label still says "ถามก่อนกิน" (left on purpose).
+
+### Round 56 DEPLOYED (2026-11-17, 831feb8, Vercel success) with her OK. Live: main pages 200, new chat heading present. She tries on iPhone.
