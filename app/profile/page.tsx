@@ -30,6 +30,7 @@ import {
   activityLevel,
   estimateEnergy,
   macroTargets,
+  proteinPerKg,
   proteinTargetG,
   usesWeightGoal,
   weightPlan,
@@ -197,7 +198,7 @@ function TargetCard({ goals, onSaved }: { goals: Goals; onSaved: () => void }) {
     setLast(goals.targetKcal);
     setValue(goals.targetKcal);
   }
-  const protein = proteinTargetG(goals.profile);
+  const protein = proteinTargetG(goals.profile, goals.targetKcal);
   const mt = macroTargets(goals.targetKcal, protein);
   const changed = value != null && Math.round(value) !== goals.targetKcal;
   return (
@@ -225,8 +226,8 @@ function TargetCard({ goals, onSaved }: { goals: Goals; onSaved: () => void }) {
       <p className="text-center text-[13px] text-muted">
         {protein != null
           ? tr(
-              `โปรตีน ${protein} g (1.6 g/กก.) · คาร์บ ${Math.round(mt.carbs)} g · ไขมัน ${Math.round(mt.fat)} g (30%)`,
-              `Protein ${protein} g (1.6 g/kg) · Carbs ${Math.round(mt.carbs)} g · Fat ${Math.round(mt.fat)} g (30%)`,
+              `โปรตีน ${protein} g (${proteinPerKg(goals.profile?.reason)} g/กก.) · คาร์บ ${Math.round(mt.carbs)} g · ไขมัน ${Math.round(mt.fat)} g (30%)`,
+              `Protein ${protein} g (${proteinPerKg(goals.profile?.reason)} g/kg) · Carbs ${Math.round(mt.carbs)} g · Fat ${Math.round(mt.fat)} g (30%)`,
             )
           : tr(
               `สัดส่วนทั่วไป P20/C50/F30 → โปรตีน ${Math.round(mt.protein)} g · คาร์บ ${Math.round(mt.carbs)} g · ไขมัน ${Math.round(mt.fat)} g`,
@@ -417,6 +418,7 @@ function Method() {
           {ACTIVITY_LEVELS.map((l) => `${l.label.th} ×${l.factor}`).join(" · ")}<br />
           แนวคิดระดับกิจกรรม (PAL): FAO/WHO/UNU, Human Energy Requirements, 2004.</p>
         <p><b>3. ลด/เพิ่มน้ำหนัก</b> — น้ำหนักที่ต้องเปลี่ยน ÷ จำนวนสัปดาห์ = กก./สัปดาห์ แล้วคูณ 7,700 ÷ 7 เป็น kcal/วัน (7,700 kcal ≈ 1 กก. เป็นค่าประมาณทั่วไป แต่ละคนต่างกัน) · ความเร็วที่ปลอดภัย: ลดไม่เกิน 1 กก./สัปดาห์ และไม่เกิน 1% ของน้ำหนักตัว (NIH/NHLBI แนะนำราว 0.5–1 กก./สัปดาห์) · เพิ่มไม่เกิน 0.5 กก./สัปดาห์</p>
+        <p><b>3b. ลดน้ำหนัก — โปรตีน</b> — 1.4 g ต่อน้ำหนักตัว 1 กก. ต่อวัน (กลางช่วง 1.2–1.6 g/กก./วัน สำหรับคนทั่วไปตามคำแนะนำ ISSN ปี 2026 เรื่องอาหารเพื่อลดน้ำหนัก) โปรตีนจะไม่เกิน 35% ของแคลอรี่ทั้งวัน ส่วนรักษา/เพิ่มน้ำหนักใช้สัดส่วนทั่วไป 20% / 50% / 30%</p>
         <p><b>4. เพิ่มกล้ามเนื้อ</b> — พลังงานเพิ่ม +10% จากค่ารักษาน้ำหนัก และโปรตีน 1.6 g ต่อน้ำหนักตัว 1 กก. ต่อวัน · ISSN แนะนำ 1.4–2.0 g/กก./วัน สำหรับคนที่ออกกำลังกาย: Jäger R, et al. J Int Soc Sports Nutr. 2017;14:20.</p>
         <p><b>5. ขั้นต่ำเพื่อความปลอดภัย</b> — ไม่แนะนำต่ำกว่า 1,200 (หญิง) / 1,500 (ชาย) kcal/วัน หากไม่มีแพทย์ดูแล · NIH/NHLBI Clinical Guidelines on Overweight and Obesity in Adults, 1998.</p>
         <p className="text-muted">เป็นค่าประมาณเพื่อช่วยวางแผน ไม่ใช่คำแนะนำทางการแพทย์ ไม่ใช้กับผู้ที่อายุต่ำกว่า 18 ปี ตั้งครรภ์ หรือให้นม</p>
@@ -435,6 +437,7 @@ function MethodEn() {
           {ACTIVITY_LEVELS.map((l) => `${l.label.en} ×${l.factor}`).join(" · ")}<br />
           Physical activity level (PAL) idea: FAO/WHO/UNU, Human Energy Requirements, 2004.</p>
         <p><b>3. Lose / gain weight</b> — kg to change ÷ number of weeks = kg/week, then × 7,700 ÷ 7 = kcal/day (7,700 kcal ≈ 1 kg is a common rough guide; people differ) · Safe pace: lose no more than 1 kg/week and no more than 1% of body weight (NIH/NHLBI suggests about 0.5–1 kg/week) · gain no more than 0.5 kg/week.</p>
+        <p><b>3b. Lose weight — protein</b> — 1.4 g per kg of body weight per day (the middle of the 1.2–1.6 g/kg/day range for the general population in the 2026 ISSN position stand on diets for body-weight reduction). Protein is never set above 35% of your day’s calories. Keep / gain weight use the usual 20% / 50% / 30% split.</p>
         <p><b>4. Build muscle</b> — +10% energy above “keep weight”, and protein of 1.6 g per kg of body weight per day · ISSN suggests 1.4–2.0 g/kg/day for people who exercise: Jäger R, et al. J Int Soc Sports Nutr. 2017;14:20.</p>
         <p><b>5. Safe minimum</b> — not below 1,200 (female) / 1,500 (male) kcal/day without a doctor · NIH/NHLBI Clinical Guidelines on Overweight and Obesity in Adults, 1998.</p>
         <p className="text-muted">These are estimates to help you plan, not medical advice. Not for people under 18, pregnant, or breastfeeding.</p>

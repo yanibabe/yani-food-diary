@@ -84,7 +84,7 @@ function TodayInner() {
   const dayEntries = useMemo(() => entries.filter((e) => e.date === date).sort((a, b) => a.createdAt - b.createdAt), [entries, date]);
   const total = useMemo(() => sumMacros(dayEntries.flatMap((e) => e.items.map(pickMacros))), [dayEntries]);
   const target = goals.targetKcal;
-  const mTargets = macroTargets(target, proteinTargetG(goals.profile));
+  const mTargets = macroTargets(target, proteinTargetG(goals.profile, target));
   const left = target - total.kcal;
   const go = (d: string) => router.replace(d === today ? "/" : `/?date=${d}`);
   const q = date === today ? "" : `?date=${date}`;
@@ -310,7 +310,7 @@ function TodayInner() {
           date={date}
           target={target}
           name={goals.profile?.name ?? ""}
-          macroTargets={macroTargets(target, proteinTargetG(goals.profile))}
+          macroTargets={macroTargets(target, proteinTargetG(goals.profile, target))}
           water={{ glasses: glassesOn(waterLogs, date), goal: waterGoal(goals.waterGoal) }}
         />
       )}

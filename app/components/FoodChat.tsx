@@ -81,8 +81,8 @@ export function FoodChat({ onBack, onAdd }: { onBack: () => void; onAdd: (s: Sug
     setError(null);
     try {
       const p = goals.profile;
-      const mt = macroTargets(goals.targetKcal, proteinTargetG(goals.profile)); // the same targets the Today tiles use
-      const ctx = buildChatContext({ lang, targetKcal: goals.targetKcal, proteinTarget: proteinTargetG(goals.profile),
+      const mt = macroTargets(goals.targetKcal, proteinTargetG(goals.profile, goals.targetKcal)); // the same targets the Today tiles use
+      const ctx = buildChatContext({ lang, targetKcal: goals.targetKcal, proteinTarget: proteinTargetG(goals.profile, goals.targetKcal),
         carbsTarget: mt.carbs,
         fatTarget: mt.fat,
         eaten,

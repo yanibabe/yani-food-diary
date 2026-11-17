@@ -196,7 +196,10 @@ test("build muscle: +10% of maintenance and protein 1.6 g/kg", () => {
     assert.equal(r.suggested, Math.round((maint * 1.1) / 10) * 10);
     assert.equal(r.proteinG, Math.round(79.35 * 1.6));
   }
-  assert.equal(proteinTargetG({ ...base, reason: "lose" }), null);
+  // Round 59: "lose" now has a weight-based protein goal (1.4 g/kg); keep / gain still have none.
+  assert.equal(proteinTargetG({ ...base, reason: "lose" }), Math.round(79.35 * 1.4));
+  assert.equal(proteinTargetG({ ...base, reason: "gain" }), null);
+  assert.equal(proteinTargetG({ ...base, reason: "maintain" }), null);
 });
 
 test("lose / gain must point the right way", () => {

@@ -30,6 +30,10 @@
 //    target of 1.6 g per kg body weight per day. The ISSN position stand on
 //    protein and exercise (Jäger R, et al. J Int Soc Sports Nutr.
 //    2017;14:20) recommends 1.4–2.0 g/kg/day for people who exercise.
+//    lose weight → protein 1.4 g per kg body weight per day (middle of the
+//    1.2–1.6 g/kg/day range in the 2026 ISSN position stand on diets for
+//    body-weight reduction). Protein is capped at 35% of the day's calories.
+//    Keep / gain weight → the usual 20% / 50% / 30% split (no body-weight rule).
 //
 // 4) Safety floor for the suggestion: not below 1,200 kcal (female) or
 //    1,500 kcal (male) without medical supervision — from NIH/NHLBI
@@ -52,16 +56,32 @@ export const REASON_LABEL: Record<Reason, L> = {
 /** Build muscle: +10% of maintenance, protein 1.6 g/kg/day (ISSN 2017: 1.4–2.0). */
 export const MUSCLE_SURPLUS = 0.1;
 export const MUSCLE_PROTEIN_G_PER_KG = 1.6;
+/** Lose weight: protein 1.4 g/kg/day, the middle of the 1.2–1.6 g/kg/day range the ISSN position stand on diets for
+ *  body-weight reduction (2026) gives for the general population. (From a search summary; full text not yet read.) */
+export const LOSE_PROTEIN_G_PER_KG = 1.4;
+/** Protein never goes above this share of the day's calories (keeps a low calorie target sane). */
+export const PROTEIN_MAX_KCAL_SHARE = 0.35;
 
 /** lose/gain use the target weight + time; maintain/muscle stay at today's weight. */
 export function usesWeightGoal(reason: Reason | undefined): boolean {
   return reason !== "maintain" && reason !== "muscle";
 }
 
-/** Protein target in grams/day, only for "build muscle". */
-export function proteinTargetG(p: Profile | null): number | null {
-  if (!p || p.reason !== "muscle" || !(p.weightKg > 0)) return null;
-  return Math.round(p.weightKg * MUSCLE_PROTEIN_G_PER_KG);
+/** Grams of protein per kg of body weight for this goal. null = keep the usual 20% split (maintain / gain). */
+export function proteinPerKg(reason: Reason | undefined): number | null {
+  if (reason === "muscle") return MUSCLE_PROTEIN_G_PER_KG;
+  if (reason === "lose") return LOSE_PROTEIN_G_PER_KG;
+  return null;
+}
+
+/** Protein target in grams/day for "build muscle" and "lose weight" (by body weight). Pass the day's calories to apply
+ *  the 35% ceiling; without them only the weight rule is used. */
+export function proteinTargetG(p: Profile | null, kcal?: number): number | null {
+  const perKg = p ? proteinPerKg(p.reason) : null;
+  if (!p || perKg == null || !(p.weightKg > 0)) return null;
+  let g = Math.round(p.weightKg * perKg);
+  if (kcal != null && kcal > 0) g = Math.min(g, Math.floor((kcal * PROTEIN_MAX_KCAL_SHARE) / 4));
+  return g;
 }
 
 export const DAILY_LABEL: Record<DailyActivity, L> = {
@@ -259,7 +279,7 @@ export function estimateEnergy(p: Profile, lang: Lang = "th"): EnergyResult {
   const kgWk = t("กก./สัปดาห์", "kg/week");
   if (muscle) {
     steps.push(t(`เพิ่มกล้ามเนื้อ: +10% ≈ +${Math.round(surplus)} kcal/วัน → ${Math.round(raw)} kcal/วัน`, `Build muscle: +10% ≈ +${Math.round(surplus)} kcal/day → ${Math.round(raw)} kcal/day`));
-    steps.push(t(`โปรตีน ${MUSCLE_PROTEIN_G_PER_KG} g × ${p.weightKg} กก. ≈ ${proteinTargetG(p)} g/วัน`, `Protein ${MUSCLE_PROTEIN_G_PER_KG} g × ${p.weightKg} kg ≈ ${proteinTargetG(p)} g/day`));
+    steps.push(t(`โปรตีน ${MUSCLE_PROTEIN_G_PER_KG} g × ${p.weightKg} กก. ≈ ${proteinTargetG(p, suggested)} g/วัน`, `Protein ${MUSCLE_PROTEIN_G_PER_KG} g × ${p.weightKg} kg ≈ ${proteinTargetG(p, suggested)} g/day`));
   } else if (plan.direction === "keep") {
     steps.push(t(`เป้าหมายคือรักษาน้ำหนัก (+0) → ${Math.round(raw)} kcal/วัน`, `Goal is to keep your weight (+0) → ${Math.round(raw)} kcal/day`));
   } else {
@@ -273,8 +293,10 @@ export function estimateEnergy(p: Profile, lang: Lang = "th"): EnergyResult {
       `${fmt1(plan.usedKgPerWeek)} ${kgWk} × 7,700 ÷ 7 ≈ ${plan.dailyDelta >= 0 ? "+" : "−"}${Math.round(Math.abs(plan.dailyDelta))} ${day} → ${Math.round(raw)} ${day}`,
     );
   }
+  if (p.reason === "lose" && proteinTargetG(p, suggested) != null)
+    steps.push(t(`โปรตีน ${LOSE_PROTEIN_G_PER_KG} g × ${p.weightKg} กก. ≈ ${proteinTargetG(p, suggested)} g/วัน`, `Protein ${LOSE_PROTEIN_G_PER_KG} g × ${p.weightKg} kg ≈ ${proteinTargetG(p, suggested)} g/day`));
   if (floorApplied) steps.push(t(`ปรับขึ้นเป็นขั้นต่ำ ${floor} kcal/วัน เพื่อความปลอดภัย`, `Raised to the safe minimum of ${floor} kcal/day`));
-  return { ok: true, bmr, level, maintenance: Math.round(maintenance), suggested, floor, floorApplied, plan, proteinG: proteinTargetG(p), steps };
+  return { ok: true, bmr, level, maintenance: Math.round(maintenance), suggested, floor, floorApplied, plan, proteinG: proteinTargetG(p, suggested), steps };
 }
 
 /**

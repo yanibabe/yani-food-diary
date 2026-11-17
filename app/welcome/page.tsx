@@ -58,7 +58,7 @@ export default function WelcomePage() {
   const result = useMemo(() => (step === 4 ? estimateEnergy(p, lang) : null), [p, step, lang]);
   const suggested = result?.ok ? result.suggested : null;
   const target = own ?? suggested ?? goals.targetKcal;
-  const protein = proteinTargetG(p);
+  const protein = proteinTargetG(p, target);
 
   function finish() {
     if (!validKcal(target)) return;
