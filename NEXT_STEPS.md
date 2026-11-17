@@ -9,7 +9,7 @@
 ## LIVE (updated 2026-11-16; Round 41 USDA LIVE (ca631a5) — see "NEXT — Round 41"; Round 40 Smart Calorie Buffer + final checks LIVE (commit 4526f87, Vercel success); Round 39.1 plain water = 0 kcal LIVE; Round 39 nutrition accuracy: careful matching + source marks + unknown nutrients + densities LIVE; Round 38 recipe ingredient photos: any/many photos + average fallback LIVE; Round 37 waiting popup while a photo is read LIVE; Round 36 camera asks once per opening + album photos LIVE; Round 35 scan ingredients in recipes LIVE; Round 34 Phosphor Light icons LIVE; Round 33 recipes in category boxes + pot icon + 34 units LIVE; Round 32 line-only small character + % in tiles + food tip LIVE; Round 31 whole app in Frosted Calm + richer share picture LIVE; Round 30 Frosted Calm share picture + Profile LIVE; Round 29 share my day with my trainer (picture) LIVE; Round 28 simpler "กินอะไรดี" (menu + recipe, no delivery) LIVE; Round 27 label numbers = no +15% LIVE; Round 26 grouped "what can I eat" LIVE; Round 25 "what can I eat" LIVE; Round 24 weight moved to Profile, steps removed)
 
 - **App:** https://yani-food-diary.vercel.app  (Vercel, exm-labs account, free)
-- **Code:** https://github.com/yanibabe/yani-food-diary  (private; pushes auto-deploy)
+- **Code:** https://github.com/yanibabe/yani-food-diary  (PUBLIC since 2026-11-17, her choice "public as is"; pushes auto-deploy)
 - `OPENROUTER_API_KEY` is set in Vercel (Production + Preview), encrypted.
 - Checked live: home, manifest, icon load; `/api/status` says configured; one real AI
   call ("กล้วยหอม 1 ลูก" → 120 kcal) worked.
