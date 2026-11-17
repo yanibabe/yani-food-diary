@@ -1325,3 +1325,5 @@ Her feedback on Round 51: still slow; the bottom tab bar felt SLOWER than before
 Kept from the earlier rounds: sheet stays open until the route changes (no Today flash) + spinner/double-tap guard (Round 49). Added back ONLY router.prefetch of the 6 destinations
 when the Add food sheet opens (so taps switch immediately). RULE: never add page-level animations app-wide again; keep tab bar untouched.
 If it is still not instant enough: Plan B = show the AI/review screen inside the same sheet (no route change).
+
+### Round 52 DEPLOYED (2026-11-17, b4efe6a, Vercel success) with her OK. Live: main pages 200; no page-melt / page-enter code on the live site. She tries on iPhone.
