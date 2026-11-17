@@ -99,7 +99,7 @@ export function AddIngredientSheet({
 }) {
   const { tr } = useLang();
   return (
-    <Sheet open={open} onClose={onClose} title={tr("เพิ่มวัตถุดิบ", "Add ingredient")}>
+    <Sheet open={open} onClose={onClose} keyboardSafe title={tr("เพิ่มวัตถุดิบ", "Add ingredient")}>
       {open && <SheetBody onClose={onClose} onAdd={onAdd} onCreateCustom={onCreateCustom} />}
     </Sheet>
   );
@@ -261,7 +261,7 @@ function SheetBody({ onClose, onAdd, onCreateCustom }: { onClose: () => void; on
 
   return (
     <div className="space-y-3 pb-5" data-testid="add-ingredient-sheet">
-      <div className="relative">
+      <div className="sticky top-0 z-10 -mx-1 bg-[rgba(250,246,240,0.96)] px-1 pb-1 pt-1">
         <Icon name="magnifying-glass" className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-muted" />
         <input
           className="field !pl-11"

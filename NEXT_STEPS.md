@@ -1246,3 +1246,8 @@ Live: home 200, status ok, /api/analyze 401 without passcode, live add-photo cod
 She tries on iPhone: pick 3 photos from album, remove one, analyze, save, view extras; one photo still shows labels.
 
 ✅ Round 43 tried on her iPhone (2026-11-17): she said "ลองแล้ว ใช้ได้เลย" (works). Details of what she tried are not known.
+
+## Fix (2026-11-17): add-ingredient sheet sank behind the iPhone keyboard — built, committed locally, NOT deployed
+`Sheet` in app/components/ui.tsx has new `keyboardSafe` prop: fixed height inside window.visualViewport (the part the keyboard
+does not cover); used by AddIngredientSheet, search box is sticky at the top. Browser check: sheet size constant while typing/deleting.
+NOT verified on a real iPhone keyboard. Needs her OK before push.

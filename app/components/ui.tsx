@@ -15,13 +15,31 @@ export function Sheet({
   onClose,
   title,
   children,
+  keyboardSafe = false,
 }: {
   open: boolean;
   onClose: () => void;
   title?: string;
   children: React.ReactNode;
+  /** For sheets with a typing box: fixed height inside the part of the screen NOT covered by the phone keyboard. */
+  keyboardSafe?: boolean;
 }) {
   const { tr } = useLang();
+  const [vv, setVv] = useState<{ top: number; height: number } | null>(null);
+  useEffect(() => {
+    if (!open || !keyboardSafe) return;
+    const v = window.visualViewport;
+    if (!v) return;
+    const update = () => setVv({ top: v.offsetTop, height: v.height });
+    update();
+    v.addEventListener("resize", update);
+    v.addEventListener("scroll", update);
+    return () => {
+      v.removeEventListener("resize", update);
+      v.removeEventListener("scroll", update);
+      setVv(null);
+    };
+  }, [open, keyboardSafe]);
   useEffect(() => {
     if (!open) return;
     const prev = document.body.style.overflow;
@@ -32,9 +50,17 @@ export function Sheet({
   }, [open]);
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center" role="dialog" aria-modal="true" aria-label={title}>
+    <div
+      className="fixed inset-x-0 z-50 flex items-end justify-center"
+      style={keyboardSafe && vv ? { top: vv.top, height: vv.height } : { top: 0, bottom: 0 }}
+      role="dialog"
+      aria-modal="true"
+      aria-label={title}
+    >
       <button className="absolute inset-0 bg-ink/30" aria-label={tr("ปิด", "Close")} onClick={onClose} />
-      <div className="relative max-h-[88dvh] w-full max-w-[560px] overflow-y-auto sheet rounded-t-[28px] px-5 pt-3 safe-bottom shadow-2xl">
+      <div
+        className={`relative w-full max-w-[560px] overflow-y-auto sheet rounded-t-[28px] px-5 pt-3 safe-bottom shadow-2xl ${keyboardSafe ? "h-[92%]" : "max-h-[88dvh]"}`}
+      >
         <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-line" />
         {title && (
           <div className="mb-4 flex items-center justify-between">
