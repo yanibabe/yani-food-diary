@@ -10,7 +10,8 @@ import { UNITS, type IngredientUnit } from "../types.ts";
 import { IngredientRefSchema, cleanIngredientRef, type IngredientRef } from "../ingredientRef.ts";
 export { IngredientRefSchema, cleanIngredientRef, type IngredientRef };
 import { usdaConfig } from "../food/usda.ts";
-import { ChatReplySchema, type ChatReply, type ChatRequest } from "../foodChat.ts";
+import { ChatReplySchema, ChatReplyShape, pickReplyLang, type ChatReply, type ChatRequest } from "../foodChat.ts";
+import { mockChat } from "./chatMock.ts";
 import { AI_PLACES, aiRoom, fitAiIdeas, kcalRoom, type AiGroups, type RawIdea } from "../suggest.ts";
 
 const ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
@@ -268,23 +269,29 @@ export async function refineMeal(input: RefineInput): Promise<RefineOut> {
 
 
 // ---------------------------------------------------------------------------
-// Round 54: "ask before eating" chat. Numbers about today only; nothing is saved by the server.
+// Round 54/57: the "Ask AI" chat. Numbers and food names about today only; nothing is saved by the server.
 // ---------------------------------------------------------------------------
 
 const CHAT_SYSTEM = (lang: Lang) => `You are a warm personal food and eating helper inside a Thai food diary app. The user chats with you, often BEFORE eating. Nothing she says here is saved to her diary.
-You are told her recorded numbers: age, sex, height, weight, goal (lose / muscle / gain / maintain), calorie and protein targets, what she has eaten TODAY (food names with kcal, and totals of kcal, protein, carbs, fat) and the kcal left. Some may be missing: then do not guess them.
-Rules:
-- ${lang === "en" ? "Answer in simple, plain English." : "Answer in simple, plain Thai (Thai dish names are fine)."} Speak like a kind, short, plain-language helper. A few sentences, unless she asks for detail. No long lists.
-- Use HER numbers. Say whether a food fits the kcal left (e.g. "about 700 kcal left, so this fits, but…"). Look at what she already ate today and at the gaps (e.g. protein far below target, little vegetables), and give concrete "eat more of" and "go easy on / skip" suggestions that fit her remaining kcal. If she is over her target, say it kindly and calmly and still help.
-- Estimates are never exact: mark them "ประมาณ" / "about". Never claim the data is verified.
-- She may ask other things too: meal ideas, what to eat more or avoid today, habits, general food, health and lifestyle questions. Answer reasonable questions helpfully; keep a food and nutrition focus.
-- Do not diagnose any illness and give no medication or supplement-dose advice. For medical matters, kindly say a doctor or dietitian is the right person to ask, and still share simple general food ideas if helpful.
-- Never shame, scare or lecture about food or weight. Suggest a lighter swap or a protein add-on only when it really helps.
-- If "avoidDairy" is true she avoids all milk products: never suggest dairy (milk, cheese, yogurt, butter, cream). If it is not given, do not assume any food restriction.
-- You do not know her name or older days. Do not guess them.
-- If (and only if) you propose ONE specific food with numbers, also fill "suggestion": name, amountText (the portion, e.g. "1 ชาม" / "1 bowl"), kcal, protein, carbs, fat (grams, for that portion). Otherwise leave "suggestion" out or null. Make the numbers match your reply.
+You are told her recorded data: age, sex, height, weight, goal (lose / muscle / gain / maintain), targets for kcal, protein, carbs and fat, what she has eaten TODAY (food names with kcal, and totals of kcal, protein, carbs, fat), the kcal left, and a list of dishes you already suggested in this chat. Some data may be missing: then do not guess it.
+LANGUAGE: reply in the language of her LATEST message (Thai text → Thai, English text → English). This time that is ${lang === "en" ? "English: write simple, plain English" : "Thai: write simple, plain Thai (Thai dish names are fine)"}.
+STYLE: warm, short, plain words, a few sentences unless she asks for detail. Never shame, scare or lecture. Mark every estimate "ประมาณ" / "about"; never claim data is exact or verified.
+HOW TO ANSWER:
+A) OPEN QUESTIONS ("what should I eat", "what to eat more", "what is left", "what do I need"): FIRST give a short status from HER numbers, 2-3 short sentences or a tiny bullet list: kcal left; is protein reached (eaten vs target, in g); is fat over its target; where carbs stand (eaten vs target). No lecture. THEN ask what style of food she feels like and give "quickReplies" (3-6 short chips, each at most 24 characters, in her language) that fit her remaining kcal and gaps, for example soup/boiled, noodles, veggies/salad, pure protein, one-plate rice, snack, dessert, drink. If kcal left is small, offer only light styles. In this first turn do NOT give "suggestions" (no food cards).
+B) A STYLE is named (she tapped a chip, or already said e.g. "I want soup"): give 3 DIFFERENT options in "suggestions": each a distinct dish with a realistic portion in amountText, kcal and protein/carbs/fat grams. Choose and order them to fit her remaining kcal and gaps (protein short → protein-forward; fat over its target → lighter). In "reply" write one short line per option saying why it fits. Optionally give 1-3 "quickReplies" such as "anything else?".
+C) "ANYTHING ELSE" / "other options" / "again": give 2-3 NEW options that are NOT in the already-suggested list and not in earlier assistant messages. Scan the history; NEVER repeat a dish; vary cuisine and cooking method. Never answer with the same pattern or just one item.
+D) A question about one specific food ("how many calories in…"): answer briefly with a clear estimate, say whether it fits her kcal left, and put that ONE dish in "suggestions". Other general food, habit, meal-idea and lifestyle questions: answer helpfully, keep the food and nutrition focus.
+SAFETY: you are not a doctor. No diagnosis, no medication or supplement-dose advice; for medical matters kindly say a doctor or dietitian is the right person, and still share simple food ideas if helpful.
+RESTRICTIONS: if "avoidDairy" is true she avoids all milk products: never suggest dairy (milk, cheese, yogurt, butter, cream). If it is not given, assume no restriction. You do not know her name or older days; do not guess them.
+Make the numbers in "suggestions" match your reply. Leave "suggestions" and "quickReplies" out (or empty) when they do not apply.
 Return ONLY a JSON object matching this JSON Schema:
-${shapeOf(ChatReplySchema)}`;
+${shapeOf(ChatReplyShape)}`;
+
+function gapLine(label: string, eaten: number, target: number | null | undefined): string | null {
+  if (target == null) return null;
+  const d = Math.round(target - eaten);
+  return `${label}: ${eaten}/${target} g (${d >= 0 ? `${d} g left` : `${-d} g over`})`;
+}
 
 function chatPrompt(input: ChatRequest): string {
   const c = input.context;
@@ -295,53 +302,27 @@ function chatPrompt(input: ChatRequest): string {
     c.weightKg != null ? `weight ${c.weightKg} kg` : null,
     c.goal ? `goal ${c.goal}` : null,
   ].filter(Boolean);
+  const gaps = [gapLine("protein", c.protein, c.proteinTarget), gapLine("carbs", c.carbs, c.carbsTarget), gapLine("fat", c.fat, c.fatTarget)].filter(Boolean);
   const lines = [
     `Her recorded data: ${body.length ? body.join(", ") : "(body details not recorded)"}.`,
-    `Targets: ${c.kcalTarget} kcal/day${c.proteinTarget != null ? `, protein ${c.proteinTarget} g` : ""}.`,
+    `Targets: ${c.kcalTarget} kcal/day${c.proteinTarget != null ? `, protein ${c.proteinTarget} g` : ""}${c.carbsTarget != null ? `, carbs ${c.carbsTarget} g` : ""}${c.fatTarget != null ? `, fat ${c.fatTarget} g` : ""}.`,
     `Today so far: ${c.eatenKcal} kcal, protein ${c.protein} g, carbs ${c.carbs} g, fat ${c.fat} g; kcal left ${c.remainingKcal}.`,
+    gaps.length ? `Status vs targets: ${gaps.join("; ")}.` : "",
     c.todayMeals?.length ? `Eaten today: ${c.todayMeals.map((m) => `${m.name} (${m.kcal} kcal)`).join("; ")}.` : "Eaten today: nothing recorded yet.",
-  ];
+  ].filter(Boolean);
   if (c.avoidDairy) lines.push("avoidDairy: true (she avoids all milk products).");
+  lines.push(input.shownDishes?.length ? `Dishes already suggested in this chat (do NOT suggest again): ${input.shownDishes.join("; ")}.` : "Dishes already suggested in this chat: none.");
   lines.push("Conversation (the last line is the new message to answer):");
   for (const m of input.messages) lines.push(`${m.role === "user" ? "user" : "assistant"}: ${m.text}`);
   return lines.join("\n");
 }
 
 export async function chatReply(input: ChatRequest): Promise<ChatReply> {
-  const lang: Lang = input.context.lang === "en" ? "en" : "th";
   if (process.env.AI_MOCK === "1") return mockChat(input);
+  // Reply in the language of her latest message; the app language only decides when that is unclear.
+  const latest = [...input.messages].reverse().find((m) => m.role === "user")?.text;
+  const lang = pickReplyLang(latest, input.context.lang);
   return callAi(CHAT_SYSTEM(lang), [{ type: "text", text: chatPrompt(input) }], ChatReplySchema, lang);
-}
-
-/** TEST MODE ONLY (AI_MOCK=1): a fixed answer. A beef-bowl question gets a suggestion; anything else a plain reply. */
-function mockChat(input: ChatRequest): ChatReply {
-  const last = input.messages[input.messages.length - 1]?.text ?? "";
-  const en = input.context.lang === "en";
-  const left = input.context.remainingKcal;
-  if (/ข้าวหน้าเนื้อ|beef bowl|gyudon/i.test(last)) {
-    const fits = left >= 700;
-    return {
-      reply: en
-        ? `A beef rice bowl is about 700 kcal (an estimate). You have about ${left} kcal left today, so ${fits ? "it fits" : "it is a bit tight"}. A lighter idea: ask for less rice, and add an egg for protein. (Test answer)`
-        : `ข้าวหน้าเนื้อ 1 ชามประมาณ 700 kcal ค่ะ (ค่าประมาณ) วันนี้เหลืออีกประมาณ ${left} kcal ${fits ? "กินได้เลย" : "ค่อนข้างเต็มแล้วนะ"} ถ้าอยากเบาลง ลดข้าวลงหน่อย แล้วเพิ่มไข่เพื่อโปรตีนก็ดีค่ะ (คำตอบทดสอบ)`,
-      suggestion: { name: en ? "Beef rice bowl" : "ข้าวหน้าเนื้อ", amountText: en ? "1 bowl" : "1 ชาม", kcal: 700, protein: 28, carbs: 95, fat: 22 },
-    };
-  }
-  if (/กินอะไรเพิ่ม|eat more/i.test(last)) {
-    const gap = input.context.proteinTarget != null ? Math.max(0, input.context.proteinTarget - input.context.protein) : null;
-    return {
-      reply: en
-        ? `You have about ${left} kcal left${gap ? ` and about ${gap} g of protein still to go` : ""}. Try something light with protein, like grilled chicken or eggs with vegetables. (Test answer)`
-        : `วันนี้เหลืออีกประมาณ ${left} kcal${gap ? ` และยังขาดโปรตีนประมาณ ${gap} กรัม` : ""} ลองกินของเบา ๆ ที่มีโปรตีน เช่น ไก่ย่างหรือไข่กับผักค่ะ (คำตอบทดสอบ)`,
-      suggestion: null,
-    };
-  }
-  return {
-    reply: en
-      ? `I can help with food and calories. Tell me what you would like to eat and I will give an estimate. (Test answer)`
-      : `ถามเรื่องอาหารและแคลอรี่ได้เลยค่ะ บอกมาว่าอยากกินอะไร เดี๋ยวช่วยประมาณให้ (คำตอบทดสอบ)`,
-    suggestion: null,
-  };
 }
 
 // ---------------------------------------------------------------------------

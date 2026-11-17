@@ -1364,3 +1364,11 @@ Her ask: chat easy to approach, no cluttered text, see at a glance what can be a
 356 tests, tsc, lint 0 errors, build OK, mock browser OK (TH + EN). Not verified: real iPhone keyboard/touch. FAB aria-label still says "ถามก่อนกิน" (left on purpose).
 
 ### Round 56 DEPLOYED (2026-11-17, 831feb8, Vercel success) with her OK. Live: main pages 200, new chat heading present. She tries on iPhone.
+
+## Round 57 (2026-11-17) — smarter chat: status → style chips → 3 varied options ✅ BUILT, committed locally, NOT deployed
+Her feedback (iPhone screenshots): "should I eat more?" jumped straight to ONE dish; "anything else?" repeated the same pattern; Thai question got an English reply.
+Now: open question → short status (kcal left, protein reached?, fat over?, carbs vs target) + tap chips for style (ซุป/ก๋วยเตี๋ยว/ผัก/โปรตีน/…); after a style → 3 DIFFERENT dishes with
+kcal + P/C/F, each with its own "เพิ่มลงบันทึก"; "anything else" → new dishes only (request carries shownDishes = dish NAMES already shown); reply follows the language of her latest message.
+Context also carries carbs + fat targets (omitted if missing). Reply schema: suggestions[] + quickReplies[] (old single `suggestion` and old saved chats still load). Mock: app/lib/server/chatMock.ts.
+367 tests, tsc, lint 0 errors (3 warnings, 2 in tests/old files), build OK, mock browser OK. NOT verified: real AI following the new prompt, iPhone chip wrapping/keyboard.
+If the real AI misbehaves: tune the chat system prompt in app/lib/server/ai.ts (steps A-D above), not the UI.

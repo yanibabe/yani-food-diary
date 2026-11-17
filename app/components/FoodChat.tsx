@@ -4,10 +4,10 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { aiFetch } from "../lib/aiFetch";
-import { buildChatContext, cleanSuggestion, buildChatRequest, CHAT_EXAMPLES, CHAT_PRIVACY, toggleInfo, CHAT_KEY, MAX_TEXT, parseChat, serializeChat, type ChatMsg, type Suggestion } from "../lib/foodChat";
+import { buildChatContext, cleanSuggestions, cleanQuickReplies, buildChatRequest, CHAT_EXAMPLES, CHAT_PRIVACY, toggleInfo, CHAT_KEY, MAX_TEXT, parseChat, serializeChat, type ChatMsg, type Suggestion } from "../lib/foodChat";
 import { thaiDateKey } from "../lib/date";
 import { validWeight } from "../lib/body";
-import { proteinTargetG } from "../lib/energy";
+import { macroTargets, proteinTargetG } from "../lib/energy";
 import { useLang } from "../lib/lang";
 import { newId, pickMacros, sumMacros } from "../lib/nutrition";
 import { useStore } from "../lib/store";
@@ -81,7 +81,10 @@ export function FoodChat({ onBack, onAdd }: { onBack: () => void; onAdd: (s: Sug
     setError(null);
     try {
       const p = goals.profile;
+      const mt = macroTargets(goals.targetKcal, proteinTargetG(goals.profile)); // the same targets the Today tiles use
       const ctx = buildChatContext({ lang, targetKcal: goals.targetKcal, proteinTarget: proteinTargetG(goals.profile),
+        carbsTarget: mt.carbs,
+        fatTarget: mt.fat,
         eaten,
         age: p?.age,
         sex: p?.sex,
@@ -98,10 +101,11 @@ export function FoodChat({ onBack, onAdd }: { onBack: () => void; onAdd: (s: Sug
         return;
       }
       const reply: ChatMsg = { id: newId("cm"), role: "assistant", text: data.reply };
-      if (data.suggestion && typeof data.suggestion === "object") {
-        const s = cleanSuggestion(data.suggestion);
-        if (s) reply.suggestion = s;
-      }
+      // Round 57: several cards + tap-to-send chips. (An older server answer with one `suggestion` still reads.)
+      const cards = cleanSuggestions([...(Array.isArray(data.suggestions) ? data.suggestions : []), ...(data.suggestion ? [data.suggestion] : [])]);
+      if (cards.length) reply.suggestions = cards;
+      const chips = cleanQuickReplies(data.quickReplies);
+      if (chips.length) reply.quickReplies = chips;
       save([...msgsRef.current, reply]);
     } catch (e) {
       setError(`${tr("เชื่อมต่อไม่ได้", "Couldn't connect")}: ${e instanceof Error ? e.message : String(e)}`);
@@ -207,26 +211,35 @@ export function FoodChat({ onBack, onAdd }: { onBack: () => void; onAdd: (s: Sug
                 <div className="max-w-[88%] whitespace-pre-wrap break-words rounded-[20px] rounded-bl-md border border-white/80 bg-white/60 px-4 py-2.5 text-[15px]" data-testid="chat-ai">
                   {m.text}
                 </div>
-                {m.suggestion && (
-                  <div className="max-w-[88%] rounded-2xl border border-white/80 bg-white/45 px-4 py-3 text-[14px]" data-testid="chat-suggestion">
+                {(m.suggestions ?? (m.suggestion ? [m.suggestion] : [])).map((sg, i) => (
+                  <div key={`${sg.name}-${i}`} className="w-full max-w-[88%] rounded-2xl border border-white/80 bg-white/45 px-4 py-3 text-[14px]" data-testid="chat-suggestion">
                     <div className="font-medium">
-                      {m.suggestion.name}
-                      {m.suggestion.amountText ? <span className="text-muted"> · {m.suggestion.amountText}</span> : null}
+                      {sg.name}
+                      {sg.amountText ? <span className="text-muted"> · {sg.amountText}</span> : null}
                     </div>
                     <div className="mt-0.5 text-muted">
-                      {tr("ประมาณ", "About")} <span className="num">{Math.round(m.suggestion.kcal)}</span> kcal
+                      {tr("ประมาณ", "About")} <span className="num">{Math.round(sg.kcal)}</span> kcal
                       {[
-                        m.suggestion.protein != null ? `${tr("โปรตีน", "protein")} ${Math.round(m.suggestion.protein)} g` : null,
-                        m.suggestion.carbs != null ? `${tr("คาร์บ", "carbs")} ${Math.round(m.suggestion.carbs)} g` : null,
-                        m.suggestion.fat != null ? `${tr("ไขมัน", "fat")} ${Math.round(m.suggestion.fat)} g` : null,
+                        sg.protein != null ? `${tr("โปรตีน", "protein")} ${Math.round(sg.protein)} g` : null,
+                        sg.carbs != null ? `${tr("คาร์บ", "carbs")} ${Math.round(sg.carbs)} g` : null,
+                        sg.fat != null ? `${tr("ไขมัน", "fat")} ${Math.round(sg.fat)} g` : null,
                       ]
                         .filter(Boolean)
                         .map((x) => ` · ${x}`)
                         .join("")}
                     </div>
-                    <button className="btn-soft mt-2 w-full" onClick={() => onAdd(m.suggestion!)} data-testid="chat-add">
+                    <button className="btn-soft mt-2 w-full" onClick={() => onAdd(sg)} data-testid="chat-add">
                       {tr("เพิ่มลงบันทึก", "Add to my day")}
                     </button>
+                  </div>
+                ))}
+                {m === last && !loading && m.quickReplies && m.quickReplies.length > 0 && (
+                  <div className="flex max-w-full flex-wrap gap-2" data-testid="chat-chips">
+                    {m.quickReplies.map((q) => (
+                      <button key={q} className="rounded-full border border-white/80 bg-white/60 px-3.5 py-2 text-[14px] leading-tight" onClick={() => send(q)} data-testid="chat-chip">
+                        {q}
+                      </button>
+                    ))}
                   </div>
                 )}
               </div>

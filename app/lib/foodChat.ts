@@ -17,11 +17,90 @@ export const MAX_TEXT = 1000;
 // ---------- messages on the phone ----------
 
 export type Suggestion = { name: string; amountText: string; kcal: number; protein?: number | null; carbs?: number | null; fat?: number | null };
-export type ChatMsg = { id: string; role: "user" | "assistant"; text: string; suggestion?: Suggestion };
+export type ChatMsg = {
+  id: string;
+  role: "user" | "assistant";
+  text: string;
+  /** Round 57: up to 4 food cards under one answer. */
+  suggestions?: Suggestion[];
+  /** Round 57: short tap-to-send replies (shown under the LAST answer only). */
+  quickReplies?: string[];
+  /** Before Round 57 an answer had one card. Old saved chats are read into `suggestions`; nothing writes this any more. */
+  suggestion?: Suggestion;
+};
 
 /** Keep the newest `max` messages. */
 export function capMessages<T>(list: T[], max = MAX_STORED): T[] {
   return list.length > max ? list.slice(list.length - max) : list;
+}
+
+export const MAX_SUGGESTIONS = 4;
+export const MAX_CHIPS = 6;
+export const MAX_CHIP_LEN = 24;
+
+/** Keep the good cards, drop the broken ones, drop repeats of the same dish name. Max 4. */
+export function cleanSuggestions(v: unknown): Suggestion[] {
+  if (!Array.isArray(v)) return [];
+  const out: Suggestion[] = [];
+  const seen = new Set<string>();
+  for (const x of v) {
+    const s = cleanSuggestion(x);
+    if (!s) continue;
+    const k = s.name.toLowerCase();
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push(s);
+    if (out.length >= MAX_SUGGESTIONS) break;
+  }
+  return out;
+}
+
+/** Tap-to-send chips: short plain strings only, trimmed, no repeats, nothing that looks like contact details. Max 6. */
+export function cleanQuickReplies(v: unknown): string[] {
+  if (!Array.isArray(v)) return [];
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const x of v) {
+    if (typeof x !== "string") continue;
+    const t = x.replace(/\s+/g, " ").trim();
+    if (!t || t.length > MAX_CHIP_LEN) continue;
+    if (/@|https?:|www\.|\d{7,}/i.test(t)) continue;
+    const k = t.toLowerCase();
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push(t);
+    if (out.length >= MAX_CHIPS) break;
+  }
+  return out;
+}
+
+/** Dish names already suggested in this chat (so the AI never repeats one). Food names only. */
+export function shownDishes(messages: Pick<ChatMsg, "suggestions" | "suggestion">[], max = 30): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const m of messages) {
+    for (const s of [...(m.suggestions ?? []), ...(m.suggestion ? [m.suggestion] : [])]) {
+      const k = s.name.trim().toLowerCase();
+      if (!k || seen.has(k)) continue;
+      seen.add(k);
+      out.push(s.name.trim().slice(0, 80));
+    }
+  }
+  return out.slice(-max);
+}
+
+const THAI = /[\u0E00-\u0E7F]/g;
+const LATIN = /[A-Za-z]/g;
+
+/** Reply in the language of her LATEST message. Thai letters → Thai, English letters → English, unclear → the app language. */
+export function pickReplyLang(latest: string | null | undefined, appLang: Lang): Lang {
+  const t = latest ?? "";
+  const th = (t.match(THAI) ?? []).length;
+  const en = (t.match(LATIN) ?? []).length;
+  if (th === 0 && en < 2) return appLang === "en" ? "en" : "th";
+  if (th > en) return "th";
+  if (en > th) return "en";
+  return appLang === "en" ? "en" : "th";
 }
 
 export function cleanSuggestion(v: unknown): Suggestion | undefined {
@@ -46,8 +125,12 @@ export function parseChat(raw: string | null): ChatMsg[] {
     if (o.role !== "user" && o.role !== "assistant") continue;
     if (typeof o.text !== "string" || !o.text.trim()) continue;
     const msg: ChatMsg = { id: typeof o.id === "string" && o.id ? o.id : `m${out.length}`, role: o.role, text: o.text.slice(0, 4000) };
-    const s = o.role === "assistant" ? cleanSuggestion(o.suggestion) : undefined;
-    if (s) msg.suggestion = s;
+    if (o.role === "assistant") {
+      const list = cleanSuggestions([...(Array.isArray(o.suggestions) ? o.suggestions : []), ...(o.suggestion != null ? [o.suggestion] : [])]);
+      if (list.length) msg.suggestions = list;
+      const chips = cleanQuickReplies(o.quickReplies);
+      if (chips.length) msg.quickReplies = chips;
+    }
     out.push(msg);
   }
   return capMessages(out);
@@ -75,6 +158,9 @@ export const ChatContextSchema = z.object({
   avoidDairy: z.literal(true).optional().catch(undefined),
   kcalTarget: n,
   proteinTarget: n.nullish(),
+  // Round 57: the carbs and fat targets (the same ones the Today tiles use). Left out when not known.
+  carbsTarget: pos.optional().catch(undefined),
+  fatTarget: pos.optional().catch(undefined),
   // Today so far.
   eatenKcal: n,
   protein: n,
@@ -96,6 +182,8 @@ export const ChatRequestSchema = z.object({
     .min(1)
     .transform((l) => l.slice(-MAX_SENT)),
   context: ChatContextSchema,
+  // Round 57: dish names already suggested in this chat (food names only).
+  shownDishes: z.array(z.string().trim().min(1).max(80)).max(30).optional().catch(undefined),
 });
 export type ChatRequest = z.infer<typeof ChatRequestSchema>;
 
@@ -105,6 +193,8 @@ export type ChatInputs = {
   lang: Lang;
   targetKcal: number;
   proteinTarget?: number | null;
+  carbsTarget?: number | null;
+  fatTarget?: number | null;
   eaten: Macros;
   age?: number | null;
   sex?: string | null;
@@ -130,6 +220,8 @@ export function buildChatContext(o: ChatInputs): ChatContext {
     remainingKcal: r0(o.targetKcal - o.eaten.kcal),
   };
   if (o.proteinTarget != null && Number.isFinite(o.proteinTarget)) ctx.proteinTarget = r0(o.proteinTarget);
+  if (okNum(o.carbsTarget, 2000)) ctx.carbsTarget = r0(o.carbsTarget);
+  if (okNum(o.fatTarget, 1000)) ctx.fatTarget = r0(o.fatTarget);
   if (okNum(o.age, 120)) ctx.age = Math.round(o.age);
   if (o.sex === "female" || o.sex === "male") ctx.sex = o.sex;
   if (okNum(o.heightCm, 260)) ctx.heightCm = Math.round(o.heightCm);
@@ -146,9 +238,11 @@ export function buildChatContext(o: ChatInputs): ChatContext {
 
 /** What goes over the network: the last few messages (role + text only) and the numbers. */
 export function buildChatRequest(messages: ChatMsg[], context: ChatContext): ChatRequest {
+  const dishes = shownDishes(messages);
   return {
     messages: messages.slice(-MAX_SENT).map((m) => ({ role: m.role, text: m.text.slice(0, MAX_TEXT) })),
     context,
+    ...(dishes.length ? { shownDishes: dishes } : {}),
   };
 }
 
@@ -163,11 +257,26 @@ export const SuggestionSchema = z.object({
   fat: z.coerce.number().finite().min(0).max(500).nullish().catch(null),
 });
 
-export const ChatReplySchema = z.object({
-  reply: z.string().trim().min(1).max(4000),
-  // A broken suggestion never kills the reply: it is just dropped.
-  suggestion: SuggestionSchema.nullish().catch(null),
+/** The shape the AI is asked for (written into the prompt). */
+export const ChatReplyShape = z.object({
+  reply: z.string().describe("The answer text"),
+  suggestions: z.array(SuggestionSchema).max(MAX_SUGGESTIONS).optional().describe("0-4 food cards"),
+  quickReplies: z.array(z.string().max(MAX_CHIP_LEN)).max(MAX_CHIPS).optional().describe("0-6 short tap-to-send replies"),
 });
+
+/** What we accept back. Lenient: a broken card or chip is dropped, never the whole reply. The old single `suggestion` still reads. */
+export const ChatReplySchema = z
+  .object({
+    reply: z.string().trim().min(1).max(4000),
+    suggestions: z.unknown().optional(),
+    suggestion: z.unknown().optional(),
+    quickReplies: z.unknown().optional(),
+  })
+  .transform((r) => ({
+    reply: r.reply,
+    suggestions: cleanSuggestions([...(Array.isArray(r.suggestions) ? r.suggestions : []), ...(r.suggestion != null ? [r.suggestion] : [])]),
+    quickReplies: cleanQuickReplies(r.quickReplies),
+  }));
 export type ChatReply = z.infer<typeof ChatReplySchema>;
 
 // ---------- suggestion → one meal item (an AI ESTIMATE) ----------

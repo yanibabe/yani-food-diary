@@ -46,7 +46,7 @@ test("the request has only the allowed fields; missing values are left out, neve
 test("nothing personal can be sent: no name, email, photos, notes or old days; only allowed keys survive", () => {
   const ctx = buildChatContext({ lang: "en", targetKcal: 1800, eaten: { kcal: 0, protein: 0, carbs: 0, fat: 0 }, age: 30 });
   const req = buildChatRequest([{ id: "x", role: "user", text: "hi", suggestion: { name: "secret meal", amountText: "", kcal: 5 } }], ctx);
-  assert.deepEqual(Object.keys(req).sort(), ["context", "messages"]);
+  assert.deepEqual(Object.keys(req).sort(), ["context", "messages", "shownDishes"]); // food names already suggested, nothing else
   assert.deepEqual(req.messages[0], { role: "user", text: "hi" });
   const dirty = {
     name: "Yani", photos: ["data:x"],
@@ -88,19 +88,15 @@ test("the request schema rejects empty or bad requests and trims to the last 10"
 });
 
 test("answer schema: good, with suggestion, bad suggestion dropped, empty / junk rejected", () => {
-  const good = ChatReplySchema.safeParse({ reply: " About 700 kcal. ", suggestion: { name: "Beef bowl", amountText: "1 bowl", kcal: 700, protein: 28, carbs: 95, fat: 22 } });
+  const good = ChatReplySchema.safeParse({ reply: " About 700 kcal. ", suggestions: [{ name: "Beef bowl", amountText: "1 bowl", kcal: 700, protein: 28, carbs: 95, fat: 22 }] });
   assert.ok(good.success);
   assert.equal(good.data.reply, "About 700 kcal.");
-  assert.equal(good.data.suggestion?.kcal, 700);
-  const noSug = ChatReplySchema.parse({ reply: "Hello" });
-  assert.ok(noSug.suggestion == null);
-  const badSug = ChatReplySchema.parse({ reply: "Hello", suggestion: { name: "", kcal: 0 } });
-  assert.equal(badSug.reply, "Hello");
-  assert.equal(badSug.suggestion, null);
-  assert.equal(ChatReplySchema.parse({ reply: "x", suggestion: { name: "a", kcal: 99999 } }).suggestion, null);
-  assert.equal(ChatReplySchema.parse({ reply: "x", suggestion: { name: "a", kcal: "abc" } }).suggestion, null);
-  const partial = ChatReplySchema.parse({ reply: "x", suggestion: { name: "a", amountText: "1", kcal: 200 } });
-  assert.equal(partial.suggestion?.protein, undefined);
+  assert.equal(good.data.suggestions[0].kcal, 700);
+  assert.deepEqual(ChatReplySchema.parse({ reply: "Hello" }).suggestions, []);
+  assert.deepEqual(ChatReplySchema.parse({ reply: "Hello", suggestions: [{ name: "", kcal: 0 }] }).suggestions, []);
+  assert.deepEqual(ChatReplySchema.parse({ reply: "x", suggestions: [{ name: "a", kcal: 99999 }] }).suggestions, []);
+  assert.deepEqual(ChatReplySchema.parse({ reply: "x", suggestions: [{ name: "a", kcal: "abc" }] }).suggestions, []);
+  assert.equal(ChatReplySchema.parse({ reply: "x", suggestions: [{ name: "a", amountText: "1", kcal: 200 }] }).suggestions[0].protein, undefined);
   for (const bad of [{}, { reply: "" }, { reply: "   " }, { reply: 5 }, null, "text", []]) assert.equal(ChatReplySchema.safeParse(bad).success, false, JSON.stringify(bad));
 });
 

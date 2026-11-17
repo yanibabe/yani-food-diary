@@ -23,7 +23,7 @@ export async function POST(req: Request) {
   }
   try {
     const result = await chatReply(parsed.data);
-    return Response.json({ reply: result.reply, suggestion: result.suggestion ?? null, mock: process.env.AI_MOCK === "1" });
+    return Response.json({ reply: result.reply, suggestions: result.suggestions, quickReplies: result.quickReplies, mock: process.env.AI_MOCK === "1" });
   } catch (e) {
     const err = e instanceof AiError ? e : new AiError("api", String(e), 500);
     console.error("[chat]", err.code, err.message);
