@@ -1301,3 +1301,9 @@ Also: Sheet has a `header` slot outside the scroll area (title + search box fixe
 Not verified: real iPhone, recipe Add-ingredient sheet in browser. /add/search page's own box now scrolls away with the page.
 
 ### Round 49 DEPLOYED (2026-11-17, 5f7ece4, Vercel success) with her OK. Live: home 200, new "กำลังเปิด…" code present. She tries on iPhone.
+
+## Round 50 (2026-11-17) — softer page change when leaving the Add food sheet ✅ BUILT, committed locally, NOT deployed
+Her feedback on Round 49: no flash, but the picture still "cut" to the next page. CSS only: `.page-enter` (fade 0→1 + rise 8px, 250 ms) on /add/[mode] and /recipes roots;
+`.sheet-leaving` (sheet dims 180 ms); both off under prefers-reduced-motion. Navigation still starts immediately. 320 tests, tsc, lint 0 errors, build OK.
+Not verified: real iPhone feel (desktop sampling showed smooth 0→1 ramp, no Today frame; once a ~450 ms blank beat at opacity 0, read as pane stall).
+Recipes page now fades in too (Profile/Today unchanged). If a blank beat shows on iPhone: consider a shorter delay or <ViewTransition>.

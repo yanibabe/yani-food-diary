@@ -17,6 +17,7 @@ export function Sheet({
   children,
   keyboardSafe = false,
   header,
+  leaving = false,
 }: {
   open: boolean;
   onClose: () => void;
@@ -26,6 +27,8 @@ export function Sheet({
   keyboardSafe?: boolean;
   /** Round 49: stays fixed at the top, under the title (e.g. a search box). Only `children` scroll, in their own area below it. */
   header?: React.ReactNode;
+  /** Round 50: the sheet is on its way out to another page — it softens a little (still open, still tappable-safe). */
+  leaving?: boolean;
 }) {
   const { tr } = useLang();
   const [vv, setVv] = useState<{ top: number; height: number } | null>(null);
@@ -62,7 +65,7 @@ export function Sheet({
     >
       <button className="absolute inset-0 bg-ink/30" aria-label={tr("ปิด", "Close")} onClick={onClose} />
       <div
-        className={`relative flex w-full max-w-[560px] flex-col overflow-hidden sheet rounded-t-[28px] shadow-2xl ${keyboardSafe ? "h-[92%]" : "max-h-[88dvh]"}`}
+        className={`relative flex w-full max-w-[560px] flex-col overflow-hidden sheet rounded-t-[28px] shadow-2xl ${leaving ? "sheet-leaving" : ""} ${keyboardSafe ? "h-[92%]" : "max-h-[88dvh]"}`}
       >
         <div className="shrink-0 px-5 pt-3">
           <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-line" />

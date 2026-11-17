@@ -59,7 +59,7 @@ function RecipesInner() {
   }
 
   return (
-    <main className="page space-y-4">
+    <main className="page page-enter space-y-4">
       <header className="flex items-center justify-between">
         <h1 className="text-[26px] font-normal">{tr("สูตรของฉัน", "My recipes")}</h1>
         {tab === "recipes" && <Link
