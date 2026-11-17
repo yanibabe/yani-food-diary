@@ -1275,3 +1275,10 @@ and "ค้นหาอาหาร" tiles removed; /add/text kept and reached v
 294 tests, tsc, lint 0 errors, build OK, mock browser OK. Not verified: iPhone keyboard, English text. Rounds 45+46 deploy together after her OK.
 
 ### Rounds 45 + 46 DEPLOYED (2026-11-17, 85561d2, Vercel success) with her OK. Live: home 200, /add/search 200, new sheet text present. She tries on iPhone.
+
+## Round 47 (2026-11-17) — smoother Add food sheet + "วัตถุดิบของฉัน" tab + one-tap AI ✅ BUILT, committed locally, NOT deployed
+Her feedback on 45+46: (1) Enter → page jumped home then to search. Now live results INSIDE the Add food sheet as she types; one navigation
+only when she taps Add (hand-off via sessionStorage `sheetHandoff`, 10 min expiry, one use). (2) Saved custom ingredients were hidden in "Manage":
+now "สูตรของฉัน" has a switch สูตร | วัตถุดิบ with search, edit, delete (CustomIngredientList shared with Manage). (3) From 2 typed chars ONE pinned row
+"ให้ AI คำนวณ “…”" → /add/text?q=…&auto → analysis starts on its own (never before the tap). In the sheet the single-ingredient AI-estimate row is hidden (only one AI button);
+it still exists on /add/search. 310 tests, tsc, lint 0 errors, build OK, mock browser OK. Not verified: real iPhone keyboard, real USDA in sheet.

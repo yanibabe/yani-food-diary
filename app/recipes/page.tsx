@@ -9,6 +9,7 @@ import { totalsForRecipe } from "../lib/recipe";
 import { useStore } from "../lib/store";
 import { RECIPE_CATEGORIES, type RecipeCategory } from "../lib/types";
 import { Icon } from "../components/Icon";
+import { MyIngredients } from "../components/MyIngredients";
 
 // Round 33 — her pick "C": recipes sorted into category boxes that open and close.
 // Rows show the line pot icon, never the photo (photos live inside the recipe).
@@ -33,7 +34,9 @@ function Chevron({ open }: { open: boolean }) {
 function RecipesInner() {
   const { ready, recipes } = useStore();
   const { tr, lang } = useLang();
-  const date = useSearchParams().get("date");
+  const sp = useSearchParams();
+  const date = sp.get("date");
+  const [tab, setTab] = useState<"recipes" | "ingredients">(sp.get("tab") === "ingredients" ? "ingredients" : "recipes");
   const q = date ? `?date=${date}` : "";
   const list = [...recipes].sort((a, b) => b.updatedAt - a.updatedAt);
   const groups = RECIPE_CATEGORIES.map((c) => ({ ...c, items: list.filter((r) => (r.category ?? "other") === c.key) })).filter(
@@ -59,7 +62,7 @@ function RecipesInner() {
     <main className="page space-y-4">
       <header className="flex items-center justify-between">
         <h1 className="text-[26px] font-normal">{tr("สูตรของฉัน", "My recipes")}</h1>
-        <Link
+        {tab === "recipes" && <Link
           href="/recipes/new/edit"
           className="glass grid h-11 w-11 place-items-center"
           style={{ borderRadius: 9999 }}
@@ -67,10 +70,31 @@ function RecipesInner() {
           data-testid="new-recipe"
         >
           <Icon name="plus" className="h-5 w-5" />
-        </Link>
+        </Link>}
       </header>
 
-      {ready && list.length === 0 && (
+      <div className="grid grid-cols-2 gap-1 rounded-full border border-white/90 bg-white/55 p-1" role="tablist" data-testid="recipes-switch">
+        {([
+          ["recipes", tr("สูตร", "Recipes")],
+          ["ingredients", tr("วัตถุดิบ", "Ingredients")],
+        ] as const).map(([k, label]) => (
+          <button
+            key={k}
+            type="button"
+            role="tab"
+            aria-selected={tab === k}
+            className={`min-h-[44px] rounded-full text-[16px] ${tab === k ? "bg-ink text-paper" : "text-muted"}`}
+            onClick={() => setTab(k)}
+            data-testid={`recipes-tab-${k}`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "ingredients" && <MyIngredients />}
+
+      {tab === "recipes" && ready && list.length === 0 && (
         <div className="card p-6 text-center">
           <div className="mx-auto w-fit">
             <PotTile id="empty" size={56} radius={18} />
@@ -82,7 +106,7 @@ function RecipesInner() {
         </div>
       )}
 
-      {groups.map((g) => {
+      {tab === "recipes" && groups.map((g) => {
         const isOpen = open.includes(g.key);
         return (
           <section key={g.key} className="card overflow-hidden" data-testid="recipe-group">

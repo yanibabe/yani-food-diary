@@ -9,7 +9,10 @@ import { WaterCard } from "./components/WaterCard";
 import { ShareDayButton } from "./components/ShareDayButton";
 import { CharacterPicture } from "./components/Character";
 import { guessSlot, shiftDateKey, shortDayLabel, thaiDateKey, thaiDateLabel } from "./lib/date";
-import { buildAddUrl, cleanPrefill } from "./lib/addSheet";
+import { buildAddUrlWith, buildReviewUrl, cleanPrefill, showWholeDishRow } from "./lib/addSheet";
+import { putHandoff } from "./lib/sheetHandoff";
+import { IngredientSearch } from "./components/AddIngredientSheet";
+import type { Ingredient } from "./lib/types";
 import { copyMeal, recentMeals, searchMeals } from "./lib/repeat";
 import { macroTargets, proteinTargetG } from "./lib/energy";
 import { fmtKcal, pickMacros, sumMacros } from "./lib/nutrition";
@@ -84,6 +87,20 @@ function TodayInner() {
   const q = date === today ? "" : `?date=${date}`;
   const recent = useMemo(() => recentMeals(entries), [entries]);
   const found = useMemo(() => searchMeals(recent, againQuery), [recent, againQuery]);
+  const typed = cleanPrefill(addText);
+  const dateParam = date === today ? null : date;
+  // The ONE hand-over: the chosen food (with its amount) goes to the review page; nothing is saved yet.
+  const handOver = (ing: Ingredient) => {
+    let store: Storage | null = null;
+    try {
+      store = window.sessionStorage;
+    } catch {
+      store = null;
+    }
+    setAddOpen(false);
+    if (putHandoff(store, ing, Date.now())) router.push(buildReviewUrl(dateParam));
+    else router.push(buildAddUrlWith("search", dateParam, ing.name, {}));
+  };
   const openAdd = () => {
     setAgainView(false);
     setAgainQuery("");
@@ -295,38 +312,69 @@ function TodayInner() {
         ) : (
         <div className="pb-3" data-testid="add-sheet-search-first">
           <form
-            className="relative mb-4"
+            className="sticky top-0 z-10 -mx-1 mb-3 px-1 pb-1 pt-1 backdrop-blur-md"
             onSubmit={(ev) => {
+              // No page jump: the results are already live below. Enter just tucks the keyboard away.
               ev.preventDefault();
-              const text = cleanPrefill(addText);
-              if (!text) return;
-              setAddOpen(false);
-              router.push(buildAddUrl("search", date === today ? null : date, text));
+              (document.activeElement as HTMLElement | null)?.blur?.();
             }}
           >
-            <Icon name="magnifying-glass" className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted" />
-            <input
-              type="text"
-              className="w-full rounded-full border border-white/90 bg-white/70 py-3.5 pl-12 pr-14 text-[16px] outline-none placeholder:text-muted"
-              placeholder={tr("ค้นหาหรือพิมพ์ว่ากินอะไร", "Search or type what you ate")}
-              aria-label={tr("ค้นหาหรือพิมพ์ว่ากินอะไร", "Search or type what you ate")}
-              value={addText}
-              onChange={(ev) => setAddText(ev.target.value)}
-              enterKeyHint="search"
-              autoComplete="off"
-              autoCorrect="off"
-              data-testid="add-search-input"
-            />
-            <button
-              type="submit"
-              className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-ink text-paper disabled:opacity-30"
-              disabled={!addText.trim()}
-              aria-label={tr("ค้นหา", "Search")}
-              data-testid="add-search-go"
-            >
-              <Icon name="caret-right" className="h-4 w-4" />
-            </button>
+            <div className="relative">
+              <Icon name="magnifying-glass" className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted" />
+              <input
+                type="text"
+                className="w-full rounded-full border border-white/90 bg-white/70 py-3.5 pl-12 pr-12 text-[16px] outline-none placeholder:text-muted"
+                placeholder={tr("ค้นหาหรือพิมพ์ว่ากินอะไร", "Search or type what you ate")}
+                aria-label={tr("ค้นหาหรือพิมพ์ว่ากินอะไร", "Search or type what you ate")}
+                value={addText}
+                onChange={(ev) => setAddText(ev.target.value)}
+                enterKeyHint="search"
+                autoComplete="off"
+                autoCorrect="off"
+                data-testid="add-search-input"
+              />
+              {addText && (
+                <button
+                  type="button"
+                  className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-muted active:opacity-60"
+                  onClick={() => setAddText("")}
+                  aria-label={tr("ล้าง", "Clear")}
+                  data-testid="add-search-clear"
+                >
+                  <Icon name="x" className="h-4 w-4" />
+                </button>
+              )}
+            </div>
           </form>
+          {typed ? (
+            <IngredientSearch
+              food
+              compact
+              query={typed}
+              onAdd={handOver}
+              onCreateCustom={(name) => {
+                setAddOpen(false);
+                router.push(buildAddUrlWith("search", dateParam, name, { create: true }));
+              }}
+              topSlot={
+                showWholeDishRow(typed) ? (
+                  <Link
+                    href={buildAddUrlWith("text", dateParam, typed, { auto: true })}
+                    onClick={() => setAddOpen(false)}
+                    className="flex min-h-[52px] w-full items-center gap-2.5 rounded-2xl border border-ink/20 bg-white/80 px-4 py-2 text-left text-[15px] active:scale-[0.99]"
+                    data-testid="ai-whole-dish-pinned"
+                  >
+                    <Icon name="sparkle" className="h-5 w-5 shrink-0" />
+                    <span className="min-w-0 flex-1 break-words">
+                      {tr("ให้ AI คำนวณ", "Let AI calculate")} “{typed}”
+                    </span>
+                    <Icon name="caret-right" className="h-4 w-4 shrink-0 text-muted" />
+                  </Link>
+                ) : null
+              }
+            />
+          ) : (
+          <>
           <div className="grid grid-cols-2 gap-3">
             {[
               { href: `/add/photo${q}`, icon: "photo", label: tr("ถ่ายรูป", "Take a photo") },
@@ -355,6 +403,8 @@ function TodayInner() {
               {tr("กรอกเอง", "Enter it myself")}
             </Link>
           </div>
+          </>
+          )}
         </div>
         )}
       </Sheet>

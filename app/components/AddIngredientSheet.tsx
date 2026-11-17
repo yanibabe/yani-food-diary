@@ -13,8 +13,6 @@ import { ingredientMacros } from "../lib/recipe";
 import { PASSCODE_HEADER, PASSCODE_KEY, passcodeHeaderValue } from "../lib/passcode";
 import {
   addCustom,
-  deleteCustom,
-  editCustom,
   forgetPick,
   forgetPickEverywhere,
   loadCustom,
@@ -42,10 +40,11 @@ import {
 import { createUsdaSearcher, type UsdaStatus } from "../lib/ingredientUsda";
 import { DIFFERENCE_LABEL } from "../lib/food/usdaMatch";
 import { DATA_TYPE_LABEL } from "../lib/food/usdaNutrients";
-import { UNIT_GROUPS, UNITS, unitKind, type FoodState, type Ingredient, type IngredientUnit, type Macros } from "../lib/types";
+import { UNIT_GROUPS, UNITS, unitKind, type Ingredient, type IngredientUnit, type Macros } from "../lib/types";
 import { Badge, MissingNote, NumberField, ProvenanceBadge, Sheet } from "./ui";
 import { UsdaAttribution, useUsdaReady } from "./UsdaPicker";
 import { Icon } from "./Icon";
+import { CustomIngredientList } from "./CustomIngredientList";
 
 const stamp = () => Date.now();
 
@@ -117,6 +116,9 @@ export function IngredientSearch({
   food = false,
   initialQuery = "",
   footer,
+  query: controlledQuery,
+  topSlot,
+  compact = false,
 }: {
   onClose?: () => void;
   onAdd: (ing: Ingredient) => void;
@@ -126,15 +128,28 @@ export function IngredientSearch({
   initialQuery?: string;
   /** Round 46: one quiet extra line at the bottom, given the words typed so far. */
   footer?: (query: string) => ReactNode;
+  /** Round 47: the words come from a box outside (the Add food sheet). Then this part shows no box of its own. */
+  query?: string;
+  /** Round 47: one pinned row right under the box (the "let AI calculate" row). While it is there, the small "AI estimate" row stays hidden: one AI button at a time. */
+  topSlot?: ReactNode;
+  /** Round 47: in the Add food sheet — no "Manage" fold (that lives on the recipes page). */
+  compact?: boolean;
 }) {
   const { tr, lang } = useLang();
   const online = useSyncExternalStore(subscribeOnline, readOnline, () => true);
   const usdaReady = useUsdaReady();
 
-  const [query, setQuery] = useState(initialQuery);
+  const [ownQuery, setOwnQuery] = useState(initialQuery);
+  const query = controlledQuery ?? ownQuery;
   const [custom, setCustom] = useState<CustomIngredient[]>(() => loadCustom());
   const [prefs, setPrefs] = useState<IngredientPrefPick[]>(() => loadPrefs());
   const [sel, setSel] = useState<Suggestion | null>(null);
+  // New words → the open row closes (done while drawing, so there is no flash of a stale row).
+  const [seenQuery, setSeenQuery] = useState(query);
+  if (seenQuery !== query) {
+    setSeenQuery(query);
+    setSel(null);
+  }
   const [amount, setAmount] = useState<number | null>(null);
   const [unit, setUnit] = useState<IngredientUnit>("g");
   const [gpu, setGpu] = useState<number | null>(null);
@@ -189,7 +204,7 @@ export function IngredientSearch({
     return aiHere?.row ? [...merged, aiHere.row] : merged;
   }, [local.items, usdaWanted, usdaHere, aiHere]);
   const hasUsdaRow = rows.some((r) => r.kind === "usda");
-  const offerAi = q.length >= 2 && !usdaLoading && !aiHere?.row && showAiRow(q, rows);
+  const offerAi = !topSlot && q.length >= 2 && !usdaLoading && !aiHere?.row && showAiRow(q, rows);
 
   function pick(s: Suggestion) {
     if (sel?.id === s.id) return;
@@ -282,15 +297,13 @@ export function IngredientSearch({
 
   return (
     <div className="space-y-3 pb-5" data-testid="add-ingredient-sheet">
+      {controlledQuery === undefined && (
       <div className="sticky top-0 z-10 -mx-1 bg-[rgba(250,246,240,0.96)] px-1 pb-1 pt-1">
         <Icon name="magnifying-glass" className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-muted" />
         <input
           className="field !pl-11"
           value={query}
-          onChange={(e) => {
-            setQuery(e.target.value);
-            setSel(null);
-          }}
+          onChange={(e) => setOwnQuery(e.target.value)}
           placeholder={food ? tr("ค้นหาอาหาร เช่น ไข่, egg, ข้าวสวย", "Search a food, e.g. egg, ไข่, rice") : tr("ค้นหาวัตถุดิบ เช่น ไข่, egg, ข้าวสวย", "Search an ingredient, e.g. egg, ไข่, rice")}
           aria-label={food ? tr("ค้นหาอาหาร", "Search food") : tr("ค้นหาวัตถุดิบ", "Search ingredient")}
           autoComplete="off"
@@ -301,6 +314,9 @@ export function IngredientSearch({
           autoFocus
         />
       </div>
+      )}
+
+      {topSlot}
 
       {showEmptyHeading && <p className="px-1 text-[13px] text-muted">{tr("ของฉัน และที่ใช้ล่าสุด", "Yours and recent")}</p>}
 
@@ -471,7 +487,7 @@ export function IngredientSearch({
 
       {footer?.(q)}
 
-      <ManageFold custom={custom} prefs={prefs} onCustom={changeCustom} onPrefs={changePrefs} onForgetCustom={(c) => changePrefs(forgetPickEverywhere(prefs, { kind: "custom", id: c.id, name: c.name }))} />
+      {!compact && <ManageFold custom={custom} prefs={prefs} onCustom={changeCustom} onPrefs={changePrefs} onForgetCustom={(c) => changePrefs(forgetPickEverywhere(prefs, { kind: "custom", id: c.id, name: c.name }))} />}
     </div>
   );
 }
@@ -509,14 +525,6 @@ function RowHead({ s, lang }: { s: Suggestion; lang: "th" | "en" }) {
 // Manage: edit / delete her saved custom ingredients, forget a usual pick
 // ---------------------------------------------------------------------------
 
-type Draft = { name: string; state: FoodState | ""; basis: "g" | "ml" | "unit"; kcal: number | null; protein: number | null; carbs: number | null; fat: number | null; gpu: number | null };
-
-const draftOf = (c: CustomIngredient): Draft => ({ name: c.name, state: c.state ?? "", basis: c.basis === "perUnit" ? "unit" : c.per, kcal: c.kcal, protein: c.protein, carbs: c.carbs, fat: c.fat, gpu: c.gramsPerUnit });
-
-function inputOf(d: Draft, old: CustomIngredient): CustomInput {
-  return { ...old, name: d.name, state: d.state || null, basis: d.basis === "unit" ? "perUnit" : "per100", per: d.basis === "ml" ? "ml" : "g", kcal: d.kcal, protein: d.protein, carbs: d.carbs, fat: d.fat, gramsPerUnit: d.gpu };
-}
-
 function ManageFold({
   custom,
   prefs,
@@ -530,34 +538,8 @@ function ManageFold({
   onPrefs: (l: IngredientPrefPick[]) => void;
   onForgetCustom: (c: CustomIngredient) => void;
 }) {
-  const { tr, lang } = useLang();
-  const [editing, setEditing] = useState<string | null>(null);
-  const [draft, setDraft] = useState<Draft | null>(null);
-  const [err, setErr] = useState<string | null>(null);
-  const [confirmDel, setConfirmDel] = useState<string | null>(null);
+  const { tr } = useLang();
   const sortedPrefs = useMemo(() => [...prefs].sort((a, b) => b.lastUsed - a.lastUsed), [prefs]);
-
-  function startEdit(c: CustomIngredient) {
-    setEditing(c.id);
-    setDraft(draftOf(c));
-    setErr(null);
-    setConfirmDel(null);
-  }
-  function saveEdit(c: CustomIngredient) {
-    if (!draft) return;
-    const r = editCustom(custom, c.id, inputOf(draft, c), stamp());
-    if (!r.ok) {
-      setErr(
-        r.error === "name" ? tr("ใส่ชื่อก่อน", "Enter a name") : r.error === "kcal" ? tr("ใส่แคลอรี่ (kcal)", "Enter the calories (kcal)") : r.error === "duplicate" ? tr("มีชื่อและสถานะนี้อยู่แล้ว", "That name and state already exist") : tr("ตัวเลขไม่ถูกต้อง", "A number isn't valid"),
-      );
-      return;
-    }
-    onCustom(r.list);
-    setEditing(null);
-    setDraft(null);
-  }
-
-  const set = (p: Partial<Draft>) => setDraft((d) => (d ? { ...d, ...p } : d));
 
   return (
     <details className="rounded-2xl bg-cream/70 px-3" data-testid="ai-manage">
@@ -566,72 +548,7 @@ function ManageFold({
         <div className="space-y-2">
           <p className="text-[13px] font-medium">{tr("วัตถุดิบของฉัน", "My ingredients")}</p>
           {custom.length === 0 && <p className="text-[13px] text-muted">{tr("ยังไม่มี — สร้างวัตถุดิบเองแล้วกด “บันทึกไว้ใช้ครั้งหน้า”", "None yet — add your own and tap “Save for future use”")}</p>}
-          {custom.map((c) => (
-            <div key={c.id} className="rounded-xl bg-white/70 p-3" data-testid="ai-custom-item">
-              {editing === c.id && draft ? (
-                <div className="space-y-2" data-testid="ai-custom-edit">
-                  <input className="field !min-h-[44px]" value={draft.name} onChange={(e) => set({ name: e.target.value })} aria-label={tr("ชื่อ", "Name")} />
-                  <div className="grid grid-cols-2 gap-2">
-                    <select className="field !min-h-[44px]" value={draft.basis} onChange={(e) => set({ basis: e.target.value as Draft["basis"] })} aria-label={tr("ค่าต่อ", "Values are per")}>
-                      <option value="g">{tr("ต่อ 100 กรัม", "Per 100 g")}</option>
-                      <option value="ml">{tr("ต่อ 100 มล.", "Per 100 ml")}</option>
-                      <option value="unit">{tr("ต่อ 1 หน่วย", "Per 1 unit")}</option>
-                    </select>
-                    <select className="field !min-h-[44px]" value={draft.state} onChange={(e) => set({ state: e.target.value as FoodState | "" })} aria-label={tr("สถานะ", "State")}>
-                      <option value="">{tr("ไม่ระบุสถานะ", "No state")}</option>
-                      {(Object.keys(STATE_LABEL) as FoodState[]).map((k) => (
-                        <option key={k} value={k}>{STATE_LABEL[k][lang]}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="grid grid-cols-4 gap-2">
-                    {(
-                      [
-                        ["kcal", "kcal"],
-                        ["protein", tr("โปรตีน", "Protein")],
-                        ["carbs", tr("คาร์บ", "Carbs")],
-                        ["fat", tr("ไขมัน", "Fat")],
-                      ] as const
-                    ).map(([k, l]) => (
-                      <div key={k}>
-                        <span className="mb-1 block text-[12px] text-muted">{l}</span>
-                        <NumberField className="field num !min-h-[44px] !px-2" value={draft[k]} onChange={(n) => set({ [k]: n })} placeholder={k === "kcal" ? undefined : tr("ไม่ทราบ", "?")} aria-label={l} />
-                      </div>
-                    ))}
-                  </div>
-                  <div>
-                    <span className="mb-1 block text-[12px] text-muted">{tr("น้ำหนักของ 1 หน่วย (กรัม) — ไม่บังคับ", "Weight of 1 unit (g) — optional")}</span>
-                    <NumberField className="field num !min-h-[44px]" value={draft.gpu} onChange={(n) => set({ gpu: n })} aria-label={tr("น้ำหนักต่อหน่วย", "Weight per unit")} />
-                  </div>
-                  {err && <p className="text-[13px] text-danger" role="alert">{err}</p>}
-                  <div className="flex gap-2">
-                    <button type="button" className="btn-soft !min-h-[44px] flex-1" onClick={() => setEditing(null)}>{tr("ยกเลิก", "Cancel")}</button>
-                    <button type="button" className="btn-primary !min-h-[44px] flex-1" onClick={() => saveEdit(c)} data-testid="ai-custom-save">{tr("บันทึก", "Save")}</button>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-center justify-between gap-2">
-                  <div className="min-w-0 text-[14px]">
-                    <p className="truncate font-medium">{c.name}{c.state ? ` · ${STATE_LABEL[c.state][lang]}` : ""}</p>
-                    <p className="text-[12px] text-muted">
-                      <span className="num">{fmtKcal(c.kcal)} kcal</span> {c.basis === "perUnit" ? tr("ต่อ 1 หน่วย", "per 1 unit") : tr(`ต่อ 100 ${c.per === "ml" ? "มล." : "ก."}`, `per 100 ${c.per}`)}
-                    </p>
-                  </div>
-                  {confirmDel === c.id ? (
-                    <div className="flex shrink-0 items-center gap-1 text-[14px]">
-                      <button type="button" className="min-h-[40px] px-2 font-medium text-danger" onClick={() => { onCustom(deleteCustom(custom, c.id)); onForgetCustom(c); setConfirmDel(null); }} data-testid="ai-custom-delete-yes">{tr("ลบเลย", "Delete")}</button>
-                      <button type="button" className="min-h-[40px] px-2 text-muted" onClick={() => setConfirmDel(null)}>{tr("ไม่ลบ", "Keep")}</button>
-                    </div>
-                  ) : (
-                    <div className="flex shrink-0 items-center gap-1 text-[14px]">
-                      <button type="button" className="min-h-[40px] px-2 font-medium text-olive-dark" onClick={() => startEdit(c)} data-testid="ai-custom-edit-btn">{tr("แก้", "Edit")}</button>
-                      <button type="button" className="min-h-[40px] px-2 text-danger" onClick={() => setConfirmDel(c.id)} data-testid="ai-custom-delete">{tr("ลบ", "Delete")}</button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          ))}
+          <CustomIngredientList custom={custom} onCustom={onCustom} onForgetCustom={onForgetCustom} />
         </div>
 
         <div className="space-y-2">

@@ -1,7 +1,7 @@
 "use client";
 import { aiDairy } from "../../lib/dairy";
 import { aiFetch } from "../../lib/aiFetch";
-import { Suspense, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { IngredientSearch } from "../../components/AddIngredientSheet";
 import { BarcodeLookup } from "../../components/BarcodeLookup";
@@ -23,6 +23,7 @@ import type { FoodItem, Ingredient } from "../../lib/types";
 import { Icon } from "../../components/Icon";
 import Link from "next/link";
 import { buildAddUrl, cleanPrefill } from "../../lib/addSheet";
+import { takeHandoff } from "../../lib/sheetHandoff";
 
 type Mode = "photo" | "text" | "manual" | "barcode" | "search";
 
@@ -56,6 +57,49 @@ function AddInner() {
   const galleryRef = useRef<HTMLInputElement>(null);
 
   const aiReady = !!ai && (ai.configured || ai.mock);
+
+  // Round 47: the Add food sheet hands over ONE chosen food. We pick it up once and go straight to the review.
+  const fromSheet = mode === "search" && search.get("from") === "sheet";
+  const [waitingHandoff, setWaitingHandoff] = useState(fromSheet);
+  const startedRef = useRef(false);
+  useEffect(() => {
+    if (startedRef.current) return;
+    startedRef.current = true;
+    // (next tick: the page paints its quiet blank state first, then moves on)
+    queueMicrotask(() => {
+    if (fromSheet) {
+      let store: Storage | null = null;
+      try {
+        store = window.sessionStorage;
+      } catch {
+        store = null;
+      }
+      const ing = takeHandoff(store, Date.now());
+      const item = ing ? ingredientToItem(ing, newId("it"), lang, cleanBufferPct(goals.calorieBuffer)) : null;
+      if (item) {
+        setDraft((d) => ({ ...d, title: item.name, items: [item] }));
+        setStartEdit(null);
+        setStep("review");
+      }
+      // No / old / broken hand-over: just show the normal search page (nothing is lost).
+      setWaitingHandoff(false);
+    } else if (mode === "search" && search.get("create") === "1" && prefill) {
+      createCustomFood(prefill);
+    } else if (mode === "text" && search.get("auto") === "1" && prefill) {
+      // She tapped "Let AI calculate": that tap is the go-ahead. Take the switch out of the link so a refresh does not ask again.
+      try {
+        const u = new URL(window.location.href);
+        u.searchParams.delete("auto");
+        window.history.replaceState(window.history.state, "", u.toString());
+      } catch {
+        /* fine */
+      }
+      void analyze();
+    }
+    });
+    // Runs once on arrival only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /** Camera adds one picture; the album can add several. Up to 4 in all. */
   async function onFiles(list: FileList | null) {
@@ -208,7 +252,7 @@ function AddInner() {
 
       {step === "input" && mode === "barcode" && <BarcodeLookup onPick={pickBarcode} onManual={goManual} />}
 
-      {step === "input" && mode === "search" && (
+      {step === "input" && mode === "search" && !waitingHandoff && (
         <IngredientSearch
           food
           initialQuery={prefill}
