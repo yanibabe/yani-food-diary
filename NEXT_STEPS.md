@@ -1244,3 +1244,5 @@ several photos, backup+restore with extras. Needs her OK before pushing.
 ### Round 43 DEPLOYED (2026-11-17, b3ab42e, Vercel success) with her OK
 Live: home 200, status ok, /api/analyze 401 without passcode, live add-photo code has extraPhotoIds + multi inputs.
 She tries on iPhone: pick 3 photos from album, remove one, analyze, save, view extras; one photo still shows labels.
+
+✅ Round 43 tried on her iPhone (2026-11-17): she said "ลองแล้ว ใช้ได้เลย" (works). Details of what she tried are not known.
