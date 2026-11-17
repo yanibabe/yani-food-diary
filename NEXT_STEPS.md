@@ -1399,3 +1399,4 @@ Now: Add food → one row of three small tiles (Water n/goal with a quick +1 gla
 Files: app/components/HomeTiles.tsx (new), app/components/ShareDayButton.tsx (`tile` prop), app/page.tsx (order), tests/round60-home-order.test.ts (4).
 381 tests pass, tsc clean, lint 0 errors, build OK. Mock browser (phone size): tiles row works, +1 glass updates the tile, both sheets open and close, chart shows 7 bars, old cards gone from the page.
 NOT verified: real iPhone, the two-tile case on an empty day by eye, English text, dark/long numbers in a tile (e.g. 12/12 glasses, avg 10,000), the Share sheet opened from the tile.
+Round 60 DEPLOYED (2026-11-17, d0481fd): Vercel build succeeded; the tile code (home-water-plus) is in the live bundle. Next: she tries the home page on her iPhone.
