@@ -1348,3 +1348,5 @@ Her ask: a ChatGPT-like chat to use BEFORE eating (e.g. "ข้าวหน้�
 - Suggestion with numbers → button "เพิ่มลงบันทึก" → review layer as an AI ESTIMATE (Smart Calorie Buffer rules) → nothing saved until she saves.
 347 tests, tsc, lint 0 errors, build OK, mock browser OK. Not verified: real iPhone drag/keyboard/swipe-back, real AI quality + passcode, rotation. Model constant stays google/gemini-3.8-flash (her choice for this app).
 Mock reply wording "-819 kcal left" is mock-only.
+
+### Round 54 DEPLOYED (2026-11-17, 5e89331, Vercel success) with her OK. Live: main pages 200, /api/status ok (not mock), /api/chat 401 without passcode, fab + chat code present. She tries on iPhone (real AI + passcode untested by me).
