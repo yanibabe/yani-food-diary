@@ -297,7 +297,6 @@ function TodayInner() {
 
 
       <Sheet
-        leaving={nav.pending !== null}
         open={addOpen}
         keyboardSafe
         onClose={() => setAddOpen(false)}

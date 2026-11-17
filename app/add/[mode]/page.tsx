@@ -242,7 +242,7 @@ function AddInner() {
             : tr("กรอกเอง", "Enter it myself");
 
   return (
-    <main className="page page-enter">
+    <main className="page">
       <header className="mb-4 flex items-center gap-3">
         <button className="grid h-11 w-11 place-items-center rounded-full bg-paper" onClick={() => router.back()} aria-label={tr("กลับ", "Back")}>
           <Icon name="caret-left" className="h-5 w-5" />
