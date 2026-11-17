@@ -1260,3 +1260,5 @@ app/lib/searchFood.ts converts Ingredient→FoodItem (saved as kind "manual"). B
 (AI guessed piece weight); typed g/ml = no buffer (her Round 40 rule). 277 tests, tsc, lint 0 errors, build OK, mock browser OK.
 Not verified: iPhone/real keyboard, AI/USDA rows by hand. Add-food sheet has an empty cell (6–7 tiles).
 NEXT WISH (not started): "ask first" chat — type a food, get kcal + advice, add to diary only if she wants. Ask her design questions one at a time.
+
+### Round 44 DEPLOYED (2026-11-17, 4212b6a, Vercel success) with her OK. Live: home 200, /add/search 200, new search code present. She tries on iPhone.
