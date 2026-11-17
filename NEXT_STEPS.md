@@ -1357,3 +1357,8 @@ Mock reply wording "-819 kcal left" is mock-only.
 353 tests, tsc, lint 0 errors, build OK, mock browser OK. Not verified: real iPhone, very long day, caption on a dark background, share picture on an empty day (button hidden there).
 
 ### Round 55 DEPLOYED (2026-11-17, 653ea22, Vercel success) with her OK. Live: main pages 200, caption "ถามผู้ช่วย" present. She tries on iPhone.
+
+## Round 56 (2026-11-17) — calmer chat screen ✅ BUILT, committed locally, NOT deployed
+Her ask: chat easy to approach, no cluttered text, see at a glance what can be asked. Empty state: title "ถามผู้ช่วย / Ask AI", one heading "อยากกินอะไรวันนี้?", one helper line,
+3 icon chips (tap = send), short placeholder, round arrow-up send. The two "AI เห็น: …" lines are now ONE card behind the ⓘ button (same meaning, TH+EN). "New chat" only when there are messages.
+356 tests, tsc, lint 0 errors, build OK, mock browser OK (TH + EN). Not verified: real iPhone keyboard/touch. FAB aria-label still says "ถามก่อนกิน" (left on purpose).

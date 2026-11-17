@@ -4,7 +4,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { aiFetch } from "../lib/aiFetch";
-import { buildChatContext, cleanSuggestion, buildChatRequest, CHAT_KEY, MAX_TEXT, parseChat, serializeChat, type ChatMsg, type Suggestion } from "../lib/foodChat";
+import { buildChatContext, cleanSuggestion, buildChatRequest, CHAT_EXAMPLES, CHAT_PRIVACY, toggleInfo, CHAT_KEY, MAX_TEXT, parseChat, serializeChat, type ChatMsg, type Suggestion } from "../lib/foodChat";
 import { thaiDateKey } from "../lib/date";
 import { validWeight } from "../lib/body";
 import { proteinTargetG } from "../lib/energy";
@@ -33,6 +33,7 @@ export function FoodChat({ onBack, onAdd }: { onBack: () => void; onAdd: (s: Sug
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmNew, setConfirmNew] = useState(false);
+  const [infoOpen, setInfoOpen] = useState(false);
   const [vv, setVv] = useState<{ top: number; height: number } | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const busyRef = useRef(false);
@@ -128,30 +129,40 @@ export function FoodChat({ onBack, onAdd }: { onBack: () => void; onAdd: (s: Sug
 
   const last = msgs[msgs.length - 1];
   const waitingForAnswer = !loading && !error && last?.role === "user"; // e.g. she closed the chat before the answer came
-  const examples = [
-    tr("ข้าวหน้าเนื้อกี่แคล กินดีไหม", "How many calories in a beef rice bowl? Is it OK to eat?"),
-    tr("วันนี้ควรกินอะไรเพิ่ม", "What should I eat more of today?"),
-    tr("เหลืออีกเท่าไหร่ กินอะไรดี", "How much is left today? What should I eat?"),
-  ];
-
   return (
     <div
       className="add-layer fixed inset-x-0 z-[45] flex flex-col"
       style={vv ? { top: vv.top, height: vv.height } : { top: 0, bottom: 0 }}
       role="dialog"
       aria-modal="true"
-      aria-label={tr("ถามก่อนกิน", "Ask before eating")}
+      aria-label={tr("ถามผู้ช่วย", "Ask AI")}
       data-testid="food-chat"
     >
       <header className="mx-auto flex w-full max-w-[560px] shrink-0 items-center gap-2 px-4 pb-2" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 12px)" }}>
         <button className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-paper" onClick={onBack} aria-label={tr("กลับ", "Back")} data-testid="chat-back">
           <Icon name="caret-left" className="h-5 w-5" />
         </button>
-        <h1 className="min-w-0 flex-1 truncate text-[20px] font-semibold">{tr("ถามก่อนกิน", "Ask before eating")}</h1>
-        <button className="shrink-0 rounded-full bg-white/60 px-3 py-2 text-[13px] text-muted disabled:opacity-40" onClick={() => (msgs.length ? setConfirmNew(true) : newChat())} disabled={!msgs.length && !text} data-testid="chat-new">
-          {tr("เริ่มใหม่", "New chat")}
+        <h1 className="min-w-0 flex-1 truncate text-[20px] font-semibold">{tr("ถามผู้ช่วย", "Ask AI")}</h1>
+        {msgs.length > 0 && (
+          <button className="shrink-0 rounded-full bg-white/60 px-3 py-1.5 text-[12.5px] text-muted" onClick={() => setConfirmNew(true)} data-testid="chat-new">
+            {tr("เริ่มใหม่", "New chat")}
+          </button>
+        )}
+        <button className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white/60 text-muted" onClick={() => setInfoOpen(toggleInfo)} aria-label={tr("ข้อมูลความเป็นส่วนตัว", "Privacy info")} aria-expanded={infoOpen} data-testid="chat-info">
+          <Icon name="info" className="h-5 w-5" />
         </button>
       </header>
+
+      {infoOpen && (
+        <>
+          <div className="fixed inset-0 z-0" onClick={() => setInfoOpen(false)} aria-hidden data-testid="chat-info-backdrop" />
+          <div className="relative z-10 mx-auto w-full max-w-[560px] px-4 pb-2">
+            <p className="rounded-2xl border border-white/80 bg-white/90 px-4 py-3 text-[13px] text-muted" role="note" data-testid="chat-sees">
+              {tr(CHAT_PRIVACY.th, CHAT_PRIVACY.en)}
+            </p>
+          </div>
+        </>
+      )}
 
       {confirmNew && (
         <div className="mx-auto mb-2 flex w-full max-w-[560px] items-center gap-2 px-4 text-[14px]" data-testid="chat-new-confirm">
@@ -168,21 +179,19 @@ export function FoodChat({ onBack, onAdd }: { onBack: () => void; onAdd: (s: Sug
       <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain" data-testid="chat-list">
         <div className="mx-auto w-full max-w-[560px] space-y-3 px-4 py-2">
           {msgs.length === 0 && (
-            <div className="space-y-3 pt-4" data-testid="chat-empty">
-              <p className="text-[15px] text-muted">
-                {tr("ถามก่อนกินได้เลย เช่น อยากกินอะไร กี่แคล กินดีไหม ยังไม่บันทึกอะไรจนกว่าจะกดเพิ่มเอง", "Ask before you eat: what you want, how many calories, is it OK. Nothing is saved until you choose to add it.")}
-              </p>
-              <p className="text-[12.5px] text-muted" data-testid="chat-sees">
-                {tr(
-                  "AI เห็น: อายุ น้ำหนัก ส่วนสูง เป้า และสิ่งที่กินวันนี้ (ไม่ส่งชื่อ รูป หรือประวัติเก่า)",
-                  "AI sees: age, weight, height, targets and what you ate today (not your name, photos or older history)",
-                )}
-              </p>
-              {examples.map((q) => (
-                <button key={q} className="block w-full rounded-2xl border border-white/80 bg-white/55 px-4 py-3 text-left text-[15px]" onClick={() => send(q)} data-testid="chat-example">
-                  {q}
-                </button>
-              ))}
+            <div className="space-y-4 pt-6" data-testid="chat-empty">
+              <div className="space-y-1.5">
+                <h2 className="text-[22px] font-semibold leading-snug">{tr("อยากกินอะไรวันนี้?", "What are you in the mood to eat?")}</h2>
+                <p className="text-[14.5px] text-muted">{tr("ถามแคลอรี่ ขอไอเดียมื้ออาหาร หรือปรึกษาเรื่องกินได้เลย", "Ask about calories, get meal ideas, or talk through what to eat.")}</p>
+              </div>
+              <div className="space-y-2">
+                {CHAT_EXAMPLES.map((x) => (
+                  <button key={x.icon} className="flex w-full items-center gap-3 rounded-2xl border border-white/80 bg-white/55 px-4 py-3 text-left text-[15px]" onClick={() => send(tr(x.th, x.en))} data-testid="chat-example">
+                    <Icon name={x.icon} className="h-5 w-5 shrink-0 text-muted" />
+                    <span className="min-w-0 flex-1">{tr(x.th, x.en)}</span>
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 
@@ -262,19 +271,14 @@ export function FoodChat({ onBack, onAdd }: { onBack: () => void; onAdd: (s: Sug
                 send(text);
               }
             }}
-            placeholder={tr("พิมพ์ถามได้เลย เช่น ข้าวหน้าเนื้อกี่แคล", "Ask anything, e.g. calories in a beef rice bowl")}
+            placeholder={tr("พิมพ์ถามได้เลย", "Ask anything")}
             aria-label={tr("ข้อความ", "Message")}
             data-testid="chat-input"
           />
-          <button className="btn-primary h-12 shrink-0 px-5" disabled={!text.trim() || loading} data-testid="chat-send">
-            {tr("ส่ง", "Send")}
+          <button className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-ink text-white disabled:opacity-40" disabled={!text.trim() || loading} aria-label={tr("ส่ง", "Send")} data-testid="chat-send">
+            <Icon name="arrow-up" className="h-5 w-5" />
           </button>
         </div>
-        {msgs.length > 0 && (
-          <p className="mx-auto max-w-[560px] px-4 pt-1.5 text-[11.5px] text-muted">
-            {tr("AI เห็น: อายุ น้ำหนัก ส่วนสูง เป้า และสิ่งที่กินวันนี้ (ไม่ส่งชื่อ รูป หรือประวัติเก่า)", "AI sees: age, weight, height, targets and what you ate today (not your name, photos or older history)")}
-          </p>
-        )}
       </form>
     </div>
   );

@@ -217,3 +217,21 @@ export function suggestionToItem(s: Suggestion, id: string, lang: Lang = "th", b
   if (missing.length) item.missing = missing;
   return startBuffer(item, cleanBufferPct(bufferPct));
 }
+
+// Round 56: the calmer empty state. Three short example questions (tap = send) and the one-line privacy note
+// that now lives behind the (i) button instead of being always on screen.
+export const CHAT_EXAMPLES: { icon: "flame" | "leaf" | "scales"; th: string; en: string }[] = [
+  { icon: "flame", th: "ข้าวหน้าเนื้อกี่แคล", en: "How many calories in a beef rice bowl?" },
+  { icon: "leaf", th: "วันนี้ควรกินอะไรเพิ่ม", en: "What should I eat more of today?" },
+  { icon: "scales", th: "วันนี้เหลืออีกเท่าไหร่", en: "How much do I have left today?" },
+];
+
+export const CHAT_PRIVACY = {
+  th: "AI เห็น: อายุ น้ำหนัก ส่วนสูง เป้า และสิ่งที่กินวันนี้ (ไม่ส่งชื่อ รูป หรือประวัติเก่า)",
+  en: "AI sees: age, weight, height, targets and what you ate today (not your name, photos or older history)",
+};
+
+/** The (i) button: tap opens the privacy card, tap again closes it. */
+export function toggleInfo(open: boolean): boolean {
+  return !open;
+}
