@@ -44,6 +44,8 @@ export type AddFlowProps = {
   create?: boolean;
   /** Layer only: the chosen food, passed in memory. */
   handoff?: Ingredient | null;
+  /** Round 54: a ready-made item (an AI estimate from the "ask before eating" chat). Goes straight to the review; nothing is saved until she saves there. */
+  initialItem?: FoodItem | null;
   /** In the Today layer: no router, the layer closes itself. */
   embedded?: boolean;
   /** Header back button. */
@@ -54,14 +56,14 @@ export type AddFlowProps = {
   onSaved: () => void;
 };
 
-export function AddFlow({ mode, date, dateParam, prefill, auto = false, fromSheet = false, create = false, handoff = null, embedded = false, onBack, onCancel, onSaved }: AddFlowProps) {
+export function AddFlow({ mode, date, dateParam, prefill, auto = false, fromSheet = false, create = false, handoff = null, initialItem = null, embedded = false, onBack, onCancel, onSaved }: AddFlowProps) {
   const { upsertEntry, goals } = useStore();
   const ai = useAiStatus();
   const { tr, lang } = useLang();
   const defaultUnit = tr("จาน", "plate");
 
   // Layer: the chosen food is already here, so the very first frame is the review (nothing is saved yet).
-  const [handoffItem] = useState<FoodItem | null>(() => (handoff ? ingredientToItem(handoff, newId("it"), lang, cleanBufferPct(goals.calorieBuffer)) : null));
+  const [handoffItem] = useState<FoodItem | null>(() => (initialItem ? initialItem : handoff ? ingredientToItem(handoff, newId("it"), lang, cleanBufferPct(goals.calorieBuffer)) : null));
   const autoStart = mode === "text" && auto && !!prefill;
 
   const [photos, setPhotos] = useState<string[]>([]);

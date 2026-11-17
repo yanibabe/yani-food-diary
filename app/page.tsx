@@ -12,6 +12,7 @@ import { guessSlot, shiftDateKey, shortDayLabel, thaiDateKey, thaiDateLabel } fr
 import { buildAddUrlWith, cleanPrefill, showWholeDishRow } from "./lib/addSheet";
 import { closeAddLayerAction, layerAfterPop, layerHistoryState, openAddLayer, type AddLayer } from "./lib/addLayer";
 import { AddFlow } from "./components/AddFlow";
+import { useReportOverlay } from "./lib/overlayFlag";
 import { beginNav, endNav, IDLE_NAV, isPending, NAV_GIVE_UP_MS, type NavState } from "./lib/navGuard";
 import { IngredientSearch } from "./components/AddIngredientSheet";
 import type { Ingredient } from "./lib/types";
@@ -178,6 +179,7 @@ function TodayInner() {
       if (window.scrollY !== y) window.scrollTo(0, y); // Today is where she left it
     };
   }, [layer]);
+  useReportOverlay("today", addOpen || layer !== null); // Round 54: the floating chat button hides while the Add sheet / a layer is up
   const openAdd = () => {
     setAgainView(false);
     setAgainQuery("");

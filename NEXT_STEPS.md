@@ -1337,3 +1337,14 @@ Not verified: real iPhone (swipe-back, keyboard, safe areas), Cancel + date-shif
 ### Round 53 DEPLOYED (2026-11-17, a9c822c, Vercel success) with her OK. Live: main pages 200, `add-layer` code present. She tries on iPhone.
 
 ✅ Round 53 tried on her iPhone (2026-11-17): she said "ลงแล้วใช้ได้เลยนะ" (works). Photo/barcode tiles still normal navigation (could get the same in-place layer if she asks).
+
+## Round 54 (2026-11-17) — floating character button + "ถามก่อนกิน" personal-assistant chat ✅ BUILT, committed locally, NOT deployed
+Her ask: a ChatGPT-like chat to use BEFORE eating (e.g. "ข้าวหน้าเนื้อกี่แคล กินดีไหม"), also other questions, personal assistant using her recorded data.
+- Floating draggable round button with her fixed character logo (ChatFab.tsx): snaps to left/right edge, position in yfd:v1:chatFab, shown on Today/Recipes/Profile,
+  hidden on /welcome, camera/barcode pages, and while the Add food sheet / any layer / the chat is open. No animations.
+- Chat (FoodChat.tsx) opens instantly as an in-place layer (Back closes it); messages in yfd:v1:chat (max ~30, in backup; old backups keep current chat). "เริ่มใหม่" asks first.
+- /api/chat (passcode like other AI routes). The AI SEES (she approved): age, sex, height, weight, goal, kcal + protein targets, today's totals, remaining kcal, today's FOOD NAMES with kcal,
+  avoidDairy flag only if on. NEVER sent: name, email, photos, notes, older days. A note in the chat says what the AI sees. Prompt: warm, short, general food/lifestyle OK, no diagnosis / medication advice.
+- Suggestion with numbers → button "เพิ่มลงบันทึก" → review layer as an AI ESTIMATE (Smart Calorie Buffer rules) → nothing saved until she saves.
+347 tests, tsc, lint 0 errors, build OK, mock browser OK. Not verified: real iPhone drag/keyboard/swipe-back, real AI quality + passcode, rotation. Model constant stays google/gemini-3.8-flash (her choice for this app).
+Mock reply wording "-819 kcal left" is mock-only.

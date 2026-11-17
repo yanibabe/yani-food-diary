@@ -6,6 +6,7 @@ import { DataProvider } from "./lib/store";
 import { LangProvider } from "./lib/lang";
 import { TabBar } from "./components/TabBar";
 import { OnboardingGate } from "./components/OnboardingGate";
+import { ChatFab } from "./components/ChatFab";
 import { PasscodeBox } from "./components/PasscodeBox";
 
 const thai = Noto_Sans_Thai({
@@ -70,6 +71,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
               <OnboardingGate>
                 {children}
                 <TabBar />
+                <ChatFab />
               </OnboardingGate>
               <PasscodeBox />
             </Suspense>

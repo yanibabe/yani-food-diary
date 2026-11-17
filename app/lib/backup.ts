@@ -16,11 +16,13 @@ export const BACKUP_KEYS = {
   // Round 42: her saved custom ingredients + the foods she usually picks (names and numbers only).
   customIngredients: "yfd:v1:customIngredients",
   ingredientPrefs: "yfd:v1:ingredientPrefs",
+  // Round 54: the current "ask before eating" chat (last ~30 messages).
+  chat: "yfd:v1:chat",
 } as const;
 
 export type BackupPart = keyof typeof BACKUP_KEYS;
 /** Parts added after the first backups. Older callers / files may leave them out (read as "nothing saved"). */
-type NewerPart = "customIngredients" | "ingredientPrefs";
+type NewerPart = "customIngredients" | "ingredientPrefs" | "chat";
 
 export type Backup = {
   app: "snapcal";
@@ -33,11 +35,11 @@ export type Backup = {
 };
 
 export function makeBackup(data: Record<Exclude<BackupPart, NewerPart>, string | null> & Partial<Record<NewerPart, string | null>>, photos: Record<string, string>, now = Date.now()): Backup {
-  return { app: "snapcal", version: 1, savedAt: now, data: { ...data, customIngredients: data.customIngredients ?? null, ingredientPrefs: data.ingredientPrefs ?? null }, photos };
+  return { app: "snapcal", version: 1, savedAt: now, data: { ...data, customIngredients: data.customIngredients ?? null, ingredientPrefs: data.ingredientPrefs ?? null, chat: data.chat ?? null }, photos };
 }
 
 /** Parts that older backup files do not have. Restoring such a file must not wipe what is on the phone now. */
-export const KEEP_IF_ABSENT: readonly BackupPart[] = ["customIngredients", "ingredientPrefs"];
+export const KEEP_IF_ABSENT: readonly BackupPart[] = ["customIngredients", "ingredientPrefs", "chat"];
 
 /**
  * What restore does with ONE saved part:
@@ -98,7 +100,7 @@ export function parseBackup(text: string, lang: Lang = "th"): { ok: true; backup
     try {
       const parsed = k === "lang" ? raw : JSON.parse(raw);
       if (k === "lang" && raw !== "th" && raw !== "en") return bad;
-      if ((k === "entries" || k === "recipes" || k === "body" || k === "water" || k === "labelFixes" || k === "customIngredients" || k === "ingredientPrefs") && !Array.isArray(parsed)) return bad;
+      if ((k === "entries" || k === "recipes" || k === "body" || k === "water" || k === "labelFixes" || k === "customIngredients" || k === "ingredientPrefs" || k === "chat") && !Array.isArray(parsed)) return bad;
       if ((k === "goals" || k === "buddy") && (typeof parsed !== "object" || parsed === null || Array.isArray(parsed))) return bad;
     } catch {
       return bad;
