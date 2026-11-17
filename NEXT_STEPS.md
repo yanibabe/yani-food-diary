@@ -1262,3 +1262,9 @@ Not verified: iPhone/real keyboard, AI/USDA rows by hand. Add-food sheet has an 
 NEXT WISH (not started): "ask first" chat — type a food, get kcal + advice, add to diary only if she wants. Ask her design questions one at a time.
 
 ### Round 44 DEPLOYED (2026-11-17, 4212b6a, Vercel success) with her OK. Live: home 200, /add/search 200, new search code present. She tries on iPhone.
+
+## Round 45 (2026-11-17) — "บันทึกเป็นวัตถุดิบของฉัน" on /add/search ✅ BUILT, committed locally, NOT deployed
+After "+ สร้างวัตถุดิบเอง" the manual editor has a Save-as-my-ingredient button (g/ml → per 100; other units → per 1 unit; empty = unknown).
+Saved ones come first in later searches (search page + recipe sheet, "ของฉัน" tag, Manage to edit/delete). Duplicate name → "use the one I already have".
+In the create-custom flow protein/carbs/fat now start as unknown. 289 tests, tsc, lint 0 errors, build OK. Not verified: Manage edit/delete clicks, iPhone.
+NEXT (she picked layout A, 2026-11-17): simplify Add food sheet — one search box on top (typing → /add/search with the text), 2 big tiles (ถ่ายรูป, บาร์โค้ด), small links "กินซ้ำ · สูตรของฉัน · กรอกเอง". The old "พิมพ์ให้ AI ช่วย" tile goes away; it becomes the last row in search results when nothing is found (the AI row already exists).

@@ -63,7 +63,10 @@ export function ItemEditor({
   onDelete,
   onDone,
   showDairy,
+  extra,
 }: {
+  /** Round 45: something small shown above the Delete / Done buttons (the page decides). */
+  extra?: React.ReactNode;
   showDairy?: boolean;
   item: FoodItem;
   onChange: (it: FoodItem) => void;
@@ -184,6 +187,7 @@ export function ItemEditor({
         </label>
       )}
       {item.note && <p className="rounded-2xl bg-warn px-4 py-3 text-[14px] text-warn-ink">{item.note}</p>}
+      {extra}
       <div className="flex gap-3 pt-1">
         <button className="btn-soft flex-1 !border-danger !text-danger" onClick={onDelete}>{tr("ลบรายการนี้", "Delete this item")}</button>
         <button className="btn-primary flex-1" onClick={onDone}>{tr("เสร็จ", "Done")}</button>
@@ -206,7 +210,10 @@ export function MealReview({
   startEditingId,
   entrySource,
   belowPhoto,
+  editorExtra,
 }: {
+  /** Round 45: optional extra block inside the item editor (e.g. "Save as my ingredient"). `replace` swaps the item in the list. */
+  editorExtra?: (item: FoodItem, replace: (it: FoodItem) => void) => React.ReactNode;
   /** Round 43: extra photos of the meal, shown right under the cover photo. */
   belowPhoto?: React.ReactNode;
   /** Round 39: how the saved meal was made, to tell where older items' numbers came from. */
@@ -585,6 +592,7 @@ export function MealReview({
           <ItemEditor
             showDairy={avoidDairy}
             item={editing}
+            extra={editorExtra?.(editing, (it) => setItems((p) => p.map((x) => (x.id === it.id ? it : x))))}
             onChange={(it) => setItems((p) => p.map((x) => (x.id === it.id ? it : x)))}
             onDelete={() => {
               setItems((p) => p.filter((x) => x.id !== editing.id));

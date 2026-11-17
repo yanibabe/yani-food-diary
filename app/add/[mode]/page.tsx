@@ -5,6 +5,7 @@ import { Suspense, useRef, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { IngredientSearch } from "../../components/AddIngredientSheet";
 import { BarcodeLookup } from "../../components/BarcodeLookup";
+import { SaveAsMine } from "../../components/SaveAsMine";
 import { MealReview, type MealDraft } from "../../components/MealReview";
 import { useAiStatus, WaitPopup } from "../../components/ui";
 import { guessSlot, thaiDateKey } from "../../lib/date";
@@ -46,6 +47,7 @@ function AddInner() {
   });
   const [question, setQuestion] = useState<string | null>(null);
   const [mock, setMock] = useState(false);
+  const [customId, setCustomId] = useState<string | null>(null); // Round 45: the item made by "+ Add custom ingredient"
   const [startEdit, setStartEdit] = useState<string | null>(mode === "manual" ? draft.items[0]?.id ?? null : null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
@@ -133,7 +135,9 @@ function AddInner() {
 
   /** "+ Add custom ingredient": the same manual editor, with the typed name already in. */
   function createCustomFood(name: string) {
-    const first = { ...blankItem(defaultUnit), name: name.trim() };
+    // Round 45: numbers she leaves empty stay unknown (not a real 0), so a saved copy keeps them unknown too.
+    const first: FoodItem = { ...blankItem(defaultUnit), name: name.trim(), missing: ["protein", "carbs", "fat"] };
+    setCustomId(first.id);
     setDraft((d) => ({ ...d, title: first.name, items: [first] }));
     setStartEdit(first.id);
     setStep("review");
@@ -327,6 +331,7 @@ function AddInner() {
           onSave={save}
           onCancel={() => router.push(`/?date=${date}`)}
           startEditingId={startEdit}
+          editorExtra={mode === "search" && customId ? (it, replace) => (it.id === customId ? <SaveAsMine item={it} replace={replace} /> : null) : undefined}
         />
       )}
     </main>
