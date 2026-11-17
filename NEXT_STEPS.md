@@ -1418,3 +1418,4 @@ Files: app/page.tsx, app/profile/page.tsx, tests/round62-style.test.ts (3 new), 
 388 tests pass, tsc clean, lint 0 errors, build OK. Mock browser (phone size): home looks light, profile card shows avatar, "Test", ลดน้ำหนัก, 34 / 160 / 60.
 NOT verified: real iPhone (top safe-area spacing on the profile card), English labels, a very long name (truncates), a profile with no reason or no body values.
 Still open: phone home-screen icon swap — waiting for her logo file (see Round 61 note).
+Round 62 DEPLOYED (2026-11-17, 15b5d5c): Vercel build succeeded; the lighter header and the profile card are in the live bundles. Next: she tries home + profile on her iPhone. Phone-icon swap still waiting for her logo file.
