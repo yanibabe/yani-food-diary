@@ -1382,3 +1382,4 @@ The three remaining Add food sheet buttons (ถ่ายรูป, บาร์�
 Files: app/lib/addLayer.ts (new kinds photo/barcode/manual + layerMode()), app/page.tsx (tiles + layer mode), tests/round58-layers.test.ts (4 new).
 371 tests pass, tsc clean, lint 0 errors (3 old warnings), build OK, mock browser check OK (layer there in ~40 ms, path stays "/", Back closes each one, no console errors).
 NOT verified: real iPhone camera/gallery inside the layer, real barcode camera, saving a meal from the manual layer by hand, swipe-back on iPhone. Nutrition-data work (Health Dept table, Thai dish set, FOOD_REF origin check) is on hold on purpose until the Health Dept email is answered.
+Round 58 DEPLOYED (2026-11-17, ef57a3a): Vercel build succeeded; the new layer code is in the live home-page bundle. Not clicked through on the live site (fresh browser lands on /welcome). Next: she tries the three buttons on her iPhone.
