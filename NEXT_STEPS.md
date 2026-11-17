@@ -1290,3 +1290,6 @@ Her iPhone screenshots: (1) white rectangle around the search box (sticky strip 
 (2) Thai dish "ข้าวผัดกะเพรา" showed many English USDA "fried rice" rows marked "name differs" (USDA has no Thai dishes; AI row is the right answer for dishes)
 → non-close rows go behind one link "ดูผลใกล้เคียงอื่น (N)", identical name+numbers de-duplicated; close/custom/recent/reference rows never hidden.
 317 tests, tsc, lint 0 errors, build OK, mock browser OK. Not verified: real iPhone, real USDA, sticky box with a long scrolled list.
+
+### Round 48 DEPLOYED (2026-11-17, 83c5d6e, Vercel success) with her OK. Live: home 200, new "ดูผลใกล้เคียงอื่น" code present. She tries on iPhone.
+Open idea (she said "not now"): email Mahidol INMU for Thai Food Composition permission. App has no Thai dish database (39 basic ingredients; AI covers dishes).
