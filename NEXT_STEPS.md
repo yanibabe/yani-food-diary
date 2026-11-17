@@ -1316,3 +1316,5 @@ no next.config option needed in Next 16.3+). Old screen stays until the new one 
 when supported (fallback stays for unsupported browsers); reduced-motion off. Add food sheet prefetches /add/text|search|photo|barcode|manual|recipes on open (app/lib/viewTransition.ts).
 323 tests, tsc, lint 0 errors, build OK. Verified in desktop browser: startViewTransition on every trip, no blank frame. NOT verified: real iPhone (Safari 18.2+ expected; 18.0/18.1 may switch instantly).
 Barcode route once took ~1 s in prod build (cause not found). Plan B if still not smooth: show the destination inside the same sheet (no route change).
+
+### Round 51 DEPLOYED (2026-11-17, b69e8cc, Vercel success) with her OK. Live: main pages 200, `page-melt` transition code present. She tries on iPhone (iOS 18.2+ expected for the full effect).
