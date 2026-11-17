@@ -5,6 +5,7 @@ import { MealReview } from "../../components/MealReview";
 import { useAiStatus } from "../../components/ui";
 import { deletePhoto, getPhoto } from "../../lib/photos";
 import { photoStillUsed } from "../../lib/repeat";
+import { entryPhotoIds } from "../../lib/mealPhotos";
 import { useLang } from "../../lib/lang";
 import { useStore } from "../../lib/store";
 import { Icon } from "../../components/Icon";
@@ -27,6 +28,18 @@ export default function EntryPage() {
       live = false;
     };
   }, [photoId]);
+  // Round 43: extra photos (after the cover). Older meals have none.
+  const extraKey = (entry?.extraPhotoIds ?? []).join(",");
+  const [extras, setExtras] = useState<{ key: string; srcs: string[] } | null>(null);
+  useEffect(() => {
+    if (!extraKey) return;
+    let live = true;
+    Promise.all(extraKey.split(",").map((x) => getPhoto(x))).then((r) => live && setExtras({ key: extraKey, srcs: r.filter((x): x is string => !!x) }));
+    return () => {
+      live = false;
+    };
+  }, [extraKey]);
+  const extraSrcs = extraKey && extras?.key === extraKey ? extras.srcs : [];
   const photoLoaded = !photoId || loaded?.id === photoId;
   const photo = photoId && loaded?.id === photoId ? loaded.src : null;
 
@@ -56,6 +69,16 @@ export default function EntryPage() {
         </p>
       )}
       <MealReview
+        belowPhoto={
+          extraSrcs.length > 0 ? (
+            <div className="-mx-1 flex snap-x gap-2 overflow-x-auto px-1 pb-1" data-testid="extra-photos" aria-label={tr("รูปอื่น ๆ ของมื้อนี้", "More photos of this meal")}>
+          {extraSrcs.map((src, i) => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img key={i} src={src} alt={tr("รูปอาหาร", "Food photo")} className="h-28 w-28 shrink-0 snap-start rounded-2xl object-cover" />
+          ))}
+            </div>
+          ) : null
+        }
         entrySource={entry.source}
         photo={photo}
         initial={{ title: entry.title, slot: entry.slot, items: entry.items }}
@@ -68,7 +91,7 @@ export default function EntryPage() {
         }}
         onCancel={() => router.push(`/?date=${entry.date}`)}
         onDelete={() => {
-          if (entry.photoId && !photoStillUsed(entries, entry.photoId, entry.id)) deletePhoto(entry.photoId);
+          for (const pid of entryPhotoIds(entry)) if (!photoStillUsed(entries, pid, entry.id)) deletePhoto(pid);
           deleteEntry(entry.id);
           router.push(`/?date=${entry.date}`);
         }}

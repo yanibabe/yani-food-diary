@@ -299,7 +299,10 @@ export type Entry = {
   title: string;
   items: FoodItem[];
   source: "photo" | "text" | "recipe" | "manual" | "barcode";
+  /** The cover photo (the first one). */
   photoId: string | null;
+  /** Round 43: more photos of the same meal (after the cover). Missing on older meals. */
+  extraPhotoIds?: string[];
   recipe: RecipeLog | null;
   createdAt: number;
   updatedAt: number;

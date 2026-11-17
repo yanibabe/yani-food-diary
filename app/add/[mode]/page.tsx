@@ -9,6 +9,7 @@ import { useAiStatus, WaitPopup } from "../../components/ui";
 import { guessSlot, thaiDateKey } from "../../lib/date";
 import { useLang } from "../../lib/lang";
 import { blankItem, cleanBox, cleanNumber, newId } from "../../lib/nutrition";
+import { boxesForPhotoCount, MAX_MEAL_PHOTOS } from "../../lib/mealPhotos";
 import { compressImage, savePhoto } from "../../lib/photos";
 import { useStore } from "../../lib/store";
 import { foodToItem } from "../../lib/food/toItem";
@@ -32,7 +33,8 @@ function AddInner() {
   const { tr, lang } = useLang();
   const defaultUnit = tr("จาน", "plate");
 
-  const [photo, setPhoto] = useState<string | null>(null);
+  const [photos, setPhotos] = useState<string[]>([]);
+  const photo = photos[0] ?? null; // the cover
   const [note, setNote] = useState("");
   const [step, setStep] = useState<"input" | "loading" | "review">(mode === "manual" ? "review" : "input");
   const [error, setError] = useState<string | null>(null);
@@ -48,11 +50,19 @@ function AddInner() {
 
   const aiReady = !!ai && (ai.configured || ai.mock);
 
-  async function onFile(f: File | undefined) {
-    if (!f) return;
+  /** Camera adds one picture; the album can add several. Up to 4 in all. */
+  async function onFiles(list: FileList | null) {
+    const files = list ? Array.from(list) : []; // copy now: the list empties when the input is reset
+    if (!files.length) return;
     setError(null);
+    const room = MAX_MEAL_PHOTOS - photos.length;
+    const take = files.slice(0, Math.max(0, room));
+    if (files.length > take.length) setError(tr(`ใส่ได้สูงสุด ${MAX_MEAL_PHOTOS} รูป`, `Up to ${MAX_MEAL_PHOTOS} photos`));
     try {
-      setPhoto(await compressImage(f, 1280, 0.8, tr("อ่านรูปไม่ได้ ลองเลือกรูปอื่น", "Couldn't read this picture. Try another one.")));
+      const msg = tr("อ่านรูปไม่ได้ ลองเลือกรูปอื่น", "Couldn't read this picture. Try another one.");
+      const done: string[] = [];
+      for (const f of take) done.push(await compressImage(f, 1280, 0.8, msg));
+      setPhotos((old) => [...old, ...done].slice(0, MAX_MEAL_PHOTOS));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
@@ -62,7 +72,7 @@ function AddInner() {
     setError(null);
     setStep("loading");
     try {
-      const res = await aiFetch("/api/analyze", { image: mode === "photo" ? photo : null, text: note, lang }, lang);
+      const res = await aiFetch("/api/analyze", { images: mode === "photo" ? photos : [], text: note, lang }, lang);
       const data = await res.json().catch(() => null);
       if (!res.ok || !data?.result) {
         setError(data?.message ?? `${tr("เซิร์ฟเวอร์ตอบกลับ", "Server replied")} ${res.status}`);
@@ -91,7 +101,8 @@ function AddInner() {
         prov: provFromAi({ fromLabel: a.fromLabel === true, userAmount: (a as { userAmount?: boolean }).userAmount === true, estimated: Boolean(a.estimated), kind: a.kind }),
         // Round 40: her optional buffer (kcal only) for AI guesses; 0% by default. The AI's own kcal is kept.
       }, pct));
-      setDraft({ title: r.title || tr("อาหาร", "Meal"), slot: draft.slot, items });
+      // Boxes belong to one photo: with 2+ photos they are dropped (1 photo = same as before).
+      setDraft({ title: r.title || tr("อาหาร", "Meal"), slot: draft.slot, items: boxesForPhotoCount(items, photos.length) });
       setQuestion(r.question);
       setMock(Boolean(data.mock));
       setStep("review");
@@ -117,15 +128,20 @@ function AddInner() {
   }
 
   async function save(d: MealDraft) {
-    let photoId: string | null = null;
-    if (photo && mode === "photo") {
-      photoId = newId("ph");
-      try {
-        await savePhoto(photoId, photo);
-      } catch {
-        photoId = null; // still save the meal even if the photo can't be stored
+    // Save every photo; the first is the cover (photoId), the rest are extras.
+    const saved: string[] = [];
+    if (mode === "photo") {
+      for (const p of photos) {
+        const id = newId("ph");
+        try {
+          await savePhoto(id, p);
+          saved.push(id);
+        } catch {
+          /* still save the meal even if a photo can't be stored */
+        }
       }
     }
+    const photoId = saved[0] ?? null;
     const now = Date.now();
     upsertEntry({
       id: newId("en"),
@@ -135,6 +151,7 @@ function AddInner() {
       items: d.items,
       source: mode,
       photoId,
+      ...(saved.length > 1 ? { extraPhotoIds: saved.slice(1) } : {}),
       recipe: null,
       createdAt: now,
       updatedAt: now,
@@ -174,16 +191,43 @@ function AddInner() {
                   <Icon name="camera" className="h-16 w-16" />
                 </div>
               )}
+              {photos.length > 0 && (
+                <div className="px-4 pt-4" data-testid="photo-tray">
+                  <div className="flex flex-wrap gap-2">
+                    {photos.map((p, i) => (
+                      <div key={`${i}-${p.length}`} className="relative h-16 w-16 overflow-hidden rounded-xl">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={p} alt="" className="h-full w-full object-cover" />
+                        {i === 0 && photos.length > 1 && (
+                          <span className="absolute bottom-0 left-0 right-0 bg-black/55 text-center text-[10px] text-white">{tr("หน้าปก", "Cover")}</span>
+                        )}
+                        <button
+                          type="button"
+                          className="absolute right-0.5 top-0.5 grid h-6 w-6 place-items-center rounded-full bg-black/55 text-white"
+                          onClick={() => setPhotos((old) => old.filter((_, j) => j !== i))}
+                          aria-label={tr("เอารูปนี้ออก", "Remove this photo")}
+                          data-testid="photo-remove"
+                        >
+                          <Icon name="x" className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="mt-2 text-[12px] text-muted">
+                    {tr(`ใส่ได้สูงสุด ${MAX_MEAL_PHOTOS} รูปของมื้อเดียวกัน — รูปแรกเป็นหน้าปก`, `Up to ${MAX_MEAL_PHOTOS} photos of the same meal — the first is the cover`)}
+                  </p>
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-3 p-4">
-                <button className="btn-primary" onClick={() => cameraRef.current?.click()}>
-                  {photo ? tr("ถ่ายใหม่", "Retake") : tr("เปิดกล้อง", "Open camera")}
+                <button className="btn-primary" onClick={() => cameraRef.current?.click()} disabled={photos.length >= MAX_MEAL_PHOTOS}>
+                  {photos.length ? tr("ถ่ายเพิ่ม", "Add a photo") : tr("เปิดกล้อง", "Open camera")}
                 </button>
-                <button className="btn-soft" onClick={() => galleryRef.current?.click()}>
-                  {tr("เลือกรูป", "Choose photo")}
+                <button className="btn-soft" onClick={() => galleryRef.current?.click()} disabled={photos.length >= MAX_MEAL_PHOTOS}>
+                  {tr("เลือกรูป", "Choose photos")}
                 </button>
               </div>
-              <input ref={cameraRef} type="file" accept="image/*" capture="environment" hidden onChange={(e) => onFile(e.target.files?.[0])} data-testid="camera-input" />
-              <input ref={galleryRef} type="file" accept="image/*" hidden onChange={(e) => onFile(e.target.files?.[0])} data-testid="gallery-input" />
+              <input ref={cameraRef} type="file" accept="image/*" capture="environment" hidden onChange={(e) => { void onFiles(e.target.files); e.target.value = ""; }} data-testid="camera-input" />
+              <input ref={galleryRef} type="file" accept="image/*" multiple hidden onChange={(e) => { void onFiles(e.target.files); e.target.value = ""; }} data-testid="gallery-input" />
             </div>
           )}
 
@@ -221,7 +265,7 @@ function AddInner() {
           <button
             className="btn-primary w-full"
             onClick={analyze}
-            disabled={mode === "photo" ? !photo : !note.trim()}
+            disabled={mode === "photo" ? photos.length === 0 : !note.trim()}
           >
             {tr("วิเคราะห์", "Check with AI")}
           </button>

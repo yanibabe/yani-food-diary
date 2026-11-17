@@ -1233,3 +1233,10 @@ Live checks: home 200, edit page 200, /api/status usda:true, /api/food/usda 401 
 "สร้างวัตถุดิบเอง" and NO key/USDA address. NOT checked: real USDA search (needs her passcode), real iPhone.
 She tries on iPhone: egg rows; "chicken breast" USDA row; custom ingredient save+reuse; airplane mode still allows manual entry.
 Do NOT start the next round until she says.
+
+## Round 43 (2026-11-17) — many photos for one meal ✅ BUILT, committed locally, NOT deployed
+Photo add page: up to 4 photos (camera adds one at a time, gallery multi-select), thumbnails with x, first = cover.
+`/api/analyze` takes `images[]` (old `image` still works), one AI call. >1 photo → item boxes dropped; 1 photo = as before.
+Entry.photoId = cover; others in optional `extraPhotoIds` (helpers in app/lib/mealPhotos.ts). Delete/eat-again handle extras.
+268 tests pass, tsc clean, lint 0 errors, build OK, mock browser check OK. NOT verified: real camera/gallery, real AI with
+several photos, backup+restore with extras. Needs her OK before pushing.

@@ -5,6 +5,7 @@
 import { z } from "zod";
 import { trFor, type Lang } from "../i18n.ts";
 import { LEGACY_MARGIN_PCT, cleanBufferPct } from "../calorieBuffer.ts";
+import { MAX_MEAL_PHOTOS } from "../mealPhotos.ts";
 import { UNITS, type IngredientUnit } from "../types.ts";
 import { IngredientRefSchema, cleanIngredientRef, type IngredientRef } from "../ingredientRef.ts";
 export { IngredientRefSchema, cleanIngredientRef, type IngredientRef };
@@ -225,21 +226,19 @@ async function callAi<T>(system: string, content: Part[], schema: z.ZodType<T>, 
 export type AnalysisOut = Analysis;
 export type RefineOut = Refine;
 
-export async function analyzeMeal(input: { image: string | null; text: string; lang: Lang }): Promise<AnalysisOut> {
+export async function analyzeMeal(input: { images: string[]; text: string; lang: Lang }): Promise<AnalysisOut> {
   if (process.env.AI_MOCK === "1") return mockAnalyze(input);
   const content: Part[] = [
     {
       type: "text",
-      text: input.image
-        ? `Photo of my meal. My extra notes: ${input.text || "(none)"}`
+      text: input.images.length
+        ? `${input.images.length > 1 ? `${input.images.length} photos of ONE meal (different angles or parts of the same meal; do not count the same food twice). ` : "Photo of my meal. "}My extra notes: ${input.text || "(none)"}`
         : `No photo. What I ate: ${input.text}`,
     },
   ];
-  if (input.image) {
-    if (!/^data:image\/(jpeg|png|webp);base64,/.test(input.image))
-      throw new AiError("bad-output", trFor(input.lang)("รูปแบบรูปไม่รองรับ", "This picture format is not supported"), 400);
-    content.push({ type: "image_url", image_url: { url: input.image } });
-  }
+  if (input.images.length > MAX_MEAL_PHOTOS || input.images.some((i) => !/^data:image\/(jpeg|png|webp);base64,/.test(i)))
+    throw new AiError("bad-output", trFor(input.lang)("รูปแบบรูปไม่รองรับ", "This picture format is not supported"), 400);
+  for (const url of input.images) content.push({ type: "image_url", image_url: { url } });
   return callAi(ANALYZE_SYSTEM(input.lang), content, AnalysisSchema, input.lang);
 }
 
@@ -271,11 +270,12 @@ export async function refineMeal(input: RefineInput): Promise<RefineOut> {
 // tested without an API key. The app shows a clear "AI จำลอง" badge.
 // ---------------------------------------------------------------------------
 
-function mockAnalyze(input: { image: string | null; text: string; lang: Lang }): Analysis {
+function mockAnalyze(input: { images: string[]; text: string; lang: Lang }): Analysis {
+  const hasImage = input.images.length > 0;
   const items: Analysis["items"] = [
-    { name: "ข้าวสวย", amount: 1, unit: "ทัพพี", kcal: 160, protein: 3, carbs: 35, fat: 0.4, estimated: false, kind: "food", note: null, box: input.image ? { x: 0.08, y: 0.45, w: 0.4, h: 0.4 } : null },
-    { name: "ไก่ทอด", amount: 1, unit: "ชิ้น", kcal: 290, protein: 24, carbs: 9, fat: 17, estimated: false, kind: "food", note: null, box: input.image ? { x: 0.5, y: 0.15, w: 0.38, h: 0.38 } : null },
-    { name: "ผักลวก", amount: 1, unit: "ถ้วย", kcal: 35, protein: 2, carbs: 6, fat: 0.3, estimated: false, kind: "food", note: null, box: input.image ? { x: 0.52, y: 0.58, w: 0.36, h: 0.3 } : null },
+    { name: "ข้าวสวย", amount: 1, unit: "ทัพพี", kcal: 160, protein: 3, carbs: 35, fat: 0.4, estimated: false, kind: "food", note: null, box: hasImage ? { x: 0.08, y: 0.45, w: 0.4, h: 0.4 } : null },
+    { name: "ไก่ทอด", amount: 1, unit: "ชิ้น", kcal: 290, protein: 24, carbs: 9, fat: 17, estimated: false, kind: "food", note: null, box: hasImage ? { x: 0.5, y: 0.15, w: 0.38, h: 0.38 } : null },
+    { name: "ผักลวก", amount: 1, unit: "ถ้วย", kcal: 35, protein: 2, carbs: 6, fat: 0.3, estimated: false, kind: "food", note: null, box: hasImage ? { x: 0.52, y: 0.58, w: 0.36, h: 0.3 } : null },
   ];
   const t = input.text;
   if (/ครึ่ง/.test(t) && /ไก่/.test(t)) {

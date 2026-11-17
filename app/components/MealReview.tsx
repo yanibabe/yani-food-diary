@@ -205,7 +205,10 @@ export function MealReview({
   onDelete,
   startEditingId,
   entrySource,
+  belowPhoto,
 }: {
+  /** Round 43: extra photos of the meal, shown right under the cover photo. */
+  belowPhoto?: React.ReactNode;
   /** Round 39: how the saved meal was made, to tell where older items' numbers came from. */
   entrySource?: Entry["source"];
   photo: string | null;
@@ -396,6 +399,7 @@ export function MealReview({
       )}
 
       {photo && <LabeledPhoto src={photo} items={items} onTap={setEditingId} />}
+      {photo && belowPhoto}
 
       {milky.length > 0 && (
         <div className="rounded-[22px] bg-warn px-4 py-3 text-warn-ink" role="note" data-testid="dairy-warning">

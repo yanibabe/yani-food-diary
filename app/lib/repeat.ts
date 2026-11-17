@@ -2,6 +2,7 @@
 // The copy keeps the same numbers (no AI call, no credit spent).
 
 import { newId, pickMacros, sumMacros } from "./nutrition.ts";
+import { entryPhotoIds } from "./mealPhotos.ts";
 import type { Entry, MealSlot } from "./types.ts";
 
 /** Same title + same total kcal = the same meal. */
@@ -44,6 +45,7 @@ export function copyMeal(e: Entry, date: string, slot: MealSlot, now = Date.now(
     date,
     slot,
     items: e.items.map((i) => ({ ...i, id: newId("it") })),
+    ...(e.extraPhotoIds ? { extraPhotoIds: [...e.extraPhotoIds] } : {}),
     recipe: e.recipe ? { ...e.recipe } : null,
     createdAt: now,
     updatedAt: now,
@@ -52,5 +54,5 @@ export function copyMeal(e: Entry, date: string, slot: MealSlot, now = Date.now(
 
 /** A photo may be shared by copies: only delete it when no other meal uses it. */
 export function photoStillUsed(entries: Entry[], photoId: string, exceptId: string): boolean {
-  return entries.some((e) => e.id !== exceptId && e.photoId === photoId);
+  return entries.some((e) => e.id !== exceptId && entryPhotoIds(e).includes(photoId));
 }
