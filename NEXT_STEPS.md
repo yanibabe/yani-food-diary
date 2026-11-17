@@ -1307,3 +1307,5 @@ Her feedback on Round 49: no flash, but the picture still "cut" to the next page
 `.sheet-leaving` (sheet dims 180 ms); both off under prefers-reduced-motion. Navigation still starts immediately. 320 tests, tsc, lint 0 errors, build OK.
 Not verified: real iPhone feel (desktop sampling showed smooth 0→1 ramp, no Today frame; once a ~450 ms blank beat at opacity 0, read as pane stall).
 Recipes page now fades in too (Profile/Today unchanged). If a blank beat shows on iPhone: consider a shorter delay or <ViewTransition>.
+
+### Round 50 DEPLOYED (2026-11-17, a49f6d6, Vercel success) with her OK. Live: home 200, `.page-enter` CSS present. She tries on iPhone.
