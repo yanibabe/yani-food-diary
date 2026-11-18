@@ -1481,3 +1481,6 @@ Round 68 DEPLOYED (2026-11-18, 9a4ea2f): Vercel build succeeded; live functions 
 - Round 70: AI recipe covers (shared dish key with meals), "วาดรูปปก" for old recipes, thumbnails in the recipe list.
 - Round 71: new share-day card (app/lib/shareCard.ts layout + ShareDayButton draw): header totals vs targets, per-meal pictures, foods with amounts, P/C/F, "~" estimate note. Checked in the browser with real data.
 - NOT verified: real iPhone; "database" badge in the review UI; food-db bundling on Vercel (local build OK).
+
+## Round 72 (2026-11-18) — chat: Today page peeked through above the iPhone keyboard
+Her iPhone screenshot: in Ask AI, with the keyboard open, a Today meal row showed between the input and the keyboard bar. Cause: the chat layer follows visualViewport, which iOS reports late while it scrolls the page. Fix: a tall cover (same .add-layer background, top -50vh, height 200vh, z 44) behind the chat layer in FoodChat.tsx. Preview check: chat shrunk to 420px + page scrolled → only soft background in the gap. NOT verified on her iPhone (real keyboard).

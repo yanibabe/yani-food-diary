@@ -135,6 +135,10 @@ export function FoodChat({ onBack, onAdd }: { onBack: () => void; onAdd: (s: Sug
   const last = msgs[msgs.length - 1];
   const waitingForAnswer = !loading && !error && last?.role === "user"; // e.g. she closed the chat before the answer came
   return (
+    <>
+    {/* Round 72: a tall cover behind the chat. When the iPhone keyboard opens, iOS scrolls the page and the
+        visual-viewport size arrives late; without this the Today page peeked through between the input and the keyboard. */}
+    <div className="add-layer fixed inset-x-0 z-[44]" style={{ top: "-50vh", height: "200vh" }} aria-hidden data-testid="chat-cover" />
     <div
       className="add-layer fixed inset-x-0 z-[45] flex flex-col"
       style={vv ? { top: vv.top, height: vv.height } : { top: 0, bottom: 0 }}
@@ -296,5 +300,6 @@ export function FoodChat({ onBack, onAdd }: { onBack: () => void; onAdd: (s: Sug
         </div>
       </form>
     </div>
+    </>
   );
 }
