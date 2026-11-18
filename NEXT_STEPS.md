@@ -1493,3 +1493,4 @@ Inspired by her MY JAR reference (feeling only). Fixed colors + shapes: protein 
 - matter-js loads only on the jar screen (dynamic import). Files: app/lib/jar.ts, jarShapes.ts, jarPhysics.ts, components/JarCard.tsx, JarScreen.tsx, JarShapeIcon.tsx; tests/round73-jar.test.ts. Prototype with 27 palettes: public/_try/jar.html (gitignored).
 - Checked in the preview (mobile size): card 23/61/16% matches 40/105/27 g; Today + Week; tap piece (40 g protein = 160 kcal); shake; pour again. 481 tests pass, tsc clean, lint 0 errors, build OK.
 - NOT verified: real iPhone (shake permission prompt, motion); "new pieces drop last" after a real new meal; dark mode; English text; bundle size.
+Round 73 DEPLOYED (2026-11-18, e79794e): Vercel build succeeded; the jar code is in the live bundles. Next: she tries it on her iPhone (swipe the app away and reopen; Profile bottom shows the new build), incl. shake permission.
