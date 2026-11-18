@@ -50,6 +50,7 @@ export const AnalysisSchema = z.object({
   title: z.string().catch("").describe("Short name for the whole meal"),
   items: z.array(ItemSchema),
   question: z.string().nullish().describe("ONE short, easy question ONLY if a missing detail (portion size, cooking oil, sauce/dressing, sugar, fried vs steamed…) would change the meal's kcal a lot; else null"),
+  visual: z.string().nullish().describe("ONE short ENGLISH sentence saying how the whole meal looks (used to draw a picture of it), e.g. \"Thai pad kra pao (ผัดกะเพรา): stir-fried basil pork with a fried egg over rice on a white plate\". Only foods really in the items list. Else null"),
 });
 export type Analysis = z.infer<typeof AnalysisSchema>;
 
@@ -98,6 +99,7 @@ Rules:
 - dairy: think about how the dish is usually made in Thailand (e.g. Thai iced tea, coffee drinks, bakery, creamy soups, some curries and desserts use milk, butter or condensed milk). Set dairy=true when it likely contains ANY milk product, and name it in dairySource.
 - box: when there is a photo and you can locate the food, give its bounding box as fractions (0..1) of the image. Otherwise null.
 - question: if an important detail is missing and you cannot see or reasonably infer it — portion size, how much cooking oil, a sauce or dressing, sugar or milk in a drink, fried vs steamed/boiled — and the answer would change the meal's kcal a lot (roughly 100 kcal or 20% or more), ask ONE short, easy question about the biggest one (e.g. "Was it stir-fried with a lot of oil or a little?"). Still give your best estimate now and set estimated=true on that item. Do NOT ask about small things (garnish, herbs, a pinch of salt, a splash of sauce). If nothing important is unclear, null.
+- visual: always write it in English (whatever language the other fields use), keep a Thai dish name next to the English one, and mention only foods you listed in items.
 - Use typical Thai portion sizes and Thai food composition values (e.g. INMU Thai Food Composition Table). Be realistic: do not shrink portions or leave out cooking fat.
 Return ONLY a JSON object matching this JSON Schema:
 ${shapeOf(AnalysisSchema)}`;
@@ -358,7 +360,7 @@ function mockAnalyze(input: { images: string[]; text: string; lang: Lang }): Ana
   }
   // Round 40: an important detail is missing (how much oil) → ask, instead of adding anything silently.
   const question = /ผัด/.test(t) && !/น้ำมัน/.test(t) ? "ผัดใช้น้ำมันเยอะหรือน้อยคะ? (เช่น 1 ช้อนชา หรือ 1 ช้อนโต๊ะ)" : null;
-  return { title: "ข้าวไก่ทอดกับผักลวก", items, question };
+  return { title: "ข้าวไก่ทอดกับผักลวก", items, question, visual: "Thai ข้าวไก่ทอด (fried chicken rice): fried chicken piece with steamed rice and blanched vegetables on a plate" };
 }
 
 function mockRefine(input: RefineInput): Refine {

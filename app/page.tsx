@@ -2,7 +2,7 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { MacroCards, MacroTipLine, Sheet, StoredPhoto } from "./components/ui";
+import { MacroCards, MacroTipLine, Sheet } from "./components/ui";
 import { BackupReminder } from "./components/BackupReminder";
 import { HomeTiles } from "./components/HomeTiles";
 import { ShareDayButton } from "./components/ShareDayButton";
@@ -23,6 +23,7 @@ import { useStore } from "./lib/store";
 import { glassesOn, waterGoal } from "./lib/water";
 import { SLOT_LABEL, SLOTS, type Entry } from "./lib/types";
 import { Icon, type IconName } from "./components/Icon";
+import { MealThumb } from "./components/MealPicture";
 import { SwipeRow } from "./components/SwipeRow";
 import { deletePhoto } from "./lib/photos";
 import { entryPhotoIds } from "./lib/mealPhotos";
@@ -477,13 +478,15 @@ function TodayInner() {
                       onClick={() => eatAgain(e)}
                       data-testid="eat-again-item"
                     >
-                      {e.photoId ? (
-                        <StoredPhoto id={e.photoId} className="h-11 w-11 shrink-0 rounded-xl object-cover" />
-                      ) : (
-                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/80 text-muted" aria-hidden>
-                          <SourceIcon e={e} small />
-                        </span>
-                      )}
+                      <MealThumb
+                        title={e.title}
+                        className="h-11 w-11 shrink-0 rounded-xl"
+                        fallback={
+                          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/80 text-muted" aria-hidden>
+                            <SourceIcon e={e} small />
+                          </span>
+                        }
+                      />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-[16px] font-medium">{e.title}</span>
                         <span className="block text-[13px] text-muted">
@@ -621,13 +624,15 @@ function EntryRow({ e, onDelete }: { e: Entry; onDelete: () => void }) {
   return (
     <SwipeRow onDelete={onDelete} label={`${tr("ลบ", "Delete")} ${e.title}`}>
       <Link href={`/entry/${e.id}`} className="flex items-center gap-3 px-1 py-3" data-testid="entry-row">
-        {e.photoId ? (
-          <StoredPhoto id={e.photoId} className="h-14 w-14 shrink-0 rounded-2xl object-cover" />
-        ) : (
-          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/70 text-muted" aria-hidden>
-            <SourceIcon e={e} />
-          </span>
-        )}
+        <MealThumb
+          title={e.title}
+          className="h-14 w-14 shrink-0 rounded-2xl"
+          fallback={
+            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/70 text-muted" aria-hidden>
+              <SourceIcon e={e} />
+            </span>
+          }
+        />
         <div className="min-w-0 flex-1">
           <div className="truncate font-medium">{e.title}</div>
           <div className="truncate text-[14px] text-muted">

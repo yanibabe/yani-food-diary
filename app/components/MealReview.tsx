@@ -210,8 +210,11 @@ export function MealReview({
   startEditingId,
   entrySource,
   belowPhoto,
+  topSlot,
   editorExtra,
 }: {
+  /** Round 67: shown above everything (the meal's AI picture on the meal page). */
+  topSlot?: React.ReactNode;
   /** Round 45: optional extra block inside the item editor (e.g. "Save as my ingredient"). `replace` swaps the item in the list. */
   editorExtra?: (item: FoodItem, replace: (it: FoodItem) => void) => React.ReactNode;
   /** Round 43: extra photos of the meal, shown right under the cover photo. */
@@ -405,6 +408,7 @@ export function MealReview({
         </div>
       )}
 
+      {topSlot}
       {photo && <LabeledPhoto src={photo} items={items} onTap={setEditingId} />}
       {photo && belowPhoto}
 

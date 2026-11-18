@@ -9,6 +9,8 @@ import { entryPhotoIds } from "../../lib/mealPhotos";
 import { useLang } from "../../lib/lang";
 import { useStore } from "../../lib/store";
 import { Icon } from "../../components/Icon";
+import { MealPicHeader } from "../../components/MealPicture";
+import { useMealPic } from "../../lib/mealPicClient";
 
 export default function EntryPage() {
   const { id } = useParams<{ id: string }>();
@@ -42,6 +44,10 @@ export default function EntryPage() {
   const extraSrcs = extraKey && extras?.key === extraKey ? extras.srcs : [];
   const photoLoaded = !photoId || loaded?.id === photoId;
   const photo = photoId && loaded?.id === photoId ? loaded.src : null;
+  // Round 67: once the meal has an AI picture (or one is being drawn), her real photo moves behind the "My photo" thumbnail.
+  const picState = useMealPic(entry?.title ?? "");
+  const hasPicture = !!picState.pic || picState.drawing;
+  const realPhotos = [photo, ...extraSrcs].filter((x): x is string => !!x);
 
   if (!ready || (entry && !photoLoaded)) return <main className="page" />;
   if (!entry)
@@ -69,6 +75,7 @@ export default function EntryPage() {
         </p>
       )}
       <MealReview
+        topSlot={<MealPicHeader title={entry.title} items={entry.items} photos={realPhotos} />}
         belowPhoto={
           extraSrcs.length > 0 ? (
             <div className="-mx-1 flex snap-x gap-2 overflow-x-auto px-1 pb-1" data-testid="extra-photos" aria-label={tr("รูปอื่น ๆ ของมื้อนี้", "More photos of this meal")}>
@@ -80,7 +87,7 @@ export default function EntryPage() {
           ) : null
         }
         entrySource={entry.source}
-        photo={photo}
+        photo={hasPicture ? null : photo}
         initial={{ title: entry.title, slot: entry.slot, items: entry.items }}
         chatEnabled={!!ai && (ai.configured || ai.mock)}
         chatDisabledReason={tr("ยังไม่ได้ตั้งค่า AI (OpenRouter) — แตะรายการเพื่อแก้เองได้", "The AI (OpenRouter) is not set up — tap an item to edit it yourself")}

@@ -103,3 +103,28 @@ export async function putPhotos(photos: Record<string, string>): Promise<void> {
     t.onabort = () => reject(t.error);
   });
 }
+
+/** Shrink a picture (data URL) to a small square-ish JPEG. With `square`, the middle part is cropped to 1:1. */
+export function shrinkDataUrl(dataUrl: string, maxSide = 512, quality = 0.8, square = true): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const side = square ? Math.min(img.width, img.height) : Math.max(img.width, img.height);
+      const scale = Math.min(1, maxSide / side);
+      const sx = square ? (img.width - side) / 2 : 0;
+      const sy = square ? (img.height - side) / 2 : 0;
+      const w = square ? Math.round(side * scale) : Math.round(img.width * scale);
+      const h = square ? Math.round(side * scale) : Math.round(img.height * scale);
+      const c = document.createElement("canvas");
+      c.width = w;
+      c.height = h;
+      const ctx = c.getContext("2d");
+      if (!ctx) return reject(new Error("canvas"));
+      if (square) ctx.drawImage(img, sx, sy, side, side, 0, 0, w, h);
+      else ctx.drawImage(img, 0, 0, w, h);
+      resolve(c.toDataURL("image/jpeg", quality));
+    };
+    img.onerror = () => reject(new Error("bad image"));
+    img.src = dataUrl;
+  });
+}

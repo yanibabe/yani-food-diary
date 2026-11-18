@@ -283,3 +283,16 @@ select {
   backdrop-filter: blur(22px);
   border-top: 1px solid rgba(255, 255, 255, 0.9);
 }
+/* Round 67: soft shimmer while an AI meal picture is being drawn. */
+.pic-shimmer {
+  background: linear-gradient(110deg, rgba(255, 255, 255, 0.55) 30%, rgba(255, 255, 255, 0.95) 50%, rgba(255, 255, 255, 0.55) 70%);
+  background-size: 220% 100%;
+  animation: pic-shimmer 1.6s ease-in-out infinite;
+}
+@keyframes pic-shimmer {
+  from { background-position: 120% 0; }
+  to { background-position: -120% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pic-shimmer { animation: none; }
+}

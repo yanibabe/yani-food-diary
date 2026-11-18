@@ -2,11 +2,12 @@
 // All diary data, recipes and goals live on this device (localStorage),
 // so closing and reopening the app keeps everything.
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { Entry, Goals, Recipe } from "./types.ts";
 import { upsertLog, type BodyLog } from "./body.ts";
 import { setGlasses, type WaterLog } from "./water.ts";
 import { upgradeSlot } from "./date.ts";
+import { drawInBackground } from "./mealPicClient.ts";
 
 const KEY = {
   entries: "yfd:v1:entries",
@@ -87,7 +88,13 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     setReady(true);
   }, []);
 
+  // Round 67: a NEW meal (not an edit) gets its AI picture drawn in the background if its dish has none.
+  const entriesRef = useRef<Entry[]>([]);
+  useEffect(() => {
+    entriesRef.current = entries;
+  }, [entries]);
   const upsertEntry = useCallback((e: Entry) => {
+    if (!entriesRef.current.some((x) => x.id === e.id)) drawInBackground(e.title, e.items);
     setEntries((prev) => {
       const next = prev.some((x) => x.id === e.id) ? prev.map((x) => (x.id === e.id ? e : x)) : [...prev, e];
       setSaveError(write(KEY.entries, next));

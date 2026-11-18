@@ -1,6 +1,7 @@
 "use client";
 import { aiDairy } from "../lib/dairy";
 import { aiFetch } from "../lib/aiFetch";
+import { rememberVisual } from "../lib/mealPicClient";
 import { useEffect, useRef, useState } from "react";
 import { IngredientSearch } from "./AddIngredientSheet";
 import { BarcodeLookup } from "./BarcodeLookup";
@@ -93,6 +94,7 @@ export function AddFlow({ mode, date, dateParam, prefill, auto = false, fromShee
   const galleryRef = useRef<HTMLInputElement>(null);
 
   const savingRef = useRef(false);
+  const visualRef = useRef<string | null>(null);
   const aiReady = !!ai && (ai.configured || ai.mock);
 
   // Round 47: the Add food sheet hands over ONE chosen food. We pick it up once and go straight to the review.
@@ -170,7 +172,9 @@ export function AddFlow({ mode, date, dateParam, prefill, auto = false, fromShee
         setStep("input");
         return;
       }
-      const r = data.result as { title: string; question: string | null; items: Omit<FoodItem, "id">[] };
+      const r = data.result as { title: string; question: string | null; visual?: string | null; items: Omit<FoodItem, "id">[] };
+      // Round 67: how the AI saw the meal, used later to draw its picture (photo meals only).
+      visualRef.current = mode === "photo" && typeof r.visual === "string" ? r.visual : null;
       const pct = cleanBufferPct(goals.calorieBuffer);
       const items: FoodItem[] = r.items.map((a): FoodItem => startBuffer({
         id: newId("it"),
@@ -291,6 +295,7 @@ export function AddFlow({ mode, date, dateParam, prefill, auto = false, fromShee
     }
     const photoId = saved[0] ?? null;
     const now = Date.now();
+    rememberVisual(d.title, visualRef.current);
     upsertEntry({
       id: newId("en"),
       date,
