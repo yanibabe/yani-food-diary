@@ -1518,3 +1518,9 @@ Round 75 DEPLOYED (2026-11-18, 59af26b): Vercel build succeeded. Next: she check
 - Week card: fat circles no longer overlap (circle body 0.98r in app/lib/shareWeekJar.ts; hearts/clouds stay 0.86r). Sample re-rendered: docs/mockups/share-week-sample.png (offline ruler is rough, so the "SNAPCAL ·" header spacing in that PNG is off; in the app it is right).
 - Checked in the preview: 17 Nov (empty, same week) → "แชร์สัปดาห์" → week card, day tab disabled. 501 tests, tsc clean, lint 0 errors, build OK. No new unit test (UI-only condition).
 Round 76 DEPLOYED (2026-11-18, ee3b90b): Vercel build succeeded. Next: she uses the app for about a week and notes photo accuracy + anything slow/annoying; redesign references whenever she is ready.
+
+## 2026-11-18 — AI passcode turned OFF (her choice)
+Her boyfriend couldn't use the app because of the passcode. I explained the risk (anyone with the link — the repo is public — can spend her OpenRouter credit) and recommended keeping it and giving him the code; she chose "Remove it anyway".
+- Done by removing the Vercel env var APP_PASSCODE (Production). No code change: app/lib/server/passcode.ts already allows AI when APP_PASSCODE is not set.
+- To turn it back ON: `vercel env add APP_PASSCODE production` (type a new code), then redeploy; each phone types the code once.
+- Recommended safety net (not done yet): a credit limit on the OpenRouter key (set by Machina/her in OpenRouter settings), and/or a server-side daily cap.
