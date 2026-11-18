@@ -9,6 +9,7 @@ import { totalsForRecipe } from "../lib/recipe";
 import { useStore } from "../lib/store";
 import { RECIPE_CATEGORIES, type RecipeCategory } from "../lib/types";
 import { Icon } from "../components/Icon";
+import { MealThumb } from "../components/MealPicture";
 import { MyIngredients } from "../components/MyIngredients";
 import { ListSearchField } from "../components/ListSearchField";
 import { filterByName } from "../components/recipeFilter";
@@ -172,7 +173,7 @@ function RecipesInner() {
                       className="flex items-center gap-3 border-t border-line py-2.5 active:opacity-70"
                       data-testid="recipe-card"
                     >
-                      <PotTile id={r.id} size={38} radius={11} />
+                      <MealThumb title={r.name} className="h-[38px] w-[38px] shrink-0 rounded-[11px]" fallback={<PotTile id={r.id} size={38} radius={11} />} />
                       <span className="min-w-0 flex-1 truncate text-[16px]">{r.name}</span>
                       {t.complete ? (
                         <span className="shrink-0 text-right">

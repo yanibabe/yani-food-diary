@@ -22,7 +22,7 @@ export function MealThumb({ title, className, fallback }: { title: string; class
 }
 
 /** The big picture + small controls at the top of the meal page. `photos` = her real photos (cover first). */
-export function MealPicHeader({ title, items, photos }: { title: string; items: FoodItem[]; photos: string[] }) {
+export function MealPicHeader({ title, items, photos, cover }: { title: string; items: Pick<FoodItem, "name" | "amount" | "unit">[]; photos: string[]; /** Round 70: a recipe cover (labels say "cover") */ cover?: boolean }) {
   const { tr } = useLang();
   const { pic, drawing } = useMealPic(title);
   const src = usePicSrc(pic);
@@ -64,7 +64,7 @@ export function MealPicHeader({ title, items, photos }: { title: string; items: 
 
       {!src && !busy && src !== undefined && (
         <button className="btn-soft w-full" onClick={() => draw("")} data-testid="draw-this-dish">
-          <Icon name="sparkle" className="h-5 w-5" /> {tr("วาดรูปเมนูนี้", "Draw this dish")}
+          <Icon name="sparkle" className="h-5 w-5" /> {cover ? tr("วาดรูปปก", "Draw a cover") : tr("วาดรูปเมนูนี้", "Draw this dish")}
         </button>
       )}
 

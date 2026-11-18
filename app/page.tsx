@@ -72,7 +72,7 @@ function Ring({ eaten, target }: { eaten: number; target: number }) {
 }
 
 function TodayInner() {
-  const { ready, entries, goals, saveError, upsertEntry, deleteEntry, waterLogs } = useStore();
+  const { ready, entries, goals, saveError, upsertEntry, deleteEntry, waterLogs, bodyLogs } = useStore();
   const search = useSearchParams();
   const router = useRouter();
   const today = thaiDateKey();
@@ -329,6 +329,7 @@ function TodayInner() {
                 name={goals.profile?.name ?? ""}
                 macroTargets={macroTargets(target, proteinTargetG(goals.profile, target))}
                 water={{ glasses: glassesOn(waterLogs, date), goal: waterGoal(goals.waterGoal) }}
+                weightKg={bodyLogs.find((l) => l.date === date)?.weightKg ?? null}
               />
             ) : null
           }

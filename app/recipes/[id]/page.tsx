@@ -1,8 +1,8 @@
 "use client";
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { Badge, KcalBig, MacroCards, MissingNote, NumberField, ProvenanceBadge, Sheet, StoredPhoto, PotIcon, potTone } from "../../components/ui";
+import { Badge, KcalBig, MacroCards, MissingNote, NumberField, ProvenanceBadge, Sheet } from "../../components/ui";
 import { guessSlot, thaiDateKey } from "../../lib/date";
 import { fmtAmount, fmtG, fmtKcal, newId } from "../../lib/nutrition";
 import { ingredientMacros, mealFromRecipe, totalsForRecipe } from "../../lib/recipe";
@@ -11,6 +11,9 @@ import { useLang } from "../../lib/lang";
 import { useStore } from "../../lib/store";
 import { SLOT_LABEL, SLOTS, UNIT_LABEL, type Ingredient, type MealSlot, type Recipe } from "../../lib/types";
 import { Icon } from "../../components/Icon";
+import { MealPicHeader } from "../../components/MealPicture";
+import { getPhoto } from "../../lib/photos";
+import { recipePictureItems } from "../../lib/mealPics";
 
 function LogSheet({ recipe, open, onClose, date }: { recipe: Recipe; open: boolean; onClose: () => void; date: string }) {
   const { upsertEntry } = useStore();
@@ -178,6 +181,20 @@ function RecipeInner() {
   const [logOpen, setLogOpen] = useState(false);
   const [confirmDel, setConfirmDel] = useState(false);
   const { tr, lang } = useLang();
+  // Round 70: her own cover photo (if any) is shown as "My photo" under the AI picture.
+  const coverId = recipe?.coverPhotoId ?? null;
+  const [ownCover, setOwnCover] = useState<{ id: string; src: string } | null>(null);
+  useEffect(() => {
+    if (!coverId) return;
+    let live = true;
+    getPhoto(coverId).then((src) => {
+      if (live && src) setOwnCover({ id: coverId, src });
+    });
+    return () => {
+      live = false;
+    };
+  }, [coverId]);
+  const ownPhotos = coverId && ownCover?.id === coverId ? [ownCover.src] : [];
 
   if (!ready) return <main className="page" />;
   if (!recipe)
@@ -193,22 +210,15 @@ function RecipeInner() {
 
   return (
     <main className="page !pt-0 space-y-5">
-      <div className="relative -mx-4">
-        {recipe.coverPhotoId ? (
-          <StoredPhoto id={recipe.coverPhotoId} className="aspect-[4/3] w-full object-cover" alt={recipe.name} />
-        ) : (
-          <div className="flex aspect-[16/9] items-center justify-center text-ink" style={{ background: potTone(recipe.id) }} aria-hidden>
-            <PotIcon className="h-20 w-20 opacity-50" strokeWidth={1} />
-          </div>
-        )}
+      <div className="space-y-3" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 12px)" }}>
         <button
-          className="absolute left-4 grid h-11 w-11 place-items-center rounded-full bg-paper/95 shadow"
-          style={{ top: "calc(env(safe-area-inset-top, 0px) + 12px)" }}
+          className="grid h-11 w-11 place-items-center rounded-full bg-paper/95 shadow"
           onClick={() => router.push("/recipes")}
           aria-label={tr("กลับ", "Back")}
         >
           <Icon name="caret-left" className="h-5 w-5" />
         </button>
+        <MealPicHeader title={recipe.name} items={recipePictureItems(recipe.ingredients)} photos={ownPhotos} cover />
       </div>
 
       <div className="space-y-1 text-center">

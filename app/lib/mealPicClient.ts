@@ -203,7 +203,7 @@ export function claimEarlyPicture(earlyTitle: string | null, newTitle: string, i
 }
 
 /** A meal was just saved: draw its picture in the background if the dish has none. Never blocks, never shows errors. */
-export function drawInBackground(title: string, items: FoodItem[]) {
+export function drawInBackground(title: string, items: Pick<FoodItem, "name" | "amount" | "unit">[]) {
   load();
   if (claims.has(dishKey(title))) return; // an early picture is on its way to this name
   if (!shouldDraw(pics, title, inflight)) return;

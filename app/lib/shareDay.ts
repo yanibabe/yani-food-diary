@@ -4,6 +4,8 @@
 import { fmtAmount, pickMacros, sumMacros } from "./nutrition.ts";
 import { macroSplit, type Split } from "./macroSplit.ts";
 import { SLOTS, type Entry, type Macros, type MealSlot } from "./types.ts";
+import { findPic, type MealPics } from "./mealPics.ts";
+import { isEstimated } from "./provenance.ts";
 
 export type ShareMeal = {
   title: string;
@@ -12,6 +14,12 @@ export type ShareMeal = {
   detail: string;
   /** The meal's photo (in IndexedDB), if it has one. */
   photoId: string | null;
+  /** Round 71: the picture to draw: her chosen/AI picture for this dish name, else the meal's own photo, else null. */
+  picId: string | null;
+  /** Round 71: every food in the meal with its amount, e.g. "ข้าวสวย 150 กรัม". est = shown as an estimate ("~"). */
+  items: { text: string; est: boolean }[];
+  /** true when any food in the meal is an estimate. */
+  est: boolean;
 };
 
 export type ShareSlot = { slot: MealSlot; m: Macros; meals: ShareMeal[] };
@@ -23,7 +31,7 @@ function roundM(m: Macros): Macros {
   return { kcal: Math.round(m.kcal), protein: Math.round(m.protein), carbs: Math.round(m.carbs), fat: Math.round(m.fat) };
 }
 
-export function buildShareDay(entries: Entry[], date: string): ShareDay {
+export function buildShareDay(entries: Entry[], date: string, pics: MealPics = {}): ShareDay {
   const day = entries.filter((e) => e.date === date).sort((a, b) => a.createdAt - b.createdAt);
   const slots = SLOTS.map((slot) => {
     const meals = day
@@ -33,6 +41,9 @@ export function buildShareDay(entries: Entry[], date: string): ShareDay {
         m: roundM(sumMacros(e.items.map(pickMacros))),
         detail: e.items.length > 1 ? e.items.map((i) => `${i.name} ${fmtAmount(i.amount)} ${i.unit}`.trim()).join(" · ") : "",
         photoId: e.photoId ?? null,
+        picId: findPic(pics, e.title)?.photoId ?? e.photoId ?? null,
+        items: e.items.map((i) => ({ text: `${i.name} ${fmtAmount(i.amount)} ${i.unit}`.trim(), est: isEstimated(i, e) })),
+        est: e.items.some((i) => isEstimated(i, e)),
       }));
     return { slot, meals, m: roundM(sumMacros(meals.map((x) => x.m))) };
   });

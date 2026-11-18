@@ -8,6 +8,7 @@ import { upsertLog, type BodyLog } from "./body.ts";
 import { setGlasses, type WaterLog } from "./water.ts";
 import { upgradeSlot } from "./date.ts";
 import { drawInBackground } from "./mealPicClient.ts";
+import { recipePictureItems } from "./mealPics.ts";
 
 const KEY = {
   entries: "yfd:v1:entries",
@@ -108,7 +109,13 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       return next;
     });
   }, []);
+  // Round 70: a NEW recipe gets its AI cover drawn in the background (same dish key as a meal of the same name).
+  const recipesRef = useRef<Recipe[]>([]);
+  useEffect(() => {
+    recipesRef.current = recipes;
+  }, [recipes]);
   const upsertRecipe = useCallback((r: Recipe) => {
+    if (!recipesRef.current.some((x) => x.id === r.id)) drawInBackground(r.name, recipePictureItems(r.ingredients));
     setRecipes((prev) => {
       const next = prev.some((x) => x.id === r.id) ? prev.map((x) => (x.id === r.id ? r : x)) : [...prev, r];
       setSaveError(write(KEY.recipes, next));

@@ -3,7 +3,7 @@
 // The picture itself is a small JPEG in IndexedDB (`photos` store, id "pic-…"); this map says which.
 
 import { normalizeName } from "./foodRef.ts";
-import type { FoodItem } from "./types.ts";
+import { UNIT_LABEL, type FoodItem, type Ingredient } from "./types.ts";
 
 export const MEAL_PICS_KEY = "yfd:v1:mealPics";
 export const PIC_ID_PREFIX = "pic-";
@@ -105,4 +105,11 @@ export function planEarlyClaim(pics: MealPics, earlyTitle: string, newTitle: str
 export function copyPic(pics: MealPics, fromTitle: string, toTitle: string): MealPics {
   const from = findPic(pics, fromTitle);
   return from ? withPic(pics, toTitle, from) : pics;
+}
+
+/** Round 70: a recipe's ingredients as picture items (name, amount, unit in English words). Same shape the meal pictures use. */
+export function recipePictureItems(ingredients: Pick<Ingredient, "name" | "amount" | "unit">[]): Pick<FoodItem, "name" | "amount" | "unit">[] {
+  return ingredients
+    .filter((i) => i.name.trim() !== "")
+    .map((i) => ({ name: i.name.trim(), amount: i.amount, unit: UNIT_LABEL[i.unit]?.en ?? String(i.unit) }));
 }
