@@ -2,7 +2,7 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { MacroTipLine, Sheet } from "./components/ui";
+import { MacroCards, MacroTipLine, Sheet } from "./components/ui";
 import { BackupReminder } from "./components/BackupReminder";
 import { HomeTiles } from "./components/HomeTiles";
 import { ShareDayButton } from "./components/ShareDayButton";
@@ -10,8 +10,7 @@ import { guessSlot, shiftDateKey, shortDayLabel, thaiDateKey, thaiDateLabel } fr
 import { buildAddUrlWith, cleanPrefill, showWholeDishRow } from "./lib/addSheet";
 import { closeAddLayerAction, layerAfterPop, layerHistoryState, layerMode, openAddLayer, type AddLayer } from "./lib/addLayer";
 import { AddFlow } from "./components/AddFlow";
-import { DailyJars } from "./components/DailyJars";
-import { dayGrams } from "./lib/jar";
+import { dailyJarConfig } from "./lib/dailyJars";
 
 import { useReportOverlay } from "./lib/overlayFlag";
 import { beginNav, endNav, IDLE_NAV, isPending, NAV_GIVE_UP_MS, type NavState } from "./lib/navGuard";
@@ -91,7 +90,6 @@ function TodayInner() {
   const dayEntries = useMemo(() => entries.filter((e) => e.date === date).sort((a, b) => a.createdAt - b.createdAt), [entries, date]);
   const total = useMemo(() => sumMacros(dayEntries.flatMap((e) => e.items.map(pickMacros))), [dayEntries]);
   const target = goals.targetKcal;
-  const jarGrams = useMemo(() => dayGrams(entries, date), [entries, date]);
   const mTargets = macroTargets(target, proteinTargetG(goals.profile, target));
   const left = target - total.kcal;
   const go = (d: string) => router.replace(d === today ? "/" : `/?date=${d}`);
@@ -304,7 +302,8 @@ function TodayInner() {
           </Link>
         )}
         <div className="mt-4 w-full">
-          <DailyJars grams={jarGrams} kcalTarget={target} proteinTarget={mTargets.protein} date={date} today={today} />
+          {/* Round 75: back to the simple tiles (the jars felt cluttered); carbs/fat quietly show their good range. */}
+          <MacroCards m={total} targets={mTargets} showSplit ranges={{ carbs: dailyJarConfig(target, mTargets.protein).c.range!, fat: dailyJarConfig(target, mTargets.protein).f.range! }} />
         </div>
         {ready && (
           <div className="mt-2.5 w-full">

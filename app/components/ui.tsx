@@ -106,9 +106,11 @@ export function WaitPopup({ text, note }: { text: string | null; note?: string }
 }
 
 /** The 3 macro tiles. With showSplit (Today), each tile also shows its share of the calories (always 100% together). */
-export function MacroCards({ m, targets, showSplit }: { m: Macros; targets?: { protein: number; carbs: number; fat: number }; showSplit?: boolean }) {
+/** ranges (Today only): carbs/fat show their good range ("ช่วง 180–260 g") instead of one target, and the bar fills to the range top. */
+export function MacroCards({ m, targets, showSplit, ranges }: { m: Macros; targets?: { protein: number; carbs: number; fat: number }; showSplit?: boolean; ranges?: { carbs: [number, number]; fat: [number, number] } }) {
   const { tr } = useLang();
   const split = showSplit ? macroSplit(m) : null;
+  const rng = (k: "protein" | "carbs" | "fat") => (k === "protein" ? undefined : ranges?.[k]);
   const cards = [
     { key: "protein", label: tr("โปรตีน", "Protein"), value: m.protein, target: targets?.protein, dot: "bg-protein-dot" },
     { key: "carbs", label: tr("คาร์บ", "Carbs"), value: m.carbs, target: targets?.carbs, dot: "bg-carbs-dot" },
@@ -129,9 +131,11 @@ export function MacroCards({ m, targets, showSplit }: { m: Macros; targets?: { p
           {c.target != null && (
             <>
               <div className="mx-auto mt-2 h-1 w-[80%] overflow-hidden rounded-full bg-ink/10">
-                <div className={`h-full rounded-full ${c.dot}`} style={{ width: `${Math.min(100, (c.value / Math.max(1, c.target)) * 100)}%` }} />
+                <div className={`h-full rounded-full ${c.dot}`} style={{ width: `${Math.min(100, (c.value / Math.max(1, rng(c.key)?.[1] ?? c.target)) * 100)}%` }} />
               </div>
-              <div className="mt-1 text-[12px] text-muted">{tr("จาก", "of")} {Math.round(c.target)} g</div>
+              <div className="mt-1 whitespace-nowrap text-[12px] text-muted">
+                {rng(c.key) ? `${rng(c.key)![0]}–${rng(c.key)![1]} g` : `${tr("จาก", "of")} ${Math.round(c.target)} g`}
+              </div>
             </>
           )}
           {showSplit && (
@@ -148,8 +152,8 @@ export function MacroCards({ m, targets, showSplit }: { m: Macros; targets?: { p
 /** One short tip under the tiles on Today: the one thing that matters most right now (no AI). */
 export function MacroTipLine({ m, targets, kcalTarget }: { m: Macros; targets: { protein: number; carbs: number; fat: number }; kcalTarget: number }) {
   const { lang } = useLang();
-  // Round 74: carbs and fat use the top of the jars' good range (same numbers the jars show), so the tip
-  // never says "over" while the jar says "in range". Protein keeps its own target.
+  // Carbs and fat use the top of their good range (same numbers the tiles show), so the tip
+  // never says "over" while the tile shows an in-range amount. Protein keeps its own target.
   const cfg = dailyJarConfig(kcalTarget, targets.protein);
   const tip = macroTip(m, { protein: cfg.p.goal ?? targets.protein, carbs: cfg.c.full, fat: cfg.f.full }, kcalTarget);
   if (!tip) return null;

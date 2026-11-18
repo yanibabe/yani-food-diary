@@ -296,23 +296,3 @@ select {
 @media (prefers-reduced-motion: reduce) {
   .pic-shimmer { animation: none; }
 }
-
-/* Round 74: the small glass jars on Today. */
-.daily-jar {
-  border-radius: 20px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0.7));
-  border: 1.5px solid rgba(150, 130, 110, 0.22);
-  box-shadow: inset 0 0 24px rgba(255, 255, 255, 0.7);
-}
-.daily-jar::before {
-  content: "";
-  position: absolute;
-  left: 14%;
-  top: 14%;
-  width: 7%;
-  height: 40%;
-  border-radius: 10px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0));
-  z-index: 2;
-  pointer-events: none;
-}

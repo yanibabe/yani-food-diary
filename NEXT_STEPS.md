@@ -1504,3 +1504,9 @@ She found the Round 73 jar pointless (it repeated the macro tiles). New idea she
 - Checked: 501 tests pass, tsc clean, lint 0 errors, build OK; preview at 375px: piles meet line/band, statuses, tip agrees, week card in the share sheet.
 - NOT verified: real iPhone (share sheet, speed of settling); dark mode; English; reduced motion; new meal dropping while the page is open. The share button only shows on a day that has meals.
 Round 74 DEPLOYED (2026-11-18, 8399236): Vercel build succeeded; daily jar code is in the live bundles. Next: she tries it on her iPhone (swipe the app away and reopen), incl. the "สัปดาห์นี้" share.
+
+## Round 75 (2026-11-18) — back to the simple macro tiles (built, NOT deployed)
+She tried Round 74 on her iPhone: the three jars on Today felt too cluttered ("ดูรกเกินไป ไม่ชอบเลย"). Lesson: Today must stay calm — no extra visuals/text blocks under the ring.
+- Today shows the old MacroCards tiles again. Only quiet change: carbs and fat tiles show their good range ("180–260 g", "36–62 g", from dailyJarConfig: 45–65% / 20–35% of target kcal) instead of "จาก X g", and their bar fills to the range top. Protein unchanged ("จาก 81 g").
+- Removed DailyJars.tsx, jarPhysics.ts and the .daily-jar CSS (in git history at 8399236 if ever wanted). Kept app/lib/dailyJars.ts (range math used by tiles + tip) and the weekly jar share card (share sheet "วันนี้ / สัปดาห์นี้").
+- Checked in the preview at 375px: tiles on one line each, tip agrees ("สัดส่วนวันนี้ดีแล้ว" at 260 g carbs / 62 g fat). 501 tests, tsc clean, lint 0 errors, build OK.
