@@ -2,7 +2,7 @@
 import type { Lang } from "./i18n.ts";
 
 export const PICTURE_STYLE =
-  "Overhead top-down food photo shot straight down, tight close-up so the dish fills most of the frame, on a smooth solid pastel background in a color that suits the dish, soft even studio light, gentle soft shadow, bright clean minimal appetizing. Show ONLY the foods described, add no extra foods or garnishes (no eggs, no sides unless described). No text, no hands, no people.";
+  "Overhead top-down food photo shot straight down, tight close-up so the dish fills most of the frame, on a smooth solid pastel background in a color that suits the dish, soft even studio light, gentle soft shadow, bright clean minimal appetizing. Show ONLY the foods described, add no extra foods or garnishes (no eggs, no sides unless described). Nothing but the food in a simple plate, bowl or glass appears: no kitchen scales, no table items, no packaging, no utensils, no props. No text, no hands, no people.";
 
 export type PictureInput = {
   title: string;
@@ -18,6 +18,7 @@ Reply with ONLY a JSON object: {"visual": "<ONE short English sentence>"}.
 Rules:
 - One short sentence: what the dish is and what it looks like on the plate or in the bowl.
 - Keep the Thai name too, e.g. "Thai น้ำปลาพริก (prik nam pla): small bowl of fish sauce with sliced chilies and garlic".
+- Describe ONLY the food or drink and the plate, bowl or glass it is in. Never mention scales, tables, packaging, hands, utensils, phones, receipts or any prop.
 - Mention ONLY foods that are in the items list. Do not add foods that were not logged (for example no fried egg if none is listed).
 - If a correction hint from the user is given (it may be Thai), follow it.`;
 

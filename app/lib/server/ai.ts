@@ -9,6 +9,7 @@ import { MAX_MEAL_PHOTOS } from "../mealPhotos.ts";
 import { UNITS, type IngredientUnit } from "../types.ts";
 import { IngredientRefSchema, cleanIngredientRef, type IngredientRef } from "../ingredientRef.ts";
 export { IngredientRefSchema, cleanIngredientRef, type IngredientRef };
+import { FAST_VISION_OPTS } from "../aiSpeed.ts";
 import { usdaConfig } from "../food/usda.ts";
 import { ChatReplySchema, ChatReplyShape, pickReplyLang, type ChatReply, type ChatRequest } from "../foodChat.ts";
 import { mockChat } from "./chatMock.ts";
@@ -50,7 +51,7 @@ export const AnalysisSchema = z.object({
   title: z.string().catch("").describe("Short name for the whole meal"),
   items: z.array(ItemSchema),
   question: z.string().nullish().describe("ONE short, easy question ONLY if a missing detail (portion size, cooking oil, sauce/dressing, sugar, fried vs steamed…) would change the meal's kcal a lot; else null"),
-  visual: z.string().nullish().describe("ONE short ENGLISH sentence saying how the whole meal looks (used to draw a picture of it), e.g. \"Thai pad kra pao (ผัดกะเพรา): stir-fried basil pork with a fried egg over rice on a white plate\". Only foods really in the items list. Else null"),
+  visual: z.string().nullish().describe("ONE short ENGLISH sentence saying how the whole meal looks (used to draw a picture of it), e.g. \"Thai pad kra pao (ผัดกะเพรา): stir-fried basil pork with a fried egg over rice on a white plate\". Only the food and its plate/bowl/glass (no scale, table, packaging, hands or other props). Only foods really in the items list. Else null"),
 });
 export type Analysis = z.infer<typeof AnalysisSchema>;
 
@@ -99,7 +100,7 @@ Rules:
 - dairy: think about how the dish is usually made in Thailand (e.g. Thai iced tea, coffee drinks, bakery, creamy soups, some curries and desserts use milk, butter or condensed milk). Set dairy=true when it likely contains ANY milk product, and name it in dairySource.
 - box: when there is a photo and you can locate the food, give its bounding box as fractions (0..1) of the image. Otherwise null.
 - question: if an important detail is missing and you cannot see or reasonably infer it — portion size, how much cooking oil, a sauce or dressing, sugar or milk in a drink, fried vs steamed/boiled — and the answer would change the meal's kcal a lot (roughly 100 kcal or 20% or more), ask ONE short, easy question about the biggest one (e.g. "Was it stir-fried with a lot of oil or a little?"). Still give your best estimate now and set estimated=true on that item. Do NOT ask about small things (garnish, herbs, a pinch of salt, a splash of sauce). If nothing important is unclear, null.
-- visual: always write it in English (whatever language the other fields use), keep a Thai dish name next to the English one, and mention only foods you listed in items.
+- visual: always write it in English (whatever language the other fields use), keep a Thai dish name next to the English one, and mention only foods you listed in items. Describe ONLY the food or drink itself and the plate, bowl or glass it is in. NEVER mention scales, tables, packaging, hands, utensils in the background, phones, receipts or anything else around it.
 - Use typical Thai portion sizes and Thai food composition values (e.g. INMU Thai Food Composition Table). Be realistic: do not shrink portions or leave out cooking fat.
 Return ONLY a JSON object matching this JSON Schema:
 ${shapeOf(AnalysisSchema)}`;
@@ -160,7 +161,10 @@ function extractJson(content: string, lang: Lang): unknown {
   }
 }
 
-async function callAi<T>(system: string, content: Part[], schema: z.ZodType<T>, lang: Lang): Promise<T> {
+/** Round 68: extra OpenRouter settings for the slow photo read (never used by the text-only routes). */
+type CallOpts = { reasoning?: { effort: string }; max_tokens?: number; provider?: { sort: string } };
+
+async function callAi<T>(system: string, content: Part[], schema: z.ZodType<T>, lang: Lang, opts: CallOpts = {}): Promise<T> {
   const t = trFor(lang);
   const key = process.env.OPENROUTER_API_KEY;
   if (!key) throw new AiError("not-configured", t("ยังไม่ได้ตั้งค่า OpenRouter API key บนเซิร์ฟเวอร์", "The OpenRouter API key is not set up on the server"), 503);
@@ -177,6 +181,7 @@ async function callAi<T>(system: string, content: Part[], schema: z.ZodType<T>, 
         model: MODEL,
         temperature: 0.2,
         response_format: { type: "json_object" },
+        ...opts,
         messages: [
           { role: "system", content: system },
           { role: "user", content },
@@ -243,7 +248,7 @@ export async function analyzeMeal(input: { images: string[]; text: string; lang:
   if (input.images.length > MAX_MEAL_PHOTOS || input.images.some((i) => !/^data:image\/(jpeg|png|webp);base64,/.test(i)))
     throw new AiError("bad-output", trFor(input.lang)("รูปแบบรูปไม่รองรับ", "This picture format is not supported"), 400);
   for (const url of input.images) content.push({ type: "image_url", image_url: { url } });
-  return callAi(ANALYZE_SYSTEM(input.lang), content, AnalysisSchema, input.lang);
+  return callAi(ANALYZE_SYSTEM(input.lang), content, AnalysisSchema, input.lang, FAST_VISION_OPTS);
 }
 
 export type RefineInput = {

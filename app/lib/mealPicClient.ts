@@ -7,7 +7,7 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { aiFetch } from "./aiFetch";
 import { PASSCODE_HEADER, PASSCODE_KEY, passcodeHeaderValue } from "./passcode";
 import { deletePhoto, getPhoto, savePhoto, shrinkDataUrl } from "./photos";
-import { MEAL_PICS_KEY, PIC_QUALITY, PIC_SIZE, dishKey, findPic, newPicId, orphanPicId, parseMealPics, pictureRequest, shouldDraw, withPic, type MealPic, type MealPics } from "./mealPics";
+import { MEAL_PICS_KEY, PIC_QUALITY, PIC_SIZE, copyPic, dishKey, findPic, newPicId, orphanPicId, parseMealPics, pictureRequest, planEarlyClaim, shouldDraw, withPic, type MealPic, type MealPics } from "./mealPics";
 import type { Lang } from "./i18n";
 import type { FoodItem } from "./types";
 
@@ -159,9 +159,53 @@ export async function drawPicture(o: DrawOpts): Promise<DrawResult> {
   }
 }
 
+/** Round 68: dishes whose picture was started EARLY (right after the AI read the photo or text), and saves waiting for one. */
+const earlyStarted = new Set<string>();
+const claims = new Map<string, { from: string; title: string; items: FoodItem[] }>();
+
+function settleClaims(fromKey: string, ok: boolean) {
+  for (const [nk, c] of [...claims]) {
+    if (c.from !== fromKey) continue;
+    claims.delete(nk);
+    if (ok) {
+      if (pics[fromKey] && !pics[nk]) {
+        pics = withPic(pics, c.title, pics[fromKey]);
+        persist();
+        bump();
+      }
+    } else {
+      void drawPicture({ title: c.title, items: c.items }); // the early try failed: one normal try under the new name
+    }
+  }
+}
+
+/** The AI has just read the meal: start drawing its picture right away (quietly, keyed by the title now). One call per dish. */
+export function startEarlyDraw(title: string, items: FoodItem[], visual?: string | null) {
+  load();
+  if (!shouldDraw(pics, title, inflight)) return;
+  const k = dishKey(title);
+  earlyStarted.add(k);
+  void drawPicture({ title, items, visual: visual?.trim() || undefined }).then((r) => settleClaims(k, r.ok));
+}
+
+/** She is saving the meal. If she renamed it, the early picture follows the new name (now, or when it arrives). No second AI call. */
+export function claimEarlyPicture(earlyTitle: string | null, newTitle: string, items: FoodItem[]) {
+  if (!earlyTitle) return;
+  load();
+  const plan = planEarlyClaim(pics, earlyTitle, newTitle, inflight, earlyStarted);
+  if (plan === "attach") {
+    pics = copyPic(pics, earlyTitle, newTitle);
+    persist();
+    bump();
+  } else if (plan === "wait") {
+    claims.set(dishKey(newTitle), { from: dishKey(earlyTitle), title: newTitle, items });
+  }
+}
+
 /** A meal was just saved: draw its picture in the background if the dish has none. Never blocks, never shows errors. */
 export function drawInBackground(title: string, items: FoodItem[]) {
   load();
+  if (claims.has(dishKey(title))) return; // an early picture is on its way to this name
   if (!shouldDraw(pics, title, inflight)) return;
   const k = dishKey(title);
   const visual = visuals.get(k);

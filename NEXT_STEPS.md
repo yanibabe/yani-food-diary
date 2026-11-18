@@ -1466,3 +1466,10 @@ Context: she asked for a first-principles rebuild; research done (docs/REBUILD_P
 - Real AI checked locally: ต้มยำกุ้งน้ำข้น, น้ำพริกหนุ่ม ผักลวก, โจ๊กหมูใส่ไข่, ข้าวผัดกุ้ง — about 6–10 s and ~$0.034 each. 434 tests pass, tsc clean, lint 0 errors.
 - NOT verified: real iPhone; background draw for a new meal with the real AI (mock only); photo-meal `visual` path in the browser; "Use my photo" in the browser; passcode prompt on "วาดใหม่".
 Round 67 DEPLOYED (2026-11-18, f8000ba): Vercel build succeeded; live /api/meal-picture answers 401 without the passcode (route is there and protected). Next: she tries it on her iPhone (swipe the app away and reopen; Profile bottom should show build f8000ba), then sends reference examples for the redesign.
+
+## Round 68 (2026-11-18) — faster photo read, early pictures, food-only pictures, draw popup (built, NOT deployed)
+- Photo read: analyze now sends reasoning effort low, max_tokens 3000, provider sort latency (app/lib/aiSpeed.ts, analyze only); the AI copy of meal photos is shrunk to 1024px q0.7 (saved photo keeps 1280/0.8). Measured locally: krapao 15.7s/13.8s -> 5.7s/7.1s; somtam 6.8s/7.8s -> 3.8s/3.3s. vercel.json regions ["sin1"] (not measured on Vercel).
+- Picture drawn right after the read (startEarlyDraw); on save, same title reuses it, a renamed title gets the same file (claimEarlyPicture, planEarlyClaim in mealPics.ts).
+- Food only: analyze `visual` + style text + VISUAL_SYSTEM forbid scales/props/packaging.
+- "วาดใหม่" / "วาดรูปเมนูนี้" show the WaitPopup "กำลังวาดรูป…" while drawing.
+- Tests: tests/round68-early-picture.test.ts.

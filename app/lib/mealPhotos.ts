@@ -4,6 +4,9 @@
 import type { Entry, FoodItem } from "./types.ts";
 
 export const MAX_MEAL_PHOTOS = 4;
+/** Round 68: meal photos are shrunk a bit more just for the AI read (faster upload). Labels/pack photos use other routes and keep their size. */
+export const ANALYZE_PHOTO_SIDE = 1024;
+export const ANALYZE_PHOTO_QUALITY = 0.7;
 
 const DATA_URL = /^data:image\/(jpeg|png|webp);base64,/;
 

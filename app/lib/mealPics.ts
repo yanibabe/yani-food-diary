@@ -86,3 +86,23 @@ export function pictureRequest(title: string, items: Pick<FoodItem, "name" | "am
     lang: extra.lang,
   };
 }
+
+/** Round 68: the picture is drawn as soon as the photo is read. When she saves, what should happen with it?
+ *  none = nothing special (same name: the normal rules already reuse it) · attach = copy the finished picture to the new name ·
+ *  wait = it is still drawing: attach it when it arrives (no second call). Only a picture drawn EARLY in this visit is ever attached. */
+export type EarlyPlan = "none" | "attach" | "wait";
+export function planEarlyClaim(pics: MealPics, earlyTitle: string, newTitle: string, inflight: ReadonlySet<string>, earlyStarted: ReadonlySet<string>): EarlyPlan {
+  const ek = dishKey(earlyTitle);
+  const nk = dishKey(newTitle);
+  if (!ek || !nk || ek === nk || !earlyStarted.has(ek)) return "none";
+  if (pics[nk]) return "none"; // the new name already has its own picture: keep it
+  if (pics[ek]) return "attach";
+  if (inflight.has(ek)) return "wait";
+  return "none";
+}
+
+/** Give `toTitle` the same picture as `fromTitle` (both point to the same file, so nothing is copied or drawn again). */
+export function copyPic(pics: MealPics, fromTitle: string, toTitle: string): MealPics {
+  const from = findPic(pics, fromTitle);
+  return from ? withPic(pics, toTitle, from) : pics;
+}

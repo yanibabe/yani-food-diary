@@ -1,7 +1,7 @@
 "use client";
 import { aiDairy } from "../lib/dairy";
 import { aiFetch } from "../lib/aiFetch";
-import { rememberVisual } from "../lib/mealPicClient";
+import { claimEarlyPicture, rememberVisual, startEarlyDraw } from "../lib/mealPicClient";
 import { useEffect, useRef, useState } from "react";
 import { IngredientSearch } from "./AddIngredientSheet";
 import { BarcodeLookup } from "./BarcodeLookup";
@@ -12,8 +12,8 @@ import { guessSlot } from "../lib/date";
 import { useLang } from "../lib/lang";
 import { blankItem, cleanBox, cleanNumber, newId, pickMacros, sumMacros } from "../lib/nutrition";
 import { joinMissing } from "../lib/provenance";
-import { boxesForPhotoCount, MAX_MEAL_PHOTOS } from "../lib/mealPhotos";
-import { compressImage, savePhoto } from "../lib/photos";
+import { ANALYZE_PHOTO_QUALITY, ANALYZE_PHOTO_SIDE, boxesForPhotoCount, MAX_MEAL_PHOTOS } from "../lib/mealPhotos";
+import { compressImage, savePhoto, shrinkDataUrl } from "../lib/photos";
 import { useStore } from "../lib/store";
 import { foodToItem } from "../lib/food/toItem";
 import { provFromAi } from "../lib/provenance";
@@ -95,6 +95,7 @@ export function AddFlow({ mode, date, dateParam, prefill, auto = false, fromShee
 
   const savingRef = useRef(false);
   const visualRef = useRef<string | null>(null);
+  const earlyTitleRef = useRef<string | null>(null); // Round 68: the title the early picture was started under
   const aiReady = !!ai && (ai.configured || ai.mock);
 
   // Round 47: the Add food sheet hands over ONE chosen food. We pick it up once and go straight to the review.
@@ -164,7 +165,9 @@ export function AddFlow({ mode, date, dateParam, prefill, auto = false, fromShee
     setError(null);
     setStep("loading");
     try {
-      const res = await aiFetch("/api/analyze", { images: mode === "photo" ? photos : [], text: note, lang }, lang);
+      // Round 68: a smaller copy goes to the AI (faster); the saved photo keeps its size.
+      const sendPhotos = mode === "photo" ? await Promise.all(photos.map((p) => shrinkDataUrl(p, ANALYZE_PHOTO_SIDE, ANALYZE_PHOTO_QUALITY, false).catch(() => p))) : [];
+      const res = await aiFetch("/api/analyze", { images: sendPhotos, text: note, lang }, lang);
       const data = await res.json().catch(() => null);
       if (!res.ok || !data?.result) {
         setError(data?.message ?? `${tr("เซิร์ฟเวอร์ตอบกลับ", "Server replied")} ${res.status}`);
@@ -197,7 +200,11 @@ export function AddFlow({ mode, date, dateParam, prefill, auto = false, fromShee
         // Round 40: her optional buffer (kcal only) for AI guesses; 0% by default. The AI's own kcal is kept.
       }, pct));
       // Boxes belong to one photo: with 2+ photos they are dropped (1 photo = same as before).
-      setDraft({ title: r.title || tr("อาหาร", "Meal"), slot: draft.slot, items: boxesForPhotoCount(items, photos.length) });
+      const title = r.title || tr("อาหาร", "Meal");
+      setDraft({ title, slot: draft.slot, items: boxesForPhotoCount(items, photos.length) });
+      // Round 68: start drawing the picture now, while she checks the result (photo: from the AI's `visual`; text: the server writes one).
+      earlyTitleRef.current = title;
+      startEarlyDraw(title, items, visualRef.current);
       setQuestion(r.question);
       setMock(Boolean(data.mock));
       setStep("review");
@@ -296,6 +303,7 @@ export function AddFlow({ mode, date, dateParam, prefill, auto = false, fromShee
     const photoId = saved[0] ?? null;
     const now = Date.now();
     rememberVisual(d.title, visualRef.current);
+    claimEarlyPicture(earlyTitleRef.current, d.title, d.items);
     upsertEntry({
       id: newId("en"),
       date,

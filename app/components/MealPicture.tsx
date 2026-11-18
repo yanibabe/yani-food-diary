@@ -7,7 +7,7 @@ import { useLang } from "../lib/lang";
 import { drawPicture, useMealPic, chooseOwnPhoto, usePicSrc } from "../lib/mealPicClient";
 import type { FoodItem } from "../lib/types";
 import { Icon } from "./Icon";
-import { Sheet } from "./ui";
+import { Sheet, WaitPopup } from "./ui";
 
 /** Today rows: the picture in a rounded square. Shimmer while drawing; `fallback` (the icon tile) if none. */
 export function MealThumb({ title, className, fallback }: { title: string; className: string; fallback: React.ReactNode }) {
@@ -31,13 +31,16 @@ export function MealPicHeader({ title, items, photos }: { title: string; items: 
   const [error, setError] = useState<string | null>(null);
   const [viewing, setViewing] = useState(false);
   const busy = drawing;
+  const [waiting, setWaiting] = useState(false); // Round 68: she pressed a draw button → show the waiting popup
 
   async function draw(withHint: string) {
     setError(null);
     setSheet(false);
+    setWaiting(true);
     const h = withHint.trim();
     // A correction means "describe it again"; without one, the saved description is reused.
     const r = await drawPicture({ title, items, hint: h || undefined, visual: !h && pic && !pic.own ? pic.visual || undefined : undefined, manual: true });
+    setWaiting(false);
     if (!r.ok && r.message) setError(r.message);
     else setHint("");
   }
@@ -85,6 +88,8 @@ export function MealPicHeader({ title, items, photos }: { title: string; items: 
         )}
       </div>
       {error && <p className="rounded-2xl bg-warn px-4 py-2.5 text-[14px] text-warn-ink" role="alert">{error}</p>}
+
+      <WaitPopup text={waiting ? tr("กำลังวาดรูป…", "Drawing the picture…") : null} />
 
       <Sheet open={sheet} onClose={() => setSheet(false)} title={tr("วาดรูปใหม่", "Draw it again")} keyboardSafe>
         <div className="space-y-4 pb-4">
