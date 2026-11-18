@@ -1473,3 +1473,4 @@ Round 67 DEPLOYED (2026-11-18, f8000ba): Vercel build succeeded; live /api/meal-
 - Food only: analyze `visual` + style text + VISUAL_SYSTEM forbid scales/props/packaging.
 - "วาดใหม่" / "วาดรูปเมนูนี้" show the WaitPopup "กำลังวาดรูป…" while drawing.
 - Tests: tests/round68-early-picture.test.ts.
+Round 68 DEPLOYED (2026-11-18, 9a4ea2f): Vercel build succeeded; live functions answer from sin1 (Singapore). Photo reading ~2× faster locally (krapao 14–16 s → 6–7 s). Next: she tries it on her iPhone, watch accuracy with reasoning 'low'.
