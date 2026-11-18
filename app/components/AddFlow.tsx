@@ -48,6 +48,8 @@ export type AddFlowProps = {
   initialItem?: FoodItem | null;
   /** In the Today layer: no router, the layer closes itself. */
   embedded?: boolean;
+  /** Round 64: switch to another way of adding (e.g. barcode not found → take a photo). */
+  onSwitchMode?: (m: "photo" | "manual") => void;
   /** Header back button. */
   onBack: () => void;
   /** Review "Cancel". */
@@ -56,7 +58,7 @@ export type AddFlowProps = {
   onSaved: () => void;
 };
 
-export function AddFlow({ mode, date, dateParam, prefill, auto = false, fromSheet = false, create = false, handoff = null, initialItem = null, embedded = false, onBack, onCancel, onSaved }: AddFlowProps) {
+export function AddFlow({ mode, date, dateParam, prefill, auto = false, fromSheet = false, create = false, handoff = null, initialItem = null, embedded = false, onSwitchMode, onBack, onCancel, onSaved }: AddFlowProps) {
   const { upsertEntry, goals } = useStore();
   const ai = useAiStatus();
   const { tr, lang } = useLang();
@@ -285,7 +287,7 @@ export function AddFlow({ mode, date, dateParam, prefill, auto = false, fromShee
         <h1 className="text-[22px] font-semibold">{step === "review" ? tr("ตรวจผล", "Check the result") : heading}</h1>
       </header>
 
-      {step === "input" && mode === "barcode" && <BarcodeLookup onPick={pickBarcode} onManual={goManual} />}
+      {step === "input" && mode === "barcode" && <BarcodeLookup onPick={pickBarcode} onManual={goManual} onUsePhotoAi={onSwitchMode ? () => onSwitchMode("photo") : undefined} />}
 
       {step === "input" && mode === "search" && !waitingHandoff && (
         <IngredientSearch

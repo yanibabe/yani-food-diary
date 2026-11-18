@@ -15,6 +15,8 @@ function AddInner() {
   const date = search.get("date") || thaiDateKey();
   return (
     <AddFlow
+      key={mode}
+      onSwitchMode={(m) => router.replace(`/add/${m}${search.get("date") ? `?date=${search.get("date")}` : ""}`)}
       mode={mode}
       date={date}
       dateParam={search.get("date")}

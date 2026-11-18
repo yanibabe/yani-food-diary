@@ -12,12 +12,22 @@ import { useLang } from "../lib/lang";
 import { fmtG, fmtKcal } from "../lib/nutrition";
 import { applyLabelFix, findFix, fixIsValid, removeFix, upsertFix, type LabelFix } from "../lib/food/labelFix";
 import { readFixes, writeFixes } from "../lib/food/labelFixStore";
+import { stopCamera } from "../lib/cameraStream";
 import { LiveBarcodeScanner } from "./LiveBarcodeScanner";
 import { OffAttribution } from "./OffAttribution";
 import { NumberField, WaitPopup } from "./ui";
 import { Icon } from "./Icon";
 
-export function BarcodeLookup({ onPick, onManual }: { onPick: (food: Food, grams: number) => void; onManual: () => void }) {
+export function BarcodeLookup({
+  onPick,
+  onManual,
+  onUsePhotoAi,
+}: {
+  onPick: (food: Food, grams: number) => void;
+  onManual: () => void;
+  /** Round 64: product not found → switch to "take a photo of the food and let the AI estimate". */
+  onUsePhotoAi?: () => void;
+}) {
   const { tr, lang } = useLang();
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
@@ -37,6 +47,8 @@ export function BarcodeLookup({ onPick, onManual }: { onPick: (food: Food, grams
   const cameraRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => warmUpBarcodeReader(), []);
+  // Leaving this screen always switches the camera off (so the phone's camera indicator goes away).
+  useEffect(() => () => stopCamera(), []);
 
   /** Photo → free reader on the phone first; if it can't, the AI reads the printed digits. */
   async function fromPhoto(file: File | undefined) {
@@ -290,8 +302,21 @@ export function BarcodeLookup({ onPick, onManual }: { onPick: (food: Food, grams
       )}
 
       {notFound && (
-        <div className="rounded-2xl bg-warn px-4 py-3 text-[15px] text-warn-ink" data-testid="barcode-not-found">
-          {tr("ไม่พบสินค้านี้ใน Open Food Facts — กรอกเองจากฉลากได้เลย", "This product isn't in Open Food Facts — you can enter it yourself from the label")}
+        <div className="space-y-3 rounded-2xl bg-warn px-4 py-3 text-[15px] text-warn-ink" data-testid="barcode-not-found">
+          <p>
+            {onUsePhotoAi
+              ? tr("ไม่พบสินค้านี้ในฐานข้อมูล ถ่ายรูปอาหารให้ AI ประมาณให้ หรือกรอกเองจากฉลากก็ได้", "This product isn't in the database. Take a photo and let the AI estimate it, or type it from the label.")
+              : tr("ไม่พบสินค้านี้ใน Open Food Facts — กรอกเองจากฉลากได้เลย", "This product isn't in Open Food Facts — you can enter it yourself from the label")}
+          </p>
+          {onUsePhotoAi && (
+            <button className="btn-primary w-full" onClick={onUsePhotoAi} data-testid="barcode-use-photo-ai">
+              <Icon name="camera" className="mr-1.5 inline-block h-5 w-5 align-[-4px]" />
+              {tr("ถ่ายรูปให้ AI ประมาณ", "Take a photo for the AI")}
+            </button>
+          )}
+          <button className="btn-soft w-full" onClick={onManual} data-testid="barcode-not-found-manual">
+            {tr("กรอกเองจากฉลาก", "Enter it from the label")}
+          </button>
         </div>
       )}
 

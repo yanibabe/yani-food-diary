@@ -1,15 +1,12 @@
-// One shared camera for the live barcode scanner.
-// iPhone home-screen apps ask "Allow camera?" again every time the camera is switched off and on.
-// So after a scan we keep the camera quietly open for a short while (it is not shown or recorded),
-// and the next scan reuses it with no question. It switches off for real when:
-//   - nobody scanned for KEEP_MS, or
-//   - the app goes to the background / the phone locks.
-
-const KEEP_MS = 3 * 60 * 1000;
+// The camera for the live barcode scanner.
+// Round 64: it is switched OFF for real the moment the scanner closes (a scan was read, she tapped Cancel, or she went
+// to another screen). Before, it was kept quietly open for 3 minutes so the iPhone would not ask "Allow camera?" again,
+// but that left iPhone's own camera/recording indicator (the red pill at the top) on after she had left the scanner.
+// Trade-off: on an iPhone home-screen app the "Allow camera?" question can come back each time the scanner opens.
+// It also switches off when the app goes to the background / the phone locks.
 
 let stream: MediaStream | null = null;
 let pending: Promise<MediaStream> | null = null;
-let offTimer: ReturnType<typeof setTimeout> | undefined;
 let listening = false;
 
 function isLive(s: MediaStream | null): s is MediaStream {
@@ -18,8 +15,6 @@ function isLive(s: MediaStream | null): s is MediaStream {
 
 /** Switch the camera off now. */
 export function stopCamera() {
-  clearTimeout(offTimer);
-  offTimer = undefined;
   stream?.getTracks().forEach((t) => t.stop());
   stream = null;
 }
@@ -35,8 +30,6 @@ function listenForBackground() {
 
 /** Get the camera. Reuses the open one if there is one, so the phone does not ask again. */
 export async function getCamera(): Promise<MediaStream> {
-  clearTimeout(offTimer);
-  offTimer = undefined;
   if (isLive(stream)) {
     stream.getVideoTracks().forEach((t) => (t.enabled = true));
     return stream;
@@ -58,10 +51,7 @@ export async function getCamera(): Promise<MediaStream> {
   return pending;
 }
 
-/** The scanner screen closed. Keep the camera ready for a little while, then switch it off. */
+/** The scanner screen closed: switch the camera off now (so the phone's camera indicator goes away). */
 export function releaseCamera() {
-  if (!stream) return;
-  stream.getVideoTracks().forEach((t) => (t.enabled = false));
-  clearTimeout(offTimer);
-  offTimer = setTimeout(stopCamera, KEEP_MS);
+  stopCamera();
 }

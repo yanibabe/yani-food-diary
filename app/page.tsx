@@ -23,6 +23,10 @@ import { useStore } from "./lib/store";
 import { glassesOn, waterGoal } from "./lib/water";
 import { SLOT_LABEL, SLOTS, type Entry } from "./lib/types";
 import { Icon, type IconName } from "./components/Icon";
+import { SwipeRow } from "./components/SwipeRow";
+import { deletePhoto } from "./lib/photos";
+import { entryPhotoIds } from "./lib/mealPhotos";
+import { photoStillUsed } from "./lib/repeat";
 
 const SLOT_COLORS = ["var(--protein-dot)", "var(--fat-dot)", "var(--carbs-dot)", "var(--water)"];
 
@@ -193,6 +197,39 @@ function TodayInner() {
     setAdded(copy);
     setAddOpen(false);
   };
+  // Swipe-to-delete with Undo: the photo is only deleted after the undo window closes.
+  const [removed, setRemoved] = useState<Entry | null>(null);
+  const entriesRef = useRef(entries);
+  useEffect(() => {
+    entriesRef.current = entries;
+  }, [entries]);
+  const photoJob = useRef<{ entry: Entry; timer: ReturnType<typeof setTimeout> } | null>(null);
+  const finishPhotos = () => {
+    const job = photoJob.current;
+    if (!job) return;
+    clearTimeout(job.timer);
+    photoJob.current = null;
+    for (const pid of entryPhotoIds(job.entry)) if (!photoStillUsed(entriesRef.current, pid, job.entry.id)) deletePhoto(pid);
+  };
+  const removeEntry = (e: Entry) => {
+    finishPhotos();
+    setAdded(null);
+    deleteEntry(e.id);
+    setRemoved(e);
+    photoJob.current = { entry: e, timer: setTimeout(finishPhotos, 6000) };
+  };
+  const undoRemove = () => {
+    const job = photoJob.current;
+    if (job) clearTimeout(job.timer);
+    photoJob.current = null;
+    if (removed) upsertEntry(removed);
+    setRemoved(null);
+  };
+  useEffect(() => {
+    if (!removed) return;
+    const t = setTimeout(() => setRemoved(null), 6000);
+    return () => clearTimeout(t);
+  }, [removed]);
   useEffect(() => {
     if (!added) return;
     const t = setTimeout(() => setAdded(null), 6000);
@@ -314,7 +351,7 @@ function TodayInner() {
             ) : (
               <ul className="divide-y divide-line">
                 {list.map((e) => (
-                  <EntryRow key={e.id} e={e} />
+                  <EntryRow key={e.id} e={e} onDelete={() => removeEntry(e)} />
                 ))}
               </ul>
             )}
@@ -322,7 +359,22 @@ function TodayInner() {
         );
       })}
 
-      {added && (
+      {removed && (
+        <div
+          className="fixed inset-x-4 bottom-[calc(96px+env(safe-area-inset-bottom))] z-40 mx-auto flex max-w-[440px] items-center gap-3 rounded-[22px] bg-ink px-4 py-3 text-paper shadow-lg"
+          role="status"
+          data-testid="removed-toast"
+        >
+          <span className="min-w-0 flex-1 truncate text-[15px]">
+            {tr("ลบแล้ว", "Deleted")} · <b className="font-semibold">{removed.title}</b>
+          </span>
+          <button className="shrink-0 rounded-full bg-paper/15 px-4 py-2 text-[15px] font-semibold" onClick={undoRemove} data-testid="removed-undo">
+            {tr("เลิกทำ", "Undo")}
+          </button>
+        </div>
+      )}
+
+      {added && !removed && (
         <div
           className="fixed inset-x-4 bottom-[calc(96px+env(safe-area-inset-bottom))] z-40 mx-auto flex max-w-[440px] items-center gap-3 rounded-[22px] bg-ink px-4 py-3 text-paper shadow-lg"
           role="status"
@@ -526,7 +578,13 @@ function TodayInner() {
       {layer && (
         <div className="add-layer fixed inset-0 z-[70] overflow-y-auto overscroll-contain" data-testid="add-layer">
           <AddFlow
+            key={layer.kind}
             embedded
+            onSwitchMode={(m) => {
+              // Round 64: e.g. barcode not found → take a photo instead, inside the same layer (still one history step)
+              layerRef.current = { kind: m };
+              setLayer({ kind: m });
+            }}
             mode={layerMode(layer)}
             date={date}
             dateParam={dateParam}
@@ -550,14 +608,15 @@ function SourceIcon({ e, small }: { e: Entry; small?: boolean }) {
   );
 }
 
-function EntryRow({ e }: { e: Entry }) {
+function EntryRow({ e, onDelete }: { e: Entry; onDelete: () => void }) {
+  const { tr } = useLang();
   const m = sumMacros(e.items.map(pickMacros));
   // Round 39: "~" = some numbers are estimates; "?" = a nutrient is unknown for some item.
   const approx = e.items.some((i) => isEstimated(i, e));
   const gap = joinMissing(...e.items.map((i) => i.missing));
   const q = (k: "protein" | "carbs" | "fat") => (gap.includes(k) ? "?" : "");
   return (
-    <li>
+    <SwipeRow onDelete={onDelete} label={`${tr("ลบ", "Delete")} ${e.title}`}>
       <Link href={`/entry/${e.id}`} className="flex items-center gap-3 px-1 py-3" data-testid="entry-row">
         {e.photoId ? (
           <StoredPhoto id={e.photoId} className="h-14 w-14 shrink-0 rounded-2xl object-cover" />
@@ -578,7 +637,7 @@ function EntryRow({ e }: { e: Entry }) {
           <span className="ml-0.5 text-[12px] font-normal text-muted">kcal</span>
         </div>
       </Link>
-    </li>
+    </SwipeRow>
   );
 }
 
