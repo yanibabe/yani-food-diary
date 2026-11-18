@@ -9,6 +9,7 @@ import { translateForUsda } from "@/app/lib/server/ai";
 import { UsdaClient, UsdaError, sharedUsdaClient } from "@/app/lib/food/usda";
 import { mockUsdaFetch } from "@/app/lib/food/usdaMock";
 import { searchUsda } from "@/app/lib/food/usdaSearch";
+import { localUsdaFood } from "@/app/lib/food/usdaLocal";
 
 export const maxDuration = 30;
 
@@ -32,10 +33,22 @@ export async function POST(req: Request) {
   if (blocked) return blocked;
 
   try {
-    const c = client();
+    // Round 77: the live client may be missing (no key) — local foods can still answer, so the error waits until it is needed.
+    let c: UsdaClient | null = null;
+    let clientError: unknown = null;
+    try {
+      c = client();
+    } catch (e) {
+      clientError = e;
+    }
+    const live = (): UsdaClient => {
+      if (!c) throw clientError;
+      return c;
+    };
     if (body.action === "detail") {
       const id = Number(body.fdcId);
-      const food = await c.food(id);
+      // The bundled table has this id (fast, works offline)? Answer from it. Otherwise live USDA.
+      const food = localUsdaFood(id) ?? (await live().food(id));
       if (!food) return Response.json({ error: "not-found", message: t("ไม่พบอาหารนี้ใน USDA", "This food wasn't found in USDA") }, { status: 404 });
       return Response.json({ food, mock: process.env.USDA_MOCK === "1" });
     }
@@ -43,8 +56,8 @@ export async function POST(req: Request) {
     if (!name && !body.query) return Response.json({ error: "bad-request", message: t("ยังไม่ได้ใส่ชื่ออาหาร", "No food name") }, { status: 400 });
     const canTranslate = Boolean(process.env.OPENROUTER_API_KEY) || process.env.AI_MOCK === "1";
     const out = await searchUsda(
-      c,
-      { name, query: typeof body.query === "string" ? body.query : null, branded: body.branded === true },
+      { search: (...a) => live().search(...a) },
+      { name, query: typeof body.query === "string" ? body.query : null, branded: body.branded === true, local: process.env.USDA_MOCK !== "1" },
       canTranslate ? async (n) => (await translateForUsda({ name: n, lang })).query || null : null,
     );
     return Response.json({ ...out, mock: process.env.USDA_MOCK === "1" });

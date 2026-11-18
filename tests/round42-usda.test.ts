@@ -17,7 +17,7 @@ function fakeApi(calls: string[] = [], over: { status?: number; body?: unknown; 
     calls.push(body.name);
     if (over.throws) throw new TypeError("Failed to fetch");
     if (over.status && over.status !== 200) return new Response(JSON.stringify(over.body ?? {}), { status: over.status });
-    const out = await searchUsda(usdaClient, { name: body.name }, null);
+    const out = await searchUsda(usdaClient, { name: body.name, local: false }, null);
     return Response.json(out);
   }) as typeof fetch;
 }
@@ -214,7 +214,7 @@ test("debounce: a slow answer for old words never replaces a newer search", asyn
   const slow = (async (_u: string, init?: RequestInit) => {
     const body = JSON.parse(String(init?.body));
     if (body.name === "chicken") await new Promise<void>((r) => (release = r));
-    return Response.json(await searchUsda(usdaClient, { name: body.name }, null));
+    return Response.json(await searchUsda(usdaClient, { name: body.name, local: false }, null));
   }) as unknown as typeof fetch;
   const s = createUsdaSearcher({ fetchFn: slow, now: t.now, schedule: t.schedule, hasPasscode: () => true, online: () => true });
   const p1 = s.searchDebounced("chicken");

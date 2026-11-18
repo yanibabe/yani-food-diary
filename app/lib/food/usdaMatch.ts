@@ -239,7 +239,7 @@ const STOP = new Set(["raw", "cooked", "boiled", "fried", "steamed", "baked", "r
  * Words in a USDA description that make it a DIFFERENT food when her search doesn't say them
  * (sticky / brown / wild rice, lunch meat, battered, flour, juice…). Learned from real USDA answers.
  */
-const VARIANTS = ["glutinous", "brown", "wild", "black", "red", "puffed", "flour", "noodles", "bran", "lunchmeat", "luncheon", "sliced", "deli", "coated", "breaded", "battered", "nuggets", "patty", "sausage", "canned", "smoked", "cured", "juice", "powder", "dehydrated", "sweetened", "syrup", "baby", "infant", "mushroom", "mushrooms", "soup", "salad", "sandwich", "pie", "cake"];
+const VARIANTS = ["glutinous", "brown", "wild", "black", "red", "puffed", "flour", "noodles", "bran", "lunchmeat", "luncheon", "sliced", "deli", "coated", "breaded", "batter", "battered", "nuggets", "patty", "sausage", "canned", "smoked", "cured", "juice", "powder", "dehydrated", "sweetened", "syrup", "baby", "infant", "mushroom", "mushrooms", "soup", "salad", "sandwich", "pie", "cake"];
 
 /** The words that say WHAT the food is ("oyster sauce" → oyster, sauce). */
 export function coreWords(query: string): string[] {
@@ -279,28 +279,64 @@ export function compare(food: UsdaFood, name: string, query: string): RankedFood
   const coverage = core.length ? found / core.length : 0;
   // A mixed dish ("Beans and white rice", "Chicken with vegetables") is not the single food she named.
   const head = desc.split(" ").slice(0, 6).join(" ");
-  const mixed = /\b(and|with)\b/.test(lower(food.description).split(",")[0] ?? "") && !/\b(and|with)\b/.test(lower(query)) && !/meat and skin/.test(head);
+  // Only the part before the first comma names the dish (lower() drops commas, so split the raw text).
+  const mixed = /\b(and|with)\b/.test(food.description.toLowerCase().split(",")[0] ?? "") && !/\b(and|with)\b/.test(lower(query)) && !/meat and skin/.test(head);
+  // Round 77: "Potatoes, raw, skin" / "Potatoes, baked, skin" is the peel ONLY, not the potato.
+  const parts = food.description.toLowerCase().split(",").map((x) => x.trim());
+  const skinOnly = parts.slice(1).some((x) => /^skins?( only)?( with(out)? salt)?$/.test(x)) && !parts.some((x) => /flesh/.test(x)) && !/\b(skin|peel)\b/.test(`${lower(name)} ${lower(query)}`);
   const q = lower(query);
   const variant = VARIANTS.some((v) => has(desc, v) && !has(q, v) && !lower(name).includes(v));
-  if (coverage < 1 || mixed || variant) differences.push("food");
+    // Egg yolk / egg white alone are parts of the egg, not "an egg".
+  const eggPart = parts[0] === "egg" && parts.slice(1).some((x) => x === "yolk" || x === "white") && !/\b(yolk|white)\b/.test(`${lower(name)} ${lower(query)}`);
+  if (coverage < 1 || mixed || variant || skinOnly || eggPart) differences.push("food");
   return { ...food, differences, coverage, attrs: got };
+}
+
+/** Words that make a food a processed product, not the plain food (only used to break ties). */
+const PROCESSED = new Set(["fried", "frozen", "mashed", "dehydrated", "scalloped", "gratin", "hash", "chips", "puffs", "flakes", "granules", "salad", "stewed", "creamed", "candied", "pickled", "canned", "instant", "pancakes", "patty", "dried", "juice", "dessert", "cake", "bread", "o'brien", "home-prepared", "tots", "sticks", "fries", "glazed", "battered", "breaded", "sweetened", "skins", "baby", "babyfood"]);
+const BASIC = new Set(["raw", "boiled", "baked", "roasted", "cooked", "steamed", "broiled", "grilled"]);
+
+const singular = (w: string) => (w.length > 3 && w.endsWith("es") && /(oes|ses|xes|ches|shes)$/.test(w) ? w.slice(0, -2) : w.length > 3 && w.endsWith("s") && !w.endsWith("ss") ? w.slice(0, -1) : w);
+
+/**
+ * Round 77: 0 = the description STARTS with the food she searched ("Potatoes, boiled…" for "potato"),
+ * 1 = the word only turns up later ("Bread, potato", "Soup, potato"), 2 = it starts with a processed word
+ * ("Stewed potatoes", "Fried …"). Singular / plural count the same. USDA names put the main food first.
+ */
+export function leadRank(description: string, query: string): number {
+  const first = lower(description).split(" ")[0] ?? "";
+  const core = coreWords(query).map(singular);
+  if (core.includes(singular(first))) return 0;
+  return PROCESSED.has(first) ? 2 : 1;
+}
+
+/** 0 = a basic raw / boiled / baked food, 1 = nothing said, 2 = carries a processing word (fried, mashed, chips…). */
+function processedRank(description: string): number {
+  const words = lower(description).split(" ");
+  if (words.some((w) => PROCESSED.has(w))) return 2;
+  // Plain food has no salt added: "without salt" before "with salt".
+  const salted = /\bwith salt\b/.test(description.toLowerCase()) ? 0.5 : 0;
+  return (words.some((w) => BASIC.has(w)) ? 0 : 1) + salted;
 }
 
 const TYPE_ORDER = { foundation: 0, sr: 1, fndds: 2, branded: 3 } as const;
 
 /**
- * Best first: fewest differences, then most food words found, then Foundation > SR Legacy > FNDDS,
+ * Best first: fewest differences, then most food words found, then foods that START with the food word (plain before processed, Round 77), then Foundation > SR Legacy > FNDDS,
  * then USDA's own order. Foods with no kcal value go last (they can't be used).
  */
 export function rankFoods(foods: UsdaFood[], name: string, query: string): RankedFood[] {
   return foods
-    .map((f, i) => ({ r: compare(f, name, query), i }))
+    .map((f, i) => ({ r: compare(f, name, query), i, lead: leadRank(f.description, query), proc: processedRank(f.description), words: lower(f.description).split(" ").length }))
     .sort(
       (a, b) =>
         Number(a.r.nutrients.kcal == null) - Number(b.r.nutrients.kcal == null) ||
         a.r.differences.length - b.r.differences.length ||
         b.r.coverage - a.r.coverage ||
+        a.lead - b.lead ||
+        a.proc - b.proc ||
         TYPE_ORDER[a.r.dataType] - TYPE_ORDER[b.r.dataType] ||
+        a.words - b.words ||
         a.i - b.i,
     )
     .map((x) => x.r);

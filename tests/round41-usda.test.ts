@@ -132,10 +132,10 @@ test("household measures → portions and a density from a cup weight", () => {
 test("raw vs cooked rice: different searches, different foods, both shown — never auto-picked", async () => {
   assert.equal(englishQuery("ข้าวสวย"), "rice white cooked");
   assert.equal(englishQuery("ข้าวสาร"), "rice white raw");
-  const cooked = await searchUsda(client(), { name: "ข้าวสวย" }, null);
+  const cooked = await searchUsda(client(), { name: "ข้าวสวย", local: false }, null);
   assert.equal(cooked.results[0].fdcId, 169757); // cooked first
   assert.ok(cooked.results.find((r) => r.fdcId === 169756)!.differences.includes("state")); // raw rice flagged
-  const raw = await searchUsda(client(), { name: "ข้าวสาร" }, null);
+  const raw = await searchUsda(client(), { name: "ข้าวสาร", local: false }, null);
   assert.equal(raw.results[0].fdcId, 169756);
   assert.ok(raw.results.find((r) => r.fdcId === 169757)!.differences.includes("state"));
   // "beans and white rice" never looks like plain rice
@@ -147,7 +147,7 @@ test("raw vs cooked rice: different searches, different foods, both shown — ne
 });
 
 test("plain 'ข้าว' (raw or cooked not said) is never a 'close match'", async () => {
-  const out = await searchUsda(client(), { name: "ข้าว" }, null);
+  const out = await searchUsda(client(), { name: "ข้าว", local: false }, null);
   assert.ok(out.results.length >= 2);
   assert.ok(out.results.every((r) => !r.close));
 });
@@ -160,14 +160,14 @@ test("chicken cuts and preparation: breast ≠ thigh, skinless ≠ skin-on, frie
   assert.equal(a.skin, true);
   assert.equal(attrsOf("Chicken breast, baked, broiled, or roasted, skin not eaten, from raw").skin, false);
 
-  const out = await searchUsda(client(), { name: "อกไก่ไม่ติดหนัง" }, null);
+  const out = await searchUsda(client(), { name: "อกไก่ไม่ติดหนัง", local: false }, null);
   const by = (id: number) => out.results.find((r) => r.fdcId === id)!;
   assert.equal(out.results[0].fdcId, 2646170); // skinless raw breast first
   assert.ok(by(2727569).differences.includes("skin"));
   const thigh = rankFoods([food(171140)], "อกไก่", "chicken breast")[0];
   assert.ok(thigh.differences.includes("cut"));
 
-  const fried = await searchUsda(client(), { name: "อกไก่ทอด" }, null);
+  const fried = await searchUsda(client(), { name: "อกไก่ทอด", local: false }, null);
   assert.equal(fried.results[0].fdcId, 171478); // the fried one
   assert.ok(fried.results.find((r) => r.fdcId === 171477)!.differences.includes("method")); // roasted ≠ fried
   assert.ok(fried.results.find((r) => r.fdcId === 2646170)!.differences.includes("state")); // raw ≠ fried
@@ -182,7 +182,7 @@ test("raw vs cooked meat: very different kcal per 100 g, so a state difference i
 test("oyster sauce ≠ oil: Thai 'น้ำมันหอย' searches oyster sauce; oil is flagged as a different food", async () => {
   assert.equal(englishQuery("น้ำมันหอย"), "oyster sauce");
   assert.equal(englishQuery("น้ำมันพืช"), "oil vegetable");
-  const out = await searchUsda(client(), { name: "น้ำมันหอย" }, null);
+  const out = await searchUsda(client(), { name: "น้ำมันหอย", local: false }, null);
   assert.equal(out.results[0].fdcId, 174531);
   const oil = compare(food(171413), "น้ำมันหอย", "oyster sauce");
   assert.ok(oil.differences.includes("food"));
@@ -191,13 +191,13 @@ test("oyster sauce ≠ oil: Thai 'น้ำมันหอย' searches oyster s
 
 test("ambiguous / unknown Thai names: AI translation only gets the NAME; no translation → no results, no crash", async () => {
   const seen: string[] = [];
-  const out = await searchUsda(client(), { name: "ปลาแซลมอนญี่ปุ่นย่างซีอิ๊ว" }, async (n) => (seen.push(n), "salmon"));
+  const out = await searchUsda(client(), { name: "ปลาแซลมอนญี่ปุ่นย่างซีอิ๊ว", local: false }, async (n) => (seen.push(n), "salmon"));
   assert.deepEqual(seen, []); // "แซลมอน" is in the safe list → no AI needed
   assert.ok(out.query.startsWith("salmon"));
-  const unknown = await searchUsda(client(), { name: "ขนมครกใบเตย" }, async (n) => (seen.push(n), null));
+  const unknown = await searchUsda(client(), { name: "ขนมครกใบเตย", local: false }, async (n) => (seen.push(n), null));
   assert.deepEqual(seen, ["ขนมครกใบเตย"]);
   assert.equal(unknown.results.length, 0);
-  const typed = await searchUsda(client(), { name: "ไก่", query: "chicken thigh raw" }, null);
+  const typed = await searchUsda(client(), { name: "ไก่", query: "chicken thigh raw", local: false }, null);
   assert.equal(typed.queryFrom, "typed");
   assert.equal(typed.results[0].fdcId, 171140);
 });
@@ -210,9 +210,9 @@ test("close-match hint only when nothing differs; she still has to confirm", () 
 });
 
 test("Branded foods are a separate search from generic ingredients", async () => {
-  const generic = await searchUsda(client(), { name: "yogurt" }, null);
+  const generic = await searchUsda(client(), { name: "yogurt", local: false }, null);
   assert.ok(generic.results.every((r) => r.dataType !== "branded"));
-  const branded = await searchUsda(client(), { name: "yogurt", branded: true }, null);
+  const branded = await searchUsda(client(), { name: "yogurt", branded: true, local: false }, null);
   assert.ok(branded.results.length > 0 && branded.results.every((r) => r.dataType === "branded"));
   const item = applyUsdaToItem(aiItem(), toSnap(branded.results[0])!, 150);
   assert.equal(item.prov?.via, "usda-branded");

@@ -99,6 +99,10 @@ export const FOOD_REF: RefFood[] = [
   { key: "garlic", label: { th: "กระเทียม", en: "garlic" }, names: ["กระเทียม", "garlic"], per100: { kcal: 149, protein: 6.4, carbs: 33, fat: 0.5 } },
   { key: "vegetables", label: { th: "ผักรวม", en: "mixed vegetables" }, names: ["ผักรวม", "ผัก", "vegetables", "mixed vegetables"], per100: { kcal: 25, protein: 1.5, carbs: 5, fat: 0.2 } },
   { key: "bread", label: { th: "ขนมปัง", en: "bread" }, names: ["ขนมปัง", "bread"], per100: { kcal: 250, protein: 10, carbs: 43, fat: 3.5 }, unitG: 30 },
+  // Round 77: potato, raw and boiled. Values are USDA SR Legacy 170026 "Potatoes, flesh and skin, raw" and 170438
+  // "Potatoes, boiled, cooked in skin, flesh, without salt" (public domain, FoodData Central).
+  { key: "potato", group: "potato", state: "raw", label: { th: "มันฝรั่ง (ดิบ)", en: "raw potato" }, names: ["มันฝรั่ง", "มันฝรั่งดิบ", "มันฝรั่งสด", "potato", "potatoes", "raw potato", "raw potatoes"], per100: { kcal: 77, protein: 2.05, carbs: 17.5, fat: 0.09 }, unitG: 213 },
+  { key: "potato-boiled", group: "potato", state: "cooked", label: { th: "มันฝรั่งต้ม", en: "boiled potato" }, names: ["มันฝรั่งต้ม", "มันฝรั่งสุก", "boiled potato", "boiled potatoes", "cooked potato"], per100: { kcal: 87, protein: 1.87, carbs: 20.1, fat: 0.1 }, unitG: 136 },
   { key: "banana", label: { th: "กล้วยหอม", en: "banana" }, names: ["กล้วยหอม", "กล้วย", "banana"], per100: { kcal: 89, protein: 1.1, carbs: 23, fat: 0.3 }, unitG: 120 },
 ];
 

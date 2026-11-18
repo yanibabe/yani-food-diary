@@ -114,7 +114,7 @@ const COOKED_WORDS = new Set(["cooked", "boiled", "steamed", "fried", "grilled",
  * a matching state ranks higher, the opposite state (raw vs cooked) ranks lower.
  * Every word of the name counts, rare words more than common ones. Returns up to `limit` foods.
  */
-export function searchFoods(query: string, opts: { state?: string | null; limit?: number; minCoverage?: number } = {}): Candidate[] {
+export function searchFoods(query: string, opts: { state?: string | null; limit?: number; minCoverage?: number; /** false = keep look-alikes with the same numbers (default true) */ dedupe?: boolean } = {}): Candidate[] {
   const limit = opts.limit ?? 6;
   const ix = foodIndex();
   const qt = [...new Set(tokenize(query))].filter((t) => ix.idf.has(t));
@@ -148,7 +148,7 @@ export function searchFoods(query: string, opts: { state?: string | null; limit?
   const top: Candidate[] = [];
   for (const c of out) {
     const key = `${c.per100.kcal}|${c.per100.protein}|${c.per100.carbs}|${c.per100.fat}`;
-    if (seen.has(key)) continue;
+    if (opts.dedupe !== false && seen.has(key)) continue;
     seen.add(key);
     top.push(c);
     if (top.length >= limit) break;

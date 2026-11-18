@@ -1524,3 +1524,11 @@ Her boyfriend couldn't use the app because of the passcode. I explained the risk
 - Done by removing the Vercel env var APP_PASSCODE (Production). No code change: app/lib/server/passcode.ts already allows AI when APP_PASSCODE is not set.
 - To turn it back ON: `vercel env add APP_PASSCODE production` (type a new code), then redeploy; each phone types the code once.
 - Recommended safety net (not done yet): a credit limit on the OpenRouter key (set by Machina/her in OpenRouter settings), and/or a server-side daily cap.
+
+## Round 77 (2026-11-18) — potato (and other plain foods) found in "add ingredient" (built, NOT deployed)
+Her report: typing "potatoes" or "มันฝรั่ง" found no plain potato. Cause: live USDA returns only 12 foods by its own relevance (stewed potatoes, potato flour, potato bread, soup…) and none was a plain potato; มันฝรั่ง → "potato" got the same list.
+- The ingredient search (searchUsda) now ALSO searches the bundled food table (app/data/food-db.json, real USDA ids) — app/lib/food/usdaLocal.ts — merges with live USDA (dedupe by fdcId) and ranks together, 14 rows max. If live USDA fails, the local foods still answer. "detail" answers from the table when the id is there (falls back to live USDA).
+- Ranking (usdaMatch.ts): description starting with the food word first (potato ≈ potatoes); processed words (fried, mashed, flour, bread, soup…) after plain raw/boiled/baked; "without salt" before "with salt"; peel-only ("Potatoes, raw, skin") and egg yolk/white alone count as a different food unless she typed skin/yolk/white; "flesh and skin" no longer mistaken for a mixed dish; "batter" counts as a variant.
+- FOOD_REF: added มันฝรั่ง (ดิบ) 77 kcal and มันฝรั่งต้ม 87 kcal (USDA 170026 / 170438) — they show first, offline.
+- Checked: 518 tests, tsc clean, lint 0 errors; preview at 375px: "มันฝรั่ง" and "potatoes" both list มันฝรั่ง (ดิบ), มันฝรั่งต้ม, then plain raw/baked potatoes; picking "Potatoes, flesh and skin, raw" 150 g → 116 kcal. Spot checks: carrot → Carrots raw; egg → Egg whole raw; chicken breast → skinless raw.
+- NOT verified: real iPhone; table-answered "detail" has no saturated fat (table doesn't carry it).
