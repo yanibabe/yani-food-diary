@@ -1549,3 +1549,4 @@ She picked "แบบ B · จดหมายสั้นๆ" from public/_try/r
 - Checked: 536 tests, tsc clean, lint 0 errors; real blob round-trip on the dev server; letter page + ingredient list at 375px with a real cover; save + no-duplicate (helper). Test share left in the store: a3vWKW5Lmglz6xCf7fzPTXbIsKi1iWXq (tofu soup); broken one deleted.
 - NOT verified: real iPhone share sheet + LINE preview card; a brand-new receiver with no profile is sent to /welcome after saving (recipe is saved); no rate limit on uploads (passcode off).
 - Later: "family kitchen" group page (needs simple sign-in).
+Round 78 DEPLOYED (2026-11-18, f94c992): Vercel build succeeded; live /r/<id> has og tags, cover 200 image/jpeg, bad POST → 400, letter page renders with the real cover. Next: she shares a real recipe to her boyfriend via LINE on her iPhone (check the LINE card + save).
