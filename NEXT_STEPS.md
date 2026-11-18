@@ -1474,3 +1474,4 @@ Round 67 DEPLOYED (2026-11-18, f8000ba): Vercel build succeeded; live /api/meal-
 - "วาดใหม่" / "วาดรูปเมนูนี้" show the WaitPopup "กำลังวาดรูป…" while drawing.
 - Tests: tests/round68-early-picture.test.ts.
 Round 68 DEPLOYED (2026-11-18, 9a4ea2f): Vercel build succeeded; live functions answer from sin1 (Singapore). Photo reading ~2× faster locally (krapao 14–16 s → 6–7 s). Next: she tries it on her iPhone, watch accuracy with reasoning 'low'.
+✅ 2026-11-18: she tried Rounds 67+68 on her iPhone (06f5d1b): faster photo reading + AI pictures "เลิศ" (excellent). Next: she sends reference examples for the redesign.
