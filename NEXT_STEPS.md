@@ -1465,3 +1465,4 @@ Context: she asked for a first-principles rebuild; research done (docs/REBUILD_P
 - New meals draw in the background (store.tsx upsertEntry); old meals only via "วาดรูปเมนูนี้". Meal page: big picture, "วาดใหม่" with hint, "รูปจริง", "ใช้รูปที่ถ่ายเอง". Today rows show the picture.
 - Real AI checked locally: ต้มยำกุ้งน้ำข้น, น้ำพริกหนุ่ม ผักลวก, โจ๊กหมูใส่ไข่, ข้าวผัดกุ้ง — about 6–10 s and ~$0.034 each. 434 tests pass, tsc clean, lint 0 errors.
 - NOT verified: real iPhone; background draw for a new meal with the real AI (mock only); photo-meal `visual` path in the browser; "Use my photo" in the browser; passcode prompt on "วาดใหม่".
+Round 67 DEPLOYED (2026-11-18, f8000ba): Vercel build succeeded; live /api/meal-picture answers 401 without the passcode (route is there and protected). Next: she tries it on her iPhone (swipe the app away and reopen; Profile bottom should show build f8000ba), then sends reference examples for the redesign.
