@@ -1485,3 +1485,11 @@ Round 68 DEPLOYED (2026-11-18, 9a4ea2f): Vercel build succeeded; live functions 
 ## Round 72 (2026-11-18) — chat: Today page peeked through above the iPhone keyboard
 Her iPhone screenshot: in Ask AI, with the keyboard open, a Today meal row showed between the input and the keyboard bar. Cause: the chat layer follows visualViewport, which iOS reports late while it scrolls the page. Fix: a tall cover (same .add-layer background, top -50vh, height 200vh, z 44) behind the chat layer in FoodChat.tsx. Preview check: chat shrunk to 420px + page scrolled → only soft background in the gap. NOT verified on her iPhone (real keyboard).
 ✅ 2026-11-18: Round 72 confirmed on her iPhone — the home page no longer shows behind Ask AI.
+
+## Round 73 (2026-11-18) — nutrient jar "โหลสารอาหาร" (built, NOT deployed)
+Inspired by her MY JAR reference (feeling only). Fixed colors + shapes: protein = heart #7FBBDD, carbs = cloud #F58B05, fat = circle #FFC22F. Pieces drop in random order; a % bar (share of GRAMS, matches the pieces) shows which is more/less.
+- Today page: JarCard under the kcal card (mini jar + % bar) → opens JarScreen (addLayer kind "jar").
+- JarScreen: Today / This week, chips with grams, % bar, "1 ชิ้น = 5 g" (today) / 20 g (week), max 150 pieces; "เขย่าโหล" (shake, also iPhone motion with permission), "เทใหม่"; tap a piece → card with grams + kcal (week shows a daily average). New pieces since last visit drop last (yfd:v1:jarSeen).
+- matter-js loads only on the jar screen (dynamic import). Files: app/lib/jar.ts, jarShapes.ts, jarPhysics.ts, components/JarCard.tsx, JarScreen.tsx, JarShapeIcon.tsx; tests/round73-jar.test.ts. Prototype with 27 palettes: public/_try/jar.html (gitignored).
+- Checked in the preview (mobile size): card 23/61/16% matches 40/105/27 g; Today + Week; tap piece (40 g protein = 160 kcal); shake; pour again. 481 tests pass, tsc clean, lint 0 errors, build OK.
+- NOT verified: real iPhone (shake permission prompt, motion); "new pieces drop last" after a real new meal; dark mode; English text; bundle size.

@@ -12,6 +12,8 @@
     "postinstall": "cp node_modules/zxing-wasm/dist/reader/zxing_reader.wasm public/zxing_reader.wasm"
   },
   "dependencies": {
+    "@types/matter-js": "^0.20.2",
+    "matter-js": "^0.20.0",
     "next": "16.4.6",
     "react": "19.3.0",
     "react-dom": "19.3.0",
