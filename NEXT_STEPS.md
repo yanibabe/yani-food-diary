@@ -1533,3 +1533,9 @@ Her report: typing "potatoes" or "มันฝรั่ง" found no plain potat
 - Checked: 518 tests, tsc clean, lint 0 errors; preview at 375px: "มันฝรั่ง" and "potatoes" both list มันฝรั่ง (ดิบ), มันฝรั่งต้ม, then plain raw/baked potatoes; picking "Potatoes, flesh and skin, raw" 150 g → 116 kcal. Spot checks: carrot → Carrots raw; egg → Egg whole raw; chicken breast → skinless raw.
 - NOT verified: real iPhone; table-answered "detail" has no saturated fat (table doesn't carry it).
 Round 77 DEPLOYED (2026-11-18, 723db57): Vercel build succeeded; live /api/food/usda for "potatoes", "potato", "มันฝรั่ง" returns plain potatoes first (one call right after deploy still hit the old version). Phone keeps old search answers up to 30 min (yfd:v1:usdaCache). Next: she checks on her iPhone (swipe away and reopen).
+
+## IDEA (2026-11-18, not started) — share recipes with family / boyfriend
+Her wish: send her recipes to her boyfriend (and family who use the app), maybe a small family "community" later. Simplest path that can grow:
+1. Step 1 — "share recipe link": a share button on a recipe → iPhone share sheet (LINE etc.) → he opens the link → sees the recipe → "บันทึกเข้าสูตรของฉัน" saves his OWN copy (her later edits don't change his). The recipe is stored online (free Supabase, like Homefolio) under a long random id; no login needed.
+2. Later — family kitchen: a shared family group page listing recipes everyone shared (needs simple sign-in), likes/comments maybe.
+Today the app is local-only (each phone keeps its own data), so any sharing needs a small online store.
