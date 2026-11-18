@@ -11,6 +11,7 @@ import { useLang } from "../../lib/lang";
 import { useStore } from "../../lib/store";
 import { SLOT_LABEL, SLOTS, UNIT_LABEL, type Ingredient, type MealSlot, type Recipe } from "../../lib/types";
 import { Icon } from "../../components/Icon";
+import { ShareRecipeButton } from "../../components/ShareRecipeButton";
 import { MealPicHeader } from "../../components/MealPicture";
 import { getPhoto } from "../../lib/photos";
 import { recipePictureItems } from "../../lib/mealPics";
@@ -211,13 +212,16 @@ function RecipeInner() {
   return (
     <main className="page !pt-0 space-y-5">
       <div className="space-y-3" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 12px)" }}>
-        <button
-          className="grid h-11 w-11 place-items-center rounded-full bg-paper/95 shadow"
-          onClick={() => router.push("/recipes")}
-          aria-label={tr("กลับ", "Back")}
-        >
-          <Icon name="caret-left" className="h-5 w-5" />
-        </button>
+        <div className="flex items-center justify-between">
+          <button
+            className="grid h-11 w-11 place-items-center rounded-full bg-paper/95 shadow"
+            onClick={() => router.push("/recipes")}
+            aria-label={tr("กลับ", "Back")}
+          >
+            <Icon name="caret-left" className="h-5 w-5" />
+          </button>
+          <ShareRecipeButton recipe={recipe} />
+        </div>
         <MealPicHeader title={recipe.name} items={recipePictureItems(recipe.ingredients)} photos={ownPhotos} cover />
       </div>
 

@@ -174,7 +174,14 @@ function RecipesInner() {
                       data-testid="recipe-card"
                     >
                       <MealThumb title={r.name} className="h-[38px] w-[38px] shrink-0 rounded-[11px]" fallback={<PotTile id={r.id} size={38} radius={11} />} />
-                      <span className="min-w-0 flex-1 truncate text-[16px]">{r.name}</span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-[16px]">{r.name}</span>
+                        {r.sharedFrom && (
+                          <span className="block truncate text-[12px]" style={{ color: "#C9845F" }} data-testid="recipe-shared-from">
+                            💌 {tr("จาก", "from")} {r.sharedFrom}
+                          </span>
+                        )}
+                      </span>
                       {t.complete ? (
                         <span className="shrink-0 text-right">
                           <span className="num text-[17px]">{fmtKcal(t.perServing.kcal)}</span>{" "}

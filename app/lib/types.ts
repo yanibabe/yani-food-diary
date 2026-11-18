@@ -275,6 +275,10 @@ export type Recipe = {
   coverPhotoId: string | null;
   /** Missing on recipes saved before Round 33 → shown under "Other". */
   category?: RecipeCategory;
+  /** Round 78: who sent this recipe (shown as "💌 from …"). Missing on recipes she made herself. */
+  sharedFrom?: string;
+  /** Round 78: the share link it was saved from, so saving the same link twice makes no duplicate. */
+  sharedId?: string;
   createdAt: number;
   updatedAt: number;
 };

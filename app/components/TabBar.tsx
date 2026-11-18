@@ -14,7 +14,7 @@ const TABS = [
 export function TabBar() {
   const path = usePathname();
   const { tr, lang } = useLang();
-  if (path === "/welcome" || path.startsWith("/add") || path.startsWith("/entry") || /^\/recipes\/.+/.test(path)) return null;
+  if (path === "/welcome" || path.startsWith("/r/") || path.startsWith("/add") || path.startsWith("/entry") || /^\/recipes\/.+/.test(path)) return null;
   return (
     <nav className="tabbar fixed inset-x-0 bottom-0 z-30 safe-bottom" aria-label={tr("เมนูหลัก", "Main menu")}>
       <div className="mx-auto flex max-w-[560px] justify-around px-2 pt-1.5">

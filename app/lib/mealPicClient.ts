@@ -87,6 +87,12 @@ export function useMealPic(title: string): PicState {
   return { pic: findPic(pics, title), drawing: !!k && inflight.has(k), failed: !!k && failed.has(k) };
 }
 
+/** Round 78: does this dish already have a picture on this phone? (not a hook) */
+export function hasMealPic(title: string): boolean {
+  load();
+  return findPic(pics, title) !== null;
+}
+
 /** The picture's data URL (loaded from the phone's storage). undefined = still loading; null = no picture / file missing. */
 export function usePicSrc(pic: MealPic | null): string | null | undefined {
   const id = pic?.photoId ?? null;

@@ -1539,3 +1539,13 @@ Her wish: send her recipes to her boyfriend (and family who use the app), maybe 
 1. Step 1 — "share recipe link": a share button on a recipe → iPhone share sheet (LINE etc.) → he opens the link → sees the recipe → "บันทึกเข้าสูตรของฉัน" saves his OWN copy (her later edits don't change his). The recipe is stored online (free Supabase, like Homefolio) under a long random id; no login needed.
 2. Later — family kitchen: a shared family group page listing recipes everyone shared (needs simple sign-in), likes/comments maybe.
 Today the app is local-only (each phone keeps its own data), so any sharing needs a small online store.
+
+## Round 78 (2026-11-18) — send a recipe to someone (built, NOT deployed)
+She picked "แบบ B · จดหมายสั้นๆ" from public/_try/recipe-share.html.
+- Storage: PRIVATE Vercel Blob store "snapcal-shared-recipes" (sin1, free Hobby; created with her OK). Env BLOB_READ_WRITE_TOKEN on Production/Preview/Development. Package @vercel/blob (her OK).
+  ⚠️ Creating the store rewrote .env.local and wiped the LOCAL OPENROUTER_API_KEY / USDA_API_KEY / OFF_* (Production values are sensitive, can't be pulled). Live app unaffected. Local AI needs the key from Machina again; USDA key is free to re-request (local ingredient search works without it).
+- Flow: recipe page → round share button top-right (ShareRecipeButton) → POST /api/share/recipe (strict check, ≤600 KB, cover JPEG ≤400 KB resized to 900px) → shared/<id>.json + .jpg (id = 192-bit random) → navigator.share (fallback: copy link). Link /r/<id> = letter page (SharedRecipeView) with og:title/description/image for the LINE card (cover via /api/share/recipe/<id>/cover, 1-year cache). "บันทึกเข้าสูตรของฉัน" saves an OWN copy (sharedFrom, sharedId; no duplicates per browser) → recipes list shows "💌 จาก <name>".
+- kcal line on the letter is hidden when the recipe's nutrition is incomplete (honest, same as recipe totals).
+- Checked: 536 tests, tsc clean, lint 0 errors; real blob round-trip on the dev server; letter page + ingredient list at 375px with a real cover; save + no-duplicate (helper). Test share left in the store: a3vWKW5Lmglz6xCf7fzPTXbIsKi1iWXq (tofu soup); broken one deleted.
+- NOT verified: real iPhone share sheet + LINE preview card; a brand-new receiver with no profile is sent to /welcome after saving (recipe is saved); no rate limit on uploads (passcode off).
+- Later: "family kitchen" group page (needs simple sign-in).
