@@ -196,7 +196,10 @@ export function AddFlow({ mode, date, dateParam, prefill, auto = false, fromShee
         dairySource: a.dairySource ?? null,
         fromLabel: a.fromLabel === true,
         // Round 39: where these numbers came from (an AI guess, or a printed label the AI read).
-        prov: provFromAi({ fromLabel: a.fromLabel === true, userAmount: (a as { userAmount?: boolean }).userAmount === true, estimated: Boolean(a.estimated), kind: a.kind }),
+        // Round 69: numbers the server looked up in the food table come with their own `prov` (database) + `ref` (USDA id).
+        prov: a.prov ?? provFromAi({ fromLabel: a.fromLabel === true, userAmount: (a as { userAmount?: boolean }).userAmount === true, estimated: Boolean(a.estimated), kind: a.kind }),
+        ...(a.prov && a.ref ? { ref: a.ref } : {}),
+        ...(a.prov && a.missing?.length ? { missing: a.missing } : {}),
         // Round 40: her optional buffer (kcal only) for AI guesses; 0% by default. The AI's own kcal is kept.
       }, pct));
       // Boxes belong to one photo: with 2+ photos they are dropped (1 photo = same as before).

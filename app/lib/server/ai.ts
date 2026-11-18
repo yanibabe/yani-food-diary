@@ -10,6 +10,7 @@ import { UNITS, type IngredientUnit } from "../types.ts";
 import { IngredientRefSchema, cleanIngredientRef, type IngredientRef } from "../ingredientRef.ts";
 export { IngredientRefSchema, cleanIngredientRef, type IngredientRef };
 import { FAST_VISION_OPTS } from "../aiSpeed.ts";
+import { groundItems, type GroundedFields, type Grounding } from "./foodDbPick.ts";
 import { usdaConfig } from "../food/usda.ts";
 import { ChatReplySchema, ChatReplyShape, pickReplyLang, type ChatReply, type ChatRequest } from "../foodChat.ts";
 import { mockChat } from "./chatMock.ts";
@@ -47,9 +48,17 @@ const ItemSchema = z.object({
   fromLabel: z.boolean().optional().catch(false).describe("true ONLY if this item's kcal (and macros) come from numbers PRINTED on its own package, nutrition facts table (ข้อมูลโภชนาการ) or energy label (e.g. 'พลังงาน 150 กิโลแคลอรี'), clearly readable in the photo, or typed by the user as the numbers on the pack; else false"),
 });
 
+// Round 69: for the photo / text read the model ALSO names each item for the local food table, and gives its weight and state.
+// The server then looks the numbers up (see foodDbPick.ts); the model's own kcal/macros are only the fallback.
+const AnalyzeItemSchema = ItemSchema.extend({
+  en: z.string().optional().catch("").describe("ENGLISH name to search a food database, 1-4 plain words, the way USDA names foods, e.g. \"rice white cooked\", \"egg whole boiled\", \"banana\", \"oyster sauce\", \"vegetable oil\", \"chicken breast grilled\". For a mixed Thai dish give the closest plain English name, e.g. \"stir-fried basil chicken\", \"papaya salad\". Always English, whatever language the other fields use."),
+  grams: num.optional().describe("Weight EATEN in grams (a number, never 0 for a real food). Work this out BEFORE kcal."),
+  state: z.enum(["raw", "cooked", "boiled", "steamed", "fried", "grilled", "baked", "dried", "other"]).optional().catch("other").describe("How the food was eaten: raw (fresh fruit, raw veg), cooked (plain cooked, e.g. rice), boiled, steamed, fried, grilled, baked, dried; other for sauces, drinks, mixed dishes"),
+});
+
 export const AnalysisSchema = z.object({
   title: z.string().catch("").describe("Short name for the whole meal"),
-  items: z.array(ItemSchema),
+  items: z.array(AnalyzeItemSchema),
   question: z.string().nullish().describe("ONE short, easy question ONLY if a missing detail (portion size, cooking oil, sauce/dressing, sugar, fried vs steamed…) would change the meal's kcal a lot; else null"),
   visual: z.string().nullish().describe("ONE short ENGLISH sentence saying how the whole meal looks (used to draw a picture of it), e.g. \"Thai pad kra pao (ผัดกะเพรา): stir-fried basil pork with a fried egg over rice on a white plate\". Only the food and its plate/bowl/glass (no scale, table, packaging, hands or other props). Only foods really in the items list. Else null"),
 });
@@ -84,7 +93,7 @@ function languageRule(lang: Lang): string {
 const ANALYZE_SYSTEM = (lang: Lang) => `You are a careful nutrition assistant inside a Thai food diary app.
 Estimate what the user ate from a photo and/or their description.
 Rules:
-- ${languageRule(lang)}
+- ${languageRule(lang)} The one exception is "en" (and "visual"): always English.
 - List each separate food on the plate as its own item. Numbers are for the amount actually EATEN, using the user's note (e.g. "ate half the chicken" → half portion).
 - If the user mentions oil, sauce, dressing, sugar or other add-ons, list each as its own item with kind "extra".
 - How to estimate each food, step by step:
@@ -101,6 +110,7 @@ Rules:
 - box: when there is a photo and you can locate the food, give its bounding box as fractions (0..1) of the image. Otherwise null.
 - question: if an important detail is missing and you cannot see or reasonably infer it — portion size, how much cooking oil, a sauce or dressing, sugar or milk in a drink, fried vs steamed/boiled — and the answer would change the meal's kcal a lot (roughly 100 kcal or 20% or more), ask ONE short, easy question about the biggest one (e.g. "Was it stir-fried with a lot of oil or a little?"). Still give your best estimate now and set estimated=true on that item. Do NOT ask about small things (garnish, herbs, a pinch of salt, a splash of sauce). If nothing important is unclear, null.
 - visual: always write it in English (whatever language the other fields use), keep a Thai dish name next to the English one, and mention only foods you listed in items. Describe ONLY the food or drink itself and the plate, bowl or glass it is in. NEVER mention scales, tables, packaging, hands, utensils in the background, phones, receipts or anything else around it.
+- en, grams and state are used to look the real nutrition numbers up in a food database, so make them exact: en is always English; state says raw / cooked / boiled / steamed / fried / grilled / baked / dried (use "cooked" for plain cooked rice and noodles, "other" for sauces and mixed dishes). Do not put oil, sauce or other items inside a plain item's en.
 - Use typical Thai portion sizes and Thai food composition values (e.g. INMU Thai Food Composition Table). Be realistic: do not shrink portions or leave out cooking fat.
 Return ONLY a JSON object matching this JSON Schema:
 ${shapeOf(AnalysisSchema)}`;
@@ -232,7 +242,7 @@ async function callAi<T>(system: string, content: Part[], schema: z.ZodType<T>, 
 
 // Round 40: the AI's plain best estimates go to the phone. No margin is added here any more;
 // the phone adds her optional calorie buffer (kcal only) — see app/lib/calorieBuffer.ts.
-export type AnalysisOut = Analysis;
+export type AnalysisOut = Omit<Analysis, "items"> & { items: (Analysis["items"][number] & Partial<GroundedFields>)[]; grounding?: Grounding };
 export type RefineOut = Refine;
 
 export async function analyzeMeal(input: { images: string[]; text: string; lang: Lang }): Promise<AnalysisOut> {
@@ -248,7 +258,15 @@ export async function analyzeMeal(input: { images: string[]; text: string; lang:
   if (input.images.length > MAX_MEAL_PHOTOS || input.images.some((i) => !/^data:image\/(jpeg|png|webp);base64,/.test(i)))
     throw new AiError("bad-output", trFor(input.lang)("รูปแบบรูปไม่รองรับ", "This picture format is not supported"), 400);
   for (const url of input.images) content.push({ type: "image_url", image_url: { url } });
-  return callAi(ANALYZE_SYSTEM(input.lang), content, AnalysisSchema, input.lang, FAST_VISION_OPTS);
+  const read = await callAi(ANALYZE_SYSTEM(input.lang), content, AnalysisSchema, input.lang, FAST_VISION_OPTS);
+  // Round 69: the numbers come from the local food table when it has the food; the model's estimate is the fallback.
+  try {
+    const { items, grounding } = await groundItems(read.items);
+    return { ...read, items, grounding };
+  } catch (e) {
+    console.error("[analyze] grounding failed, keeping estimates:", e instanceof Error ? e.message : String(e));
+    return read;
+  }
 }
 
 export type RefineInput = {
@@ -337,13 +355,13 @@ export async function chatReply(input: ChatRequest): Promise<ChatReply> {
 // tested without an API key. The app shows a clear "AI จำลอง" badge.
 // ---------------------------------------------------------------------------
 
-function mockAnalyze(input: { images: string[]; text: string; lang: Lang }): Analysis {
+function mockAnalyze(input: { images: string[]; text: string; lang: Lang }): AnalysisOut {
   const hasImage = input.images.length > 0;
-  const items: Analysis["items"] = [
+  const items = [
     { name: "ข้าวสวย", amount: 1, unit: "ทัพพี", kcal: 160, protein: 3, carbs: 35, fat: 0.4, estimated: false, kind: "food", note: null, box: hasImage ? { x: 0.08, y: 0.45, w: 0.4, h: 0.4 } : null },
     { name: "ไก่ทอด", amount: 1, unit: "ชิ้น", kcal: 290, protein: 24, carbs: 9, fat: 17, estimated: false, kind: "food", note: null, box: hasImage ? { x: 0.5, y: 0.15, w: 0.38, h: 0.38 } : null },
     { name: "ผักลวก", amount: 1, unit: "ถ้วย", kcal: 35, protein: 2, carbs: 6, fat: 0.3, estimated: false, kind: "food", note: null, box: hasImage ? { x: 0.52, y: 0.58, w: 0.36, h: 0.3 } : null },
-  ];
+  ] as Analysis["items"];
   const t = input.text;
   if (/ครึ่ง/.test(t) && /ไก่/.test(t)) {
     const c = items[1];

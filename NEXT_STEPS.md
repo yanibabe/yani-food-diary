@@ -1475,3 +1475,9 @@ Round 67 DEPLOYED (2026-11-18, f8000ba): Vercel build succeeded; live /api/meal-
 - Tests: tests/round68-early-picture.test.ts.
 Round 68 DEPLOYED (2026-11-18, 9a4ea2f): Vercel build succeeded; live functions answer from sin1 (Singapore). Photo reading ~2× faster locally (krapao 14–16 s → 6–7 s). Next: she tries it on her iPhone, watch accuracy with reasoning 'low'.
 ✅ 2026-11-18: she tried Rounds 67+68 on her iPhone (06f5d1b): faster photo reading + AI pictures "เลิศ" (excellent). Next: she sends reference examples for the redesign.
+
+## Rounds 69–71 (2026-11-18) — food database engine, recipe covers, trainer card
+- Round 69 engine: app/data/food-db.json (1.8 MB, 13,598 USDA Foundation + SR Legacy + FNDDS foods, CC0, + FOOD_REF Thai entries; rebuilt by scripts/build-food-db.mjs). Vision model also returns en/grams/state per item → local search (app/lib/server/foodDb.ts) → ONE DeepSeek pick call (foodDbPick.ts, 3 s fallback) → code computes numbers. Mixed Thai dishes keep the AI estimate. Sanity rule: >2.5× off → keep AI estimate. Costs ~2 s per photo (krapao 6–7 → 8.4–8.8 s; somtam 3–4 → 5.2–5.8 s); she chose "accept 2 s slower" over a two-step refine.
+- Round 70: AI recipe covers (shared dish key with meals), "วาดรูปปก" for old recipes, thumbnails in the recipe list.
+- Round 71: new share-day card (app/lib/shareCard.ts layout + ShareDayButton draw): header totals vs targets, per-meal pictures, foods with amounts, P/C/F, "~" estimate note. Checked in the browser with real data.
+- NOT verified: real iPhone; "database" badge in the review UI; food-db bundling on Vercel (local build OK).
