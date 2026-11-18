@@ -1511,3 +1511,4 @@ She tried Round 74 on her iPhone: the three jars on Today felt too cluttered ("�
 - Removed DailyJars.tsx, jarPhysics.ts and the .daily-jar CSS (in git history at 8399236 if ever wanted). Kept app/lib/dailyJars.ts (range math used by tiles + tip) and the weekly jar share card (share sheet "วันนี้ / สัปดาห์นี้").
 - Checked in the preview at 375px: tiles on one line each, tip agrees ("สัดส่วนวันนี้ดีแล้ว" at 260 g carbs / 62 g fat). 501 tests, tsc clean, lint 0 errors, build OK.
 Round 75 DEPLOYED (2026-11-18, 59af26b): Vercel build succeeded. Next: she checks Today on her iPhone (swipe away and reopen).
+✅ 2026-11-18: Round 75 confirmed on her iPhone — simple tiles are back.
