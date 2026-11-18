@@ -11,6 +11,7 @@ import { buildAddUrlWith, cleanPrefill, showWholeDishRow } from "./lib/addSheet"
 import { closeAddLayerAction, layerAfterPop, layerHistoryState, layerMode, openAddLayer, type AddLayer } from "./lib/addLayer";
 import { AddFlow } from "./components/AddFlow";
 import { dailyJarConfig } from "./lib/dailyJars";
+import { weekRange } from "./lib/jar";
 
 import { useReportOverlay } from "./lib/overlayFlag";
 import { beginNav, endNav, IDLE_NAV, isPending, NAV_GIVE_UP_MS, type NavState } from "./lib/navGuard";
@@ -88,6 +89,11 @@ function TodayInner() {
   const { tr, lang } = useLang();
 
   const dayEntries = useMemo(() => entries.filter((e) => e.date === date).sort((a, b) => a.createdAt - b.createdAt), [entries, date]);
+  // Round 76: the week card can be shared even on a day with no meals yet, as long as the week has some.
+  const weekHasMeals = useMemo(() => {
+    const { start, end } = weekRange(date);
+    return entries.some((e) => e.date >= start && e.date <= end);
+  }, [entries, date]);
   const total = useMemo(() => sumMacros(dayEntries.flatMap((e) => e.items.map(pickMacros))), [dayEntries]);
   const target = goals.targetKcal;
   const mTargets = macroTargets(target, proteinTargetG(goals.profile, target));
@@ -324,9 +330,10 @@ function TodayInner() {
           target={target}
           onPickDay={go}
           share={
-            dayEntries.length > 0 ? (
+            dayEntries.length > 0 || weekHasMeals ? (
               <ShareDayButton
                 tile
+                dayHasMeals={dayEntries.length > 0}
                 entries={entries}
                 date={date}
                 target={target}

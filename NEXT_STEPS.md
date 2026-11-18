@@ -1512,3 +1512,8 @@ She tried Round 74 on her iPhone: the three jars on Today felt too cluttered ("�
 - Checked in the preview at 375px: tiles on one line each, tip agrees ("สัดส่วนวันนี้ดีแล้ว" at 260 g carbs / 62 g fat). 501 tests, tsc clean, lint 0 errors, build OK.
 Round 75 DEPLOYED (2026-11-18, 59af26b): Vercel build succeeded. Next: she checks Today on her iPhone (swipe away and reopen).
 ✅ 2026-11-18: Round 75 confirmed on her iPhone — simple tiles are back.
+
+## Round 76 (2026-11-18) — two small share fixes (built, NOT deployed)
+- Share on a day with no meals: the tile now shows when the week has any meal; on an empty day it reads "แชร์สัปดาห์", opens straight on the week card, and the "วันนี้" tab is disabled (ShareDayButton `dayHasMeals`, page.tsx `weekHasMeals`).
+- Week card: fat circles no longer overlap (circle body 0.98r in app/lib/shareWeekJar.ts; hearts/clouds stay 0.86r). Sample re-rendered: docs/mockups/share-week-sample.png (offline ruler is rough, so the "SNAPCAL ·" header spacing in that PNG is off; in the app it is right).
+- Checked in the preview: 17 Nov (empty, same week) → "แชร์สัปดาห์" → week card, day tab disabled. 501 tests, tsc clean, lint 0 errors, build OK. No new unit test (UI-only condition).

@@ -181,7 +181,10 @@ export function ShareDayButton({
   water,
   weightKg = null,
   tile = false,
+  dayHasMeals = true,
 }: {
+  /** Round 76: false = this day has no meals yet, so only the week card can be shared. */
+  dayHasMeals?: boolean;
   /** Round 71: the weight she logged on this day, if any. */
   weightKg?: number | null;
   /** Round 60: true = a small tile in the home row (icon + short label) instead of the wide button. */
@@ -260,13 +263,17 @@ export function ShareDayButton({
         onClick={() => {
           setPic(null);
           setError(null);
-          setRange("day");
+          setRange(dayHasMeals ? "day" : "week");
           setOpen(true);
         }}
         data-testid="share-day-button"
       >
         <Icon name="export" className="h-5 w-5" />
-        {tile ? tr("แชร์วันนี้", "Share day") : tr("แชร์สรุปวันนี้", "Share this day")}
+        {!dayHasMeals
+          ? tr("แชร์สัปดาห์", "Share week")
+          : tile
+            ? tr("แชร์วันนี้", "Share day")
+            : tr("แชร์สรุปวันนี้", "Share this day")}
       </button>
       <Sheet open={open} onClose={() => setOpen(false)} title={range === "week" ? tr("สรุปสัปดาห์นี้", "This week") : tr("สรุปวันนี้", "This day")}>
         <div className="space-y-3 pb-4" data-testid="share-day-sheet">
@@ -276,7 +283,8 @@ export function ShareDayButton({
                 key={r}
                 role="tab"
                 aria-selected={range === r}
-                className={`min-h-[44px] flex-1 rounded-full text-[16px] ${range === r ? "bg-[#2b2724] text-white" : "text-muted"}`}
+                disabled={r === "day" && !dayHasMeals}
+                className={`min-h-[44px] flex-1 rounded-full text-[16px] disabled:opacity-40 ${range === r ? "bg-[#2b2724] text-white" : "text-muted"}`}
                 onClick={() => {
                   if (r === range) return;
                   setPic(null);

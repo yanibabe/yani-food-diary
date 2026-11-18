@@ -27,7 +27,8 @@ export async function settlePieces(order: JarMacro[], W: number, H: number, r: n
       const row = Math.floor(i / cols);
       const c = i % cols;
       const x = pad + r + ((W - 2 * pad - 2 * r) * (c + 0.5)) / cols + (rnd() - 0.5) * r * 0.4;
-      const b = Bodies.circle(x, -r - row * r * 2.2, r * 0.86, { restitution: 0.25, friction: 0.4, density: 0.002 });
+      // Round 76: circles are drawn at full r, so their body must be ~full size too (0.86 made them overlap).
+      const b = Bodies.circle(x, -r - row * r * 2.2, k === "f" ? r * 0.98 : r * 0.86, { restitution: 0.25, friction: 0.4, density: 0.002 });
       Body.setAngle(b, rnd() * 6);
       return { k, b };
     });
