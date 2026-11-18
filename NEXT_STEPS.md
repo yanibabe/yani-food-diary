@@ -1532,3 +1532,4 @@ Her report: typing "potatoes" or "มันฝรั่ง" found no plain potat
 - FOOD_REF: added มันฝรั่ง (ดิบ) 77 kcal and มันฝรั่งต้ม 87 kcal (USDA 170026 / 170438) — they show first, offline.
 - Checked: 518 tests, tsc clean, lint 0 errors; preview at 375px: "มันฝรั่ง" and "potatoes" both list มันฝรั่ง (ดิบ), มันฝรั่งต้ม, then plain raw/baked potatoes; picking "Potatoes, flesh and skin, raw" 150 g → 116 kcal. Spot checks: carrot → Carrots raw; egg → Egg whole raw; chicken breast → skinless raw.
 - NOT verified: real iPhone; table-answered "detail" has no saturated fat (table doesn't carry it).
+Round 77 DEPLOYED (2026-11-18, 723db57): Vercel build succeeded; live /api/food/usda for "potatoes", "potato", "มันฝรั่ง" returns plain potatoes first (one call right after deploy still hit the old version). Phone keeps old search answers up to 30 min (yfd:v1:usdaCache). Next: she checks on her iPhone (swipe away and reopen).
