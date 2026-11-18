@@ -580,11 +580,14 @@ function TodayInner() {
           <AddFlow
             key={layer.kind}
             embedded
-            onSwitchMode={(m) => {
-              // Round 64: e.g. barcode not found → take a photo instead, inside the same layer (still one history step)
-              layerRef.current = { kind: m };
-              setLayer({ kind: m });
+            onSwitchMode={(m, o) => {
+              // Round 64: e.g. barcode not found → take a photo instead, inside the same layer (still one history step).
+              // Round 66: the barcode comes along, so she can ask us to remember it.
+              const next: AddLayer = m === "photo" ? { kind: "photo", barcode: o?.barcode } : { kind: m };
+              layerRef.current = next;
+              setLayer(next);
             }}
+            barcode={layer.kind === "photo" ? layer.barcode : undefined}
             mode={layerMode(layer)}
             date={date}
             dateParam={dateParam}

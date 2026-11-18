@@ -10,6 +10,8 @@ import { useStore } from "../lib/store";
 import { RECIPE_CATEGORIES, type RecipeCategory } from "../lib/types";
 import { Icon } from "../components/Icon";
 import { MyIngredients } from "../components/MyIngredients";
+import { ListSearchField } from "../components/ListSearchField";
+import { filterByName } from "../components/recipeFilter";
 
 // Round 33 — her pick "C": recipes sorted into category boxes that open and close.
 // Rows show the line pot icon, never the photo (photos live inside the recipe).
@@ -38,8 +40,18 @@ function RecipesInner() {
   const date = sp.get("date");
   const [tab, setTab] = useState<"recipes" | "ingredients">(sp.get("tab") === "ingredients" ? "ingredients" : "recipes");
   const q = date ? `?date=${date}` : "";
+  // Round 66: search (per tab) + the + for ingredients lives here in the header.
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [addingIng, setAddingIng] = useState(false);
+  const searching = searchOpen && query.trim() !== "";
+  const closeSearch = () => {
+    setSearchOpen(false);
+    setQuery("");
+  };
   const list = [...recipes].sort((a, b) => b.updatedAt - a.updatedAt);
-  const groups = RECIPE_CATEGORIES.map((c) => ({ ...c, items: list.filter((r) => (r.category ?? "other") === c.key) })).filter(
+  const matched = filterByName(list, query);
+  const groups = RECIPE_CATEGORIES.map((c) => ({ ...c, items: matched.filter((r) => (r.category ?? "other") === c.key) })).filter(
     (g) => g.items.length > 0,
   );
   const firstKey = groups[0]?.key ?? null;
@@ -47,7 +59,7 @@ function RecipesInner() {
   // Which boxes are open. First visit: only the first box.
   const [saved] = useState(() => (typeof window === "undefined" ? null : readOpen()));
   const [picked, setPicked] = useState<RecipeCategory[] | null>(null);
-  const open = picked ?? saved ?? (firstKey ? [firstKey] : []);
+  const open = searching ? groups.map((g) => g.key) : picked ?? saved ?? (firstKey ? [firstKey] : []);
   function toggle(k: RecipeCategory) {
     const next = open.includes(k) ? open.filter((x) => x !== k) : [...open, k];
     setPicked(next);
@@ -60,18 +72,32 @@ function RecipesInner() {
 
   return (
     <main className="page space-y-4">
-      <header className="flex items-center justify-between">
+      <header className="flex items-start justify-between">
         <h1 className="text-[26px] font-normal">{tr("สูตรของฉัน", "My recipes")}</h1>
-        {tab === "recipes" && <Link
-          href="/recipes/new/edit"
-          className="glass grid h-11 w-11 place-items-center"
-          style={{ borderRadius: 9999 }}
-          aria-label={tr("สูตรใหม่", "New recipe")}
-          data-testid="new-recipe"
-        >
-          <Icon name="plus" className="h-5 w-5" />
-        </Link>}
+        <div className="flex flex-col gap-2">
+          {tab === "recipes" ? (
+            <Link href="/recipes/new/edit" className="glass grid h-11 w-11 place-items-center" style={{ borderRadius: 9999 }} aria-label={tr("สูตรใหม่", "New recipe")} data-testid="new-recipe">
+              <Icon name="plus" className="h-5 w-5" />
+            </Link>
+          ) : (
+            <button type="button" className="glass grid h-11 w-11 place-items-center" style={{ borderRadius: 9999 }} aria-label={tr("เพิ่มวัตถุดิบ", "Add ingredient")} onClick={() => setAddingIng(true)} data-testid="my-ingredients-add">
+              <Icon name="plus" className="h-5 w-5" />
+            </button>
+          )}
+          <button type="button" className="glass grid h-11 w-11 place-items-center" style={{ borderRadius: 9999 }} aria-label={tr("ค้นหา", "Search")} aria-pressed={searchOpen} onClick={() => (searchOpen ? closeSearch() : setSearchOpen(true))} data-testid="list-search-toggle">
+            <Icon name="magnifying-glass" className="h-5 w-5" />
+          </button>
+        </div>
       </header>
+
+      {searchOpen && (
+        <ListSearchField
+          value={query}
+          onChange={setQuery}
+          onClose={closeSearch}
+          placeholder={tab === "recipes" ? tr("ค้นหาสูตร", "Search recipes") : tr("ค้นหาวัตถุดิบของฉัน", "Search my ingredients")}
+        />
+      )}
 
       <div className="grid grid-cols-2 gap-1 rounded-full border border-white/90 bg-white/55 p-1" role="tablist" data-testid="recipes-switch">
         {([
@@ -84,7 +110,10 @@ function RecipesInner() {
             role="tab"
             aria-selected={tab === k}
             className={`min-h-[44px] rounded-full text-[16px] ${tab === k ? "bg-ink text-paper" : "text-muted"}`}
-            onClick={() => setTab(k)}
+            onClick={() => {
+              setTab(k);
+              closeSearch();
+            }}
             data-testid={`recipes-tab-${k}`}
           >
             {label}
@@ -92,7 +121,7 @@ function RecipesInner() {
         ))}
       </div>
 
-      {tab === "ingredients" && <MyIngredients />}
+      {tab === "ingredients" && <MyIngredients query={query} searching={addingIng} onSearching={setAddingIng} onQueryClear={closeSearch} />}
 
       {tab === "recipes" && ready && list.length === 0 && (
         <div className="card p-6 text-center">
@@ -104,6 +133,10 @@ function RecipesInner() {
             {tr("บันทึกเมนูที่ทำกินเอง แล้วกด “บันทึกว่ากิน” ได้ทุกครั้ง", "Save dishes you cook yourself, then tap “I ate this” any time")}
           </p>
         </div>
+      )}
+
+      {tab === "recipes" && ready && list.length > 0 && groups.length === 0 && (
+        <p className="px-1 py-6 text-center text-[15px] text-muted">{tr("ไม่เจอ ลองคำอื่น", "Nothing found — try other words")}</p>
       )}
 
       {tab === "recipes" && groups.map((g) => {

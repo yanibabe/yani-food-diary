@@ -4,6 +4,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { AddFlow, type AddMode } from "../../components/AddFlow";
 import { thaiDateKey } from "../../lib/date";
 import { cleanPrefill } from "../../lib/addSheet";
+import { cleanBarcode } from "../../lib/food/provider";
 
 // Round 53: the whole body now lives in components/AddFlow.tsx (also used as the full-screen layer on Today).
 function AddInner() {
@@ -16,7 +17,14 @@ function AddInner() {
   return (
     <AddFlow
       key={mode}
-      onSwitchMode={(m) => router.replace(`/add/${m}${search.get("date") ? `?date=${search.get("date")}` : ""}`)}
+      barcode={cleanBarcode(search.get("barcode") ?? "") ?? undefined}
+      onSwitchMode={(m, o) => {
+        const p = new URLSearchParams();
+        if (search.get("date")) p.set("date", search.get("date") as string);
+        if (m === "photo" && o?.barcode) p.set("barcode", o.barcode);
+        const qs = p.toString();
+        router.replace(`/add/${m}${qs ? `?${qs}` : ""}`);
+      }}
       mode={mode}
       date={date}
       dateParam={search.get("date")}

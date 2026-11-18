@@ -13,6 +13,7 @@ import { fmtG, fmtKcal } from "../lib/nutrition";
 import { applyLabelFix, findFix, fixIsValid, removeFix, upsertFix, type LabelFix } from "../lib/food/labelFix";
 import { readFixes, writeFixes } from "../lib/food/labelFixStore";
 import { stopCamera } from "../lib/cameraStream";
+import { findByBarcode, loadCustom, type CustomIngredient } from "../lib/customIngredients";
 import { LiveBarcodeScanner } from "./LiveBarcodeScanner";
 import { OffAttribution } from "./OffAttribution";
 import { NumberField, Sheet, WaitPopup } from "./ui";
@@ -30,11 +31,14 @@ export function BarcodeLookup({
   onPick,
   onManual,
   onUsePhotoAi,
+  onPickMine,
 }: {
   onPick: (food: Food, grams: number) => void;
   onManual: () => void;
-  /** Round 64: product not found → switch to "take a photo of the food and let the AI estimate". */
-  onUsePhotoAi?: () => void;
+  /** Round 64: product not found → switch to "take a photo of the food and let the AI estimate". Gets the barcode, so she can ask us to remember it. */
+  onUsePhotoAi?: (code: string | null) => void;
+  /** Round 66: this barcode is one she asked us to remember → open that food straight away. */
+  onPickMine?: (c: CustomIngredient) => void;
 }) {
   const { tr, lang } = useLang();
   const [code, setCode] = useState("");
@@ -232,6 +236,12 @@ export function BarcodeLookup({
     }
     setBusy(true);
     try {
+      // A food she asked us to remember for this barcode comes first (no network needed).
+      const mine = onPickMine ? findByBarcode(loadCustom(), clean) : null;
+      if (mine && onPickMine) {
+        onPickMine(mine);
+        return;
+      }
       const saved = await getOffProduct(clean);
       if (saved) {
         show(normalizeOffProduct(saved.code, saved.product));
@@ -339,7 +349,7 @@ export function BarcodeLookup({
               : tr("ไม่พบสินค้านี้ใน Open Food Facts — กรอกเองจากฉลากได้เลย", "This product isn't in Open Food Facts — you can enter it yourself from the label")}
           </p>
           {onUsePhotoAi && (
-            <button className="btn-primary w-full" onClick={onUsePhotoAi} data-testid="barcode-use-photo-ai">
+            <button className="btn-primary w-full" onClick={() => onUsePhotoAi(cleanBarcode(code))} data-testid="barcode-use-photo-ai">
               <Icon name="camera" className="mr-1.5 inline-block h-5 w-5 align-[-4px]" />
               {tr("ถ่ายรูปให้ AI ประมาณ", "Take a photo for the AI")}
             </button>
@@ -491,7 +501,7 @@ export function BarcodeLookup({
               : tr("ฐานข้อมูลยังไม่มีสินค้านี้ ให้ AI ช่วยได้ 2 แบบ", "The database doesn't have this product yet. The AI can help in two ways.")}
           </p>
           {onUsePhotoAi && (
-            <button className="btn-primary w-full" onClick={onUsePhotoAi} data-testid="offer-photo-ai">
+            <button className="btn-primary w-full" onClick={() => onUsePhotoAi(cleanBarcode(code))} data-testid="offer-photo-ai">
               <Icon name="camera" className="mr-1.5 inline-block h-5 w-5 align-[-4px]" />
               {tr("ถ่ายรูปอาหารให้ AI ประเมิน", "Take a photo, AI estimates it")}
             </button>

@@ -9,7 +9,8 @@ import { MealReview, type MealDraft } from "./MealReview";
 import { useAiStatus, WaitPopup } from "./ui";
 import { guessSlot } from "../lib/date";
 import { useLang } from "../lib/lang";
-import { blankItem, cleanBox, cleanNumber, newId } from "../lib/nutrition";
+import { blankItem, cleanBox, cleanNumber, newId, pickMacros, sumMacros } from "../lib/nutrition";
+import { joinMissing } from "../lib/provenance";
 import { boxesForPhotoCount, MAX_MEAL_PHOTOS } from "../lib/mealPhotos";
 import { compressImage, savePhoto } from "../lib/photos";
 import { useStore } from "../lib/store";
@@ -18,7 +19,9 @@ import { provFromAi } from "../lib/provenance";
 import { cleanBufferPct, startBuffer } from "../lib/calorieBuffer";
 import type { Food } from "../lib/food/provider";
 import { ingredientToItem } from "../lib/searchFood";
-import type { FoodItem, Ingredient } from "../lib/types";
+import { addCustom, loadCustom, saveCustom, type CustomIngredient } from "../lib/customIngredients";
+import { customInputFromItem, findSameName, itemFromCustom } from "../lib/saveCustomFromItem";
+import { UNITS, type FoodItem, type Ingredient, type IngredientUnit } from "../lib/types";
 import { Icon } from "./Icon";
 import Link from "next/link";
 import { buildAddUrl } from "../lib/addSheet";
@@ -49,7 +52,9 @@ export type AddFlowProps = {
   /** In the Today layer: no router, the layer closes itself. */
   embedded?: boolean;
   /** Round 64: switch to another way of adding (e.g. barcode not found → take a photo). */
-  onSwitchMode?: (m: "photo" | "manual") => void;
+  onSwitchMode?: (m: "photo" | "manual", opts?: { barcode?: string }) => void;
+  /** Round 66: the barcode that was not found; with a photo meal, she can ask us to remember it for next time. */
+  barcode?: string;
   /** Header back button. */
   onBack: () => void;
   /** Review "Cancel". */
@@ -58,7 +63,7 @@ export type AddFlowProps = {
   onSaved: () => void;
 };
 
-export function AddFlow({ mode, date, dateParam, prefill, auto = false, fromSheet = false, create = false, handoff = null, initialItem = null, embedded = false, onSwitchMode, onBack, onCancel, onSaved }: AddFlowProps) {
+export function AddFlow({ mode, date, dateParam, prefill, auto = false, fromSheet = false, create = false, handoff = null, initialItem = null, embedded = false, onSwitchMode, barcode, onBack, onCancel, onSaved }: AddFlowProps) {
   const { upsertEntry, goals } = useStore();
   const ai = useAiStatus();
   const { tr, lang } = useLang();
@@ -81,6 +86,7 @@ export function AddFlow({ mode, date, dateParam, prefill, auto = false, fromShee
   });
   const [question, setQuestion] = useState<string | null>(null);
   const [mock, setMock] = useState(false);
+  const [rememberBarcode, setRememberBarcode] = useState(true);
   const [customId, setCustomId] = useState<string | null>(null); // Round 45: the item made by "+ Add custom ingredient"
   const [startEdit, setStartEdit] = useState<string | null>(mode === "manual" ? draft.items[0]?.id ?? null : null);
   const cameraRef = useRef<HTMLInputElement>(null);
@@ -215,6 +221,41 @@ export function AddFlow({ mode, date, dateParam, prefill, auto = false, fromShee
     setStep("review");
   }
 
+  // Round 66: a barcode she asked us to remember → straight to the review with that food (nothing is saved until she saves).
+  function pickMine(c: CustomIngredient) {
+    const item = itemFromCustom(c, { id: newId("it"), amount: 100, unit: "g" }, lang);
+    if (!item) return;
+    setDraft((d) => ({ ...d, title: item.name, items: [item] }));
+    setStartEdit(null);
+    setStep("review");
+  }
+
+  /** The whole photographed product as ONE food: a single item stays as it is; several are added up as "1 plate" under the meal's name. */
+  function oneFood(d: MealDraft): FoodItem {
+    if (d.items.length === 1) return d.items[0];
+    const m = sumMacros(d.items.map(pickMacros));
+    const gap = joinMissing(...d.items.map((i) => i.missing));
+    return { ...d.items[0], id: newId("it"), name: d.title.trim() || d.items[0].name, amount: 1, unit: defaultUnit, kcal: m.kcal, protein: m.protein, carbs: m.carbs, fat: m.fat, ...(gap.length ? { missing: gap } : { missing: undefined }) };
+  }
+
+  /** She ticked "remember this barcode": keep the food as one of her ingredients, with the barcode on it. Never blocks the save. */
+  function rememberProduct(item: FoodItem, code: string) {
+    try {
+      const base = customInputFromItem(item);
+      if (!base) return;
+      const list = loadCustom();
+      const unit = base.basis === "perUnit" && item.unit in UNITS ? (item.unit as IngredientUnit) : null;
+      const r = addCustom(list, { ...base, barcode: code, unit }, Date.now());
+      if (r.ok) saveCustom(r.list);
+      else if (r.error === "duplicate") {
+        const ex = findSameName(list, item.name);
+        if (ex && !ex.barcode) saveCustom(list.map((c) => (c.id === ex.id ? { ...c, barcode: code } : c)));
+      }
+    } catch {
+      /* remembering is a bonus: the meal is already saved */
+    }
+  }
+
   /** "+ Add custom ingredient": the same manual editor, with the typed name already in. */
   function createCustomFood(name: string) {
     // Round 45: numbers she leaves empty stay unknown (not a real 0), so a saved copy keeps them unknown too.
@@ -264,6 +305,7 @@ export function AddFlow({ mode, date, dateParam, prefill, auto = false, fromShee
       createdAt: now,
       updatedAt: now,
     });
+    if (mode === "photo" && barcode && rememberBarcode && d.items.length >= 1) rememberProduct(oneFood(d), barcode);
     onSaved();
   }
 
@@ -287,7 +329,12 @@ export function AddFlow({ mode, date, dateParam, prefill, auto = false, fromShee
         <h1 className="text-[22px] font-semibold">{step === "review" ? tr("ตรวจผล", "Check the result") : heading}</h1>
       </header>
 
-      {step === "input" && mode === "barcode" && <BarcodeLookup onPick={pickBarcode} onManual={goManual} onUsePhotoAi={onSwitchMode ? () => onSwitchMode("photo") : undefined} />}
+      {step === "input" && mode === "barcode" && <BarcodeLookup
+          onPick={pickBarcode}
+          onManual={goManual}
+          onPickMine={pickMine}
+          onUsePhotoAi={onSwitchMode ? (code) => onSwitchMode("photo", code ? { barcode: code } : undefined) : undefined}
+        />}
 
       {step === "input" && mode === "search" && !waitingHandoff && (
         <IngredientSearch
@@ -431,6 +478,14 @@ export function AddFlow({ mode, date, dateParam, prefill, auto = false, fromShee
           onSave={save}
           onCancel={onCancel}
           startEditingId={startEdit}
+          belowPhoto={
+            mode === "photo" && barcode ? (
+              <label className="mb-3 flex items-center gap-2.5 rounded-2xl bg-white/60 px-3 py-2.5 text-[14px] text-muted" data-testid="remember-barcode">
+                <input type="checkbox" className="h-5 w-5 shrink-0 accent-[#2b2724]" checked={rememberBarcode} onChange={(e) => setRememberBarcode(e.target.checked)} />
+                <span>{tr("จำบาร์โค้ดนี้ไว้ ครั้งหน้าสแกนแล้วขึ้นเลย", "Remember this barcode, so the next scan opens it")}</span>
+              </label>
+            ) : undefined
+          }
           editorExtra={mode === "search" && customId ? (it, replace) => (it.id === customId ? <SaveAsMine item={it} replace={replace} /> : null) : undefined}
         />
       )}

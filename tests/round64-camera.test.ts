@@ -51,7 +51,7 @@ test("the barcode screen switches the camera off when it is left", () => {
 test("not found: a take-a-photo button and an enter-by-hand button, wired through AddFlow and Today", () => {
   const look = read("../app/components/BarcodeLookup.tsx");
   assert.ok(look.includes('data-testid="barcode-use-photo-ai"') && look.includes('data-testid="barcode-not-found-manual"'));
-  assert.ok(read("../app/components/AddFlow.tsx").includes('onSwitchMode("photo")'));
+  assert.ok(read("../app/components/AddFlow.tsx").includes('onSwitchMode("photo"'));
   const page = read("../app/page.tsx");
   assert.ok(page.includes("onSwitchMode") && page.includes("key={layer.kind}"));
   assert.ok(read("../app/add/[mode]/page.tsx").includes("key={mode}"));

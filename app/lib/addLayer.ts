@@ -9,7 +9,7 @@ import type { Ingredient } from "./types.ts";
 export type AddLayer =
   | { kind: "ai"; text: string }
   | { kind: "review"; ing: Ingredient }
-  | { kind: "photo" }
+  | { kind: "photo"; barcode?: string }
   | { kind: "barcode" }
   | { kind: "manual" }
   | null;

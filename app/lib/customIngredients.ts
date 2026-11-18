@@ -41,6 +41,8 @@ export type CustomIngredient = {
   unit?: IngredientUnit | null;
   /** Other words that should find it. */
   aliases?: string[];
+  /** Round 66: the barcode she asked us to remember for this food (8–14 digits). Scanning it opens this food. */
+  barcode?: string;
   createdAt: number;
   updatedAt: number;
 };
@@ -60,6 +62,7 @@ export type CustomInput = {
   gPerMl?: number | null;
   unit?: IngredientUnit | null;
   aliases?: string[];
+  barcode?: string | null;
 };
 
 export type CustomError = "name" | "kcal" | "number";
@@ -104,6 +107,8 @@ export function makeCustom(input: CustomInput, id: string, now: number, createdA
   if (input.unit && input.unit in UNITS) item.unit = input.unit;
   const aliases = (input.aliases ?? []).map(cleanName).filter(Boolean).slice(0, 8);
   if (aliases.length) item.aliases = aliases;
+  const barcode = String(input.barcode ?? "").replace(/\D/g, "");
+  if (barcode.length >= 8 && barcode.length <= 14) item.barcode = barcode;
   return { ok: true, item };
 }
 
@@ -161,6 +166,7 @@ export function parseCustom(raw: string | null | undefined): CustomIngredient[] 
         gPerMl: num(o.gPerMl),
         unit: o.unit as IngredientUnit | null,
         aliases: Array.isArray(o.aliases) ? (o.aliases.filter((a) => typeof a === "string") as string[]) : undefined,
+        barcode: typeof o.barcode === "string" ? o.barcode : null,
       },
       id,
       num(o.updatedAt) ?? 0,
@@ -172,6 +178,12 @@ export function parseCustom(raw: string | null | undefined): CustomIngredient[] 
     }
   }
   return out;
+}
+
+/** The saved food for a scanned barcode, if she asked us to remember one. */
+export function findByBarcode(list: CustomIngredient[], code: string): CustomIngredient | null {
+  const c = String(code ?? "").replace(/\D/g, "");
+  return c ? (list.find((x) => x.barcode === c) ?? null) : null;
 }
 
 export const serializeCustom = (list: CustomIngredient[]) => JSON.stringify(list);
