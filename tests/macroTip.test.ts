@@ -15,8 +15,8 @@ test("fat clearly over → fat tip first, with grams over", () => {
   assert.match(tip.th, /17 g/);
 });
 
-test("a tiny bit over is not 'over'", () => {
-  const tip = macroTip({ kcal: 1550, protein: 88, carbs: 175, fat: 55 }, T, 1600)!;
+test("right at the top of the range is not 'over'", () => {
+  const tip = macroTip({ kcal: 1550, protein: 88, carbs: 175, fat: 53 }, T, 1600)!;
   assert.equal(tip.key, "ok");
 });
 
@@ -42,4 +42,8 @@ test("carbs running far ahead of calories → carbs tip", () => {
 
 test("balanced day → calm ok line", () => {
   assert.equal(macroTip({ kcal: 800, protein: 46, carbs: 90, fat: 26 }, T, 1600)!.key, "ok");
+});
+
+test("Round 74: one gram above the range top counts as over (matches the jar)", () => {
+  assert.equal(macroTip({ kcal: 1550, protein: 88, carbs: 175, fat: 54 }, T, 1600)!.key, "fat");
 });

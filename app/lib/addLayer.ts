@@ -12,11 +12,10 @@ export type AddLayer =
   | { kind: "photo"; barcode?: string }
   | { kind: "barcode" }
   | { kind: "manual" }
-  | { kind: "jar" } // Round 73: the nutrient jar screen
   | null;
 
 /** Which AddFlow screen each layer kind shows. */
-export function layerMode(l: Exclude<NonNullable<AddLayer>, { kind: "jar" }>): "text" | "search" | "photo" | "barcode" | "manual" {
+export function layerMode(l: NonNullable<AddLayer>): "text" | "search" | "photo" | "barcode" | "manual" {
   switch (l.kind) {
     case "ai":
       return "text";

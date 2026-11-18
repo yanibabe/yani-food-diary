@@ -11,6 +11,9 @@ import { MEAL_PICS_KEY, parseMealPics } from "../lib/mealPics";
 import { getPhoto } from "../lib/photos";
 import { type Entry } from "../lib/types";
 import { Icon } from "./Icon";
+import { weekFileName } from "../lib/shareWeek";
+import { weekRange } from "../lib/jar";
+import { makeWeekPicture } from "./shareWeekDraw";
 
 // "Frosted Calm" look. The layout (what goes where, how tall) is worked out in lib/shareCard.ts;
 // here we only draw its commands on a canvas. A still picture can't blur, so the glass cards
@@ -192,6 +195,8 @@ export function ShareDayButton({
 }) {
   const { tr, lang } = useLang();
   const [open, setOpen] = useState(false);
+  // Round 74: "day" (the picture of this day) or "week" (the weekly card for her trainer).
+  const [range, setRange] = useState<"day" | "week">("day");
   const [pic, setPic] = useState<{ blob: Blob; url: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const mt = macroTargets;
@@ -201,7 +206,9 @@ export function ShareDayButton({
     if (!open) return;
     let url = "";
     let stop = false;
-    makePicture(
+    (range === "week"
+      ? makeWeekPicture({ entries, date, target, proteinTarget: mt.protein, lang })
+      : makePicture(
       {
         day: buildShareDay(entries, date, readPics()),
         date,
@@ -213,7 +220,7 @@ export function ShareDayButton({
         weightKg,
         lang,
       },
-    )
+    ))
       .then((blob) => {
         if (stop) return;
         url = URL.createObjectURL(blob);
@@ -226,9 +233,10 @@ export function ShareDayButton({
     };
     // mt / wt are rebuilt from these numbers, so list the numbers (not the objects).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, entries, date, target, name, lang, mt.protein, mt.carbs, mt.fat, wt.glasses, wt.goal, weightKg]);
+  }, [open, range, entries, date, target, name, lang, mt.protein, mt.carbs, mt.fat, wt.glasses, wt.goal, weightKg]);
 
-  const file = pic ? new File([pic.blob], shareFileName(date), { type: "image/png" }) : null;
+  const fileName = range === "week" ? weekFileName(weekRange(date).start) : shareFileName(date);
+  const file = pic ? new File([pic.blob], fileName, { type: "image/png" }) : null;
   const canShare = !!file && typeof navigator !== "undefined" && !!navigator.canShare?.({ files: [file] });
 
   const share = async () => {
@@ -252,6 +260,7 @@ export function ShareDayButton({
         onClick={() => {
           setPic(null);
           setError(null);
+          setRange("day");
           setOpen(true);
         }}
         data-testid="share-day-button"
@@ -259,8 +268,27 @@ export function ShareDayButton({
         <Icon name="export" className="h-5 w-5" />
         {tile ? tr("แชร์วันนี้", "Share day") : tr("แชร์สรุปวันนี้", "Share this day")}
       </button>
-      <Sheet open={open} onClose={() => setOpen(false)} title={tr("สรุปวันนี้", "This day")}>
+      <Sheet open={open} onClose={() => setOpen(false)} title={range === "week" ? tr("สรุปสัปดาห์นี้", "This week") : tr("สรุปวันนี้", "This day")}>
         <div className="space-y-3 pb-4" data-testid="share-day-sheet">
+          <div className="flex gap-1 rounded-full bg-white/60 p-1" role="tablist" data-testid="share-range">
+            {(["day", "week"] as const).map((r) => (
+              <button
+                key={r}
+                role="tab"
+                aria-selected={range === r}
+                className={`min-h-[44px] flex-1 rounded-full text-[16px] ${range === r ? "bg-[#2b2724] text-white" : "text-muted"}`}
+                onClick={() => {
+                  if (r === range) return;
+                  setPic(null);
+                  setError(null);
+                  setRange(r);
+                }}
+                data-testid={`share-range-${r}`}
+              >
+                {r === "day" ? tr("วันนี้", "Today") : tr("สัปดาห์นี้", "This week")}
+              </button>
+            ))}
+          </div>
           {error && (
             <p className="rounded-2xl bg-[#f6e1dc] px-4 py-3 text-[14px] text-danger" role="alert">
               {tr("ทำรูปไม่สำเร็จ", "Couldn't make the picture")}: {error}
@@ -270,7 +298,7 @@ export function ShareDayButton({
           {pic && (
             <>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={pic.url} alt={tr("รูปสรุปวันนี้", "Picture of this day")} className="w-full rounded-[22px] border border-line" data-testid="share-day-image" />
+              <img src={pic.url} alt={range === "week" ? tr("รูปสรุปสัปดาห์นี้", "Picture of this week") : tr("รูปสรุปวันนี้", "Picture of this day")} className="w-full rounded-[22px] border border-line" data-testid="share-day-image" />
               {canShare ? (
                 <button className="btn-primary w-full !min-h-[56px] text-[18px]" onClick={share} data-testid="share-day-send">
                   {tr("แชร์รูปนี้", "Share this picture")}
@@ -279,7 +307,7 @@ export function ShareDayButton({
                 <a
                   className="btn-primary flex w-full !min-h-[56px] items-center justify-center text-[18px]"
                   href={pic.url}
-                  download={shareFileName(date)}
+                  download={fileName}
                   data-testid="share-day-download"
                 >
                   {tr("บันทึกรูปนี้", "Save this picture")}

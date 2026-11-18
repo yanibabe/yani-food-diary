@@ -2,16 +2,15 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { MacroCards, MacroTipLine, Sheet } from "./components/ui";
+import { MacroTipLine, Sheet } from "./components/ui";
 import { BackupReminder } from "./components/BackupReminder";
 import { HomeTiles } from "./components/HomeTiles";
 import { ShareDayButton } from "./components/ShareDayButton";
 import { guessSlot, shiftDateKey, shortDayLabel, thaiDateKey, thaiDateLabel } from "./lib/date";
 import { buildAddUrlWith, cleanPrefill, showWholeDishRow } from "./lib/addSheet";
 import { closeAddLayerAction, layerAfterPop, layerHistoryState, layerMode, openAddLayer, type AddLayer } from "./lib/addLayer";
-import dynamic from "next/dynamic";
 import { AddFlow } from "./components/AddFlow";
-import { JarCard } from "./components/JarCard";
+import { DailyJars } from "./components/DailyJars";
 import { dayGrams } from "./lib/jar";
 
 import { useReportOverlay } from "./lib/overlayFlag";
@@ -33,8 +32,6 @@ import { deletePhoto } from "./lib/photos";
 import { entryPhotoIds } from "./lib/mealPhotos";
 import { photoStillUsed } from "./lib/repeat";
 
-// Round 73: the full jar (and its physics library) is only downloaded when she opens it.
-const JarScreen = dynamic(() => import("./components/JarScreen"), { ssr: false });
 
 const SLOT_COLORS = ["var(--protein-dot)", "var(--fat-dot)", "var(--carbs-dot)", "var(--water)"];
 
@@ -307,7 +304,7 @@ function TodayInner() {
           </Link>
         )}
         <div className="mt-4 w-full">
-          <MacroCards m={total} targets={mTargets} showSplit />
+          <DailyJars grams={jarGrams} kcalTarget={target} proteinTarget={mTargets.protein} date={date} today={today} />
         </div>
         {ready && (
           <div className="mt-2.5 w-full">
@@ -315,8 +312,6 @@ function TodayInner() {
           </div>
         )}
       </section>
-
-      {ready && <JarCard grams={jarGrams} onOpen={() => openLayer({ kind: "jar" })} />}
 
       <button className="btn-primary w-full !min-h-[58px] text-[19px]" onClick={openAdd}>
         + {tr("เพิ่มอาหาร", "Add food")}
@@ -589,9 +584,7 @@ function TodayInner() {
         )}
       </Sheet>
 
-      {layer?.kind === "jar" && <JarScreen date={date} today={today} onBack={closeLayer} />}
-
-      {layer && layer.kind !== "jar" && (
+      {layer && (
         <div className="add-layer fixed inset-0 z-[70] overflow-y-auto overscroll-contain" data-testid="add-layer">
           <AddFlow
             key={layer.kind}

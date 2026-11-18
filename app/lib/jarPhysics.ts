@@ -1,221 +1,232 @@
-// Round 73: the physics of the jar (matter-js). This file is only ever loaded with a dynamic import() from the
-// full jar screen, so the Today page never downloads the physics library.
+// Round 74: the physics of ONE daily jar (matter-js). Only loaded with a dynamic import() from DailyJars,
+// so the first page load never downloads the physics library.
 
 import Matter from "matter-js";
-import { JAR_COLORS, JAR_SHAPES, type JarMacro, type JarPour } from "./jar";
+import { JAR_COLORS, JAR_SHAPES, type JarMacro } from "./jar";
+import { gramsToY, pileTop, DAILY_STEPS } from "./dailyJars";
 import { drawJarShape } from "./jarShapes";
 
-const { Engine, Bodies, Composite, Body, Query, Runner } = Matter;
+const { Engine, Bodies, Composite, Body } = Matter;
 
-type PieceBody = Matter.Body & { jk?: JarMacro; born?: number };
+const PAD = 7;
+const WALL = 60;
+const LINE: Record<JarMacro, string> = { p: "#4f8db3", c: "#c86f00", f: "#c79400" };
 
-export type JarController = {
-  /** Empty the jar and pour. Settled pieces appear at the bottom at once; the rest drop one by one. */
-  pour(plan: JarPour[], opts: { animate: boolean }): void;
-  shake(power?: number): void;
-  clearSelection(): void;
+export type JarGuide = { goal?: number; range?: [number, number]; full: number };
+
+export type DailyJarController = {
+  /** Make the jar hold `total` pieces. `settled` of the new ones appear at once; the rest drop in (when `animate`). */
+  set(total: number, settled: number, animate: boolean, reset?: boolean): void;
   destroy(): void;
 };
 
-export function createJar(opts: {
-  host: HTMLElement;
-  canvas: HTMLCanvasElement;
-  onSelect: (k: JarMacro | null) => void;
-}): JarController {
-  const { host, canvas } = opts;
+function makeEngine(W: number, H: number) {
+  const eng = Engine.create();
+  eng.gravity.y = 1.1;
+  const o = { isStatic: true };
+  Composite.add(eng.world, [
+    Bodies.rectangle(W / 2, H - PAD + WALL / 2, W * 2, WALL, o),
+    Bodies.rectangle(PAD - WALL / 2, H / 2, WALL, H * 6, o),
+    Bodies.rectangle(W - PAD + WALL / 2, H / 2, WALL, H * 6, o),
+  ]);
+  return eng;
+}
+
+const pieceOpts = { restitution: 0.2, friction: 0.45, density: 0.002 };
+
+function runUntilCalm(eng: Matter.Engine, bodies: Matter.Body[], maxSteps = 900) {
+  for (let i = 0; i < maxSteps; i++) {
+    Engine.update(eng, 1000 / 60);
+    if (i > 40 && i % 15 === 0 && bodies.every((b) => b.speed < 0.05)) break;
+  }
+}
+
+/** Radius of the drawn shape and of its body for a jar this wide. Circles use ~0.98r so they do not overlap. */
+export function jarSizes(W: number, k: JarMacro) {
+  const r = Math.min(10, W / 9.5);
+  return { r, br: JAR_SHAPES[k] === "circle" ? r * 0.98 : r * 0.86 };
+}
+
+/** Y of the top of a pile of 20 pieces: the mean of five settled test runs (different drop positions). */
+export function calibratePileTop(W: number, H: number, k: JarMacro): number {
+  const { r, br } = jarSizes(W, k);
+  const runs: number[][] = [];
+  for (let run = 0; run < 5; run++) {
+    const eng = makeEngine(W, H);
+    const bodies: Matter.Body[] = [];
+    for (let i = 0; i < DAILY_STEPS; i++) {
+      const fx = ((i * 37 + run * 53 + run * run * 11) % 100) / 100;
+      const b = Bodies.circle(PAD + r + fx * (W - 2 * PAD - 2 * r), -i * r * 2.2, br, pieceOpts);
+      bodies.push(b);
+      Composite.add(eng.world, b);
+    }
+    runUntilCalm(eng, bodies);
+    runs.push(bodies.map((b) => b.position.y));
+    Composite.clear(eng.world, false);
+    Engine.clear(eng);
+  }
+  return pileTop(runs, 3, br);
+}
+
+export function createDailyJar(opts: { canvas: HTMLCanvasElement; k: JarMacro; guide: JarGuide }): DailyJarController {
+  const { canvas, k, guide } = opts;
   const ctx = canvas.getContext("2d") as CanvasRenderingContext2D;
   const dpr = Math.min(window.devicePixelRatio || 1, 3);
-  const engine = Engine.create();
-  engine.gravity.y = 1.1;
-  const runner = Runner.create();
-  let W = host.clientWidth;
-  let H = host.clientHeight;
-  let walls: Matter.Body[] = [];
-  const pieces: PieceBody[] = [];
+  const W = Math.max(40, canvas.clientWidth);
+  const H = Math.max(40, canvas.clientHeight);
+  canvas.width = Math.round(W * dpr);
+  canvas.height = Math.round(H * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  const { r, br } = jarSizes(W, k);
+  const floorY = H - PAD;
+  const topY = calibratePileTop(W, H, k);
+  const eng = makeEngine(W, H);
+  const pieces: Matter.Body[] = [];
+  let pending = 0;
+  let generation = 0;
   let timers: ReturnType<typeof setTimeout>[] = [];
-  let sel: PieceBody | null = null;
-  let radius = 20;
   let raf = 0;
   let dead = false;
-  let animateIn = true;
-  let generation = 0;
+  let visible = true;
+  let calmFrames = 0;
+  const color = JAR_COLORS[k];
+  const shape = JAR_SHAPES[k];
+  const yOf = (g: number) => gramsToY(g, guide.full, floorY, topY);
 
-  /** Keep the walls and the picture in step with the jar's size; pull any piece that ended up outside back in. */
-  function size() {
-    W = host.clientWidth;
-    H = host.clientHeight;
-    canvas.width = Math.max(1, Math.round(W * dpr));
-    canvas.height = Math.max(1, Math.round(H * dpr));
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    Composite.remove(engine.world, walls);
-    const t = 60;
-    const o = { isStatic: true, friction: 0.3, restitution: 0.2 };
-    walls = [
-      Bodies.rectangle(W / 2, H + t / 2, W * 2, t, o),
-      Bodies.rectangle(-t / 2, H / 2, t, H * 4, o),
-      Bodies.rectangle(W + t / 2, H / 2, t, H * 4, o),
-    ];
-    Composite.add(engine.world, walls);
-    for (const b of pieces) {
-      const r = b.circleRadius ?? radius;
-      if (b.position.y > H - r || b.position.x < r || b.position.x > W - r) {
-        Body.setPosition(b, {
-          x: Math.min(W - r, Math.max(r, b.position.x)),
-          y: Math.min(H - r, b.position.y) - Math.random() * 40,
-        });
-        Body.setVelocity(b, { x: 0, y: 0 });
-      }
+  function drawGuides() {
+    ctx.save();
+    if (guide.range) {
+      const y1 = yOf(guide.range[1]);
+      const y2 = yOf(guide.range[0]);
+      ctx.globalAlpha = 0.16;
+      ctx.fillStyle = color;
+      ctx.fillRect(4, y1, W - 8, y2 - y1);
+      ctx.globalAlpha = 0.6;
+      ctx.setLineDash([3, 4]);
+      ctx.strokeStyle = LINE[k];
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(9, y1);
+      ctx.lineTo(W - 9, y1);
+      ctx.moveTo(9, y2);
+      ctx.lineTo(W - 9, y2);
+      ctx.stroke();
+    } else if (guide.goal != null) {
+      const y = yOf(guide.goal);
+      ctx.setLineDash([5, 5]);
+      ctx.strokeStyle = LINE[k];
+      ctx.globalAlpha = 0.8;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(9, y);
+      ctx.lineTo(W - 9, y);
+      ctx.stroke();
     }
-  }
-  size();
-  const ro = new ResizeObserver(size);
-  ro.observe(host);
-
-  function addPiece(k: JarMacro, x: number, y: number, r: number): PieceBody {
-    const b = Bodies.circle(x, y, r, { restitution: 0.3, friction: 0.08, frictionAir: 0.012, density: 0.0015 }) as PieceBody;
-    b.jk = k;
-    b.born = performance.now();
-    Body.setAngularVelocity(b, (Math.random() - 0.5) * 0.2);
-    pieces.push(b);
-    Composite.add(engine.world, b);
-    return b;
-  }
-
-  function clear() {
-    for (const t of timers) clearTimeout(t);
-    timers = [];
-    for (const b of pieces.splice(0)) Composite.remove(engine.world, b);
-    sel = null;
+    ctx.restore();
   }
 
   function draw() {
-    if (dead) return;
     ctx.clearRect(0, 0, W, H);
-    const now = performance.now();
     for (const b of pieces) {
-      const r = b.circleRadius ?? radius;
-      const k = b.jk as JarMacro;
-      const pop = animateIn ? Math.min(1, (now - (b.born ?? 0)) / 250) : 1;
       ctx.save();
       ctx.translate(b.position.x, b.position.y);
       ctx.rotate(b.angle);
-      const s = 0.6 + 0.4 * pop;
-      ctx.scale(s, s);
-      drawJarShape(ctx, JAR_SHAPES[k], r * 0.86, JAR_COLORS[k]);
-      if (b === sel) {
-        ctx.lineWidth = 3;
-        ctx.strokeStyle = "#2b2622";
-        ctx.stroke();
-      }
+      drawJarShape(ctx, shape, r, color);
       ctx.restore();
     }
-    raf = requestAnimationFrame(draw);
+    drawGuides();
   }
 
-  /** Settle some pieces at once: lay them in rows from the floor, then let physics run a little in the background. */
-  function settle(ks: JarMacro[], r: number) {
-    const step = r * 2.02;
-    const perRow = Math.max(1, Math.floor((W - 2 * r) / step) + 1);
-    const jitter = Math.max(0, (W - 2 * r) - (perRow - 1) * step);
-    ks.forEach((k, i) => {
-      const row = Math.floor(i / perRow);
-      const col = i % perRow;
-      const x = r + (perRow === 1 ? (W - 2 * r) / 2 : col * step) + (row % 2 && jitter > r ? r : 0) + Math.random() * Math.min(jitter, 3);
-      const y = H - r - row * step * 0.9 - Math.random() * 2;
-      addPiece(k, Math.min(W - r, Math.max(r, x)), y, r);
-    });
-    // Let the stack relax quickly (not drawn while it runs). Stops early when everything is calm.
-    for (let i = 0; i < 240; i++) {
-      Engine.update(engine, 1000 / 60);
-      if (i > 20 && i % 10 === 0 && pieces.every((b) => b.speed < 0.08)) break;
-    }
-    for (const b of pieces) b.born = 0; // no pop-in for these
+  function frame() {
+    raf = 0;
+    if (dead || !visible) return;
+    Engine.update(eng, 1000 / 60);
+    draw();
+    calmFrames = pending === 0 && pieces.every((b) => b.speed < 0.08) ? calmFrames + 1 : 0;
+    if (calmFrames < 45) raf = requestAnimationFrame(frame);
+  }
+  function wake() {
+    calmFrames = 0;
+    if (!raf && visible && !dead) raf = requestAnimationFrame(frame);
   }
 
-  function drop(k: JarMacro, r: number, delay: number, gen: number) {
-    const t = setTimeout(() => {
-      if (dead || gen !== generation) return;
-      const b = addPiece(k, r + Math.random() * Math.max(0, W - 2 * r), -r - 10, r);
-      b.born = performance.now();
-    }, delay);
-    timers.push(t);
+  function add(x: number, y: number) {
+    const b = Bodies.circle(x, y, br, pieceOpts);
+    Body.setAngle(b, Math.random() * 6);
+    pieces.push(b);
+    Composite.add(eng.world, b);
+    return b;
+  }
+  const randX = () => PAD + r + Math.random() * (W - 2 * PAD - 2 * r);
+
+  /** Pieces that are already there: poured above the pile and settled out of sight, like the calibration. */
+  function settleN(n: number) {
+    const fresh: Matter.Body[] = [];
+    const base = Math.min(...pieces.map((b) => b.position.y), 0);
+    for (let i = 0; i < n; i++) fresh.push(add(randX(), base - r * 2 - i * r * 2.2));
+    runUntilCalm(eng, pieces);
   }
 
-  const ctl: JarController = {
-    pour(plan, o) {
-      clear();
-      generation++;
-      animateIn = o.animate;
-      opts.onSelect(null);
-      if (plan.length === 0) return;
-      // Pieces get smaller when there are many, so the pile fits in the jar (about 55% full at most).
-      const base = 25 * Math.min(1, W / 360);
-      const fit = Math.sqrt((0.55 * W * H) / (plan.length * Math.PI * base * base));
-      radius = Math.max(9, base * Math.min(1, fit));
-      const settledKs = plan.filter((p) => p.settled || !o.animate).map((p) => p.k);
-      const fresh = plan.filter((p) => !p.settled && o.animate);
-      if (settledKs.length) settle(settledKs, radius);
-      const gap = Math.min(105, 2400 / Math.max(1, fresh.length));
-      let tt = 250;
-      for (const p of fresh) {
-        drop(p.k, radius, tt, generation);
-        tt += gap * (0.5 + Math.random());
+  function clear() {
+    generation++;
+    for (const t of timers) clearTimeout(t);
+    timers = [];
+    pending = 0;
+    for (const b of pieces.splice(0)) Composite.remove(eng.world, b);
+  }
+
+  const io = typeof IntersectionObserver !== "undefined" ? new IntersectionObserver((es) => {
+    visible = es.some((e) => e.isIntersecting) && !document.hidden;
+    if (visible) wake();
+  }) : null;
+  io?.observe(canvas);
+  const onVis = () => {
+    visible = !document.hidden;
+    if (visible) wake();
+  };
+  document.addEventListener("visibilitychange", onVis);
+
+  draw();
+
+  return {
+    set(total, settled, animate, reset) {
+      if (dead) return;
+      if (reset) clear();
+      const have = pieces.length + pending;
+      if (total < pieces.length) {
+        for (const b of pieces.splice(total)) Composite.remove(eng.world, b);
+        pending = 0;
+      } else if (total > have) {
+        const need = total - have;
+        const now = animate ? Math.max(0, Math.min(need, settled - have)) : need;
+        if (now > 0) settleN(now);
+        const rest = need - now;
+        const gap = Math.min(110, 2400 / Math.max(1, rest));
+        const gen = generation;
+        for (let i = 0; i < rest; i++) {
+          pending++;
+          timers.push(
+            setTimeout(() => {
+              if (dead || gen !== generation) return;
+              pending = Math.max(0, pending - 1);
+              add(randX(), -r * 2);
+              wake();
+            }, 150 + i * gap),
+          );
+        }
       }
-    },
-    shake(power = 1) {
-      try {
-        navigator.vibrate?.(30);
-      } catch {
-        /* no buzz here */
-      }
-      for (const b of pieces) {
-        Body.setVelocity(b, { x: (Math.random() - 0.5) * 14 * power, y: -(6 + Math.random() * 12) * power });
-        Body.setAngularVelocity(b, (Math.random() - 0.5) * 0.6);
-      }
-      try {
-        host.animate(
-          [
-            { transform: "translateX(0)" },
-            { transform: "translateX(-8px) rotate(-1deg)" },
-            { transform: "translateX(8px) rotate(1deg)" },
-            { transform: "translateX(0)" },
-          ],
-          { duration: 350 },
-        );
-      } catch {
-        /* older browsers: no wobble */
-      }
-    },
-    clearSelection() {
-      sel = null;
+      draw();
+      wake();
     },
     destroy() {
       dead = true;
       cancelAnimationFrame(raf);
-      ro.disconnect();
-      canvas.removeEventListener("pointerdown", onDown);
-      Runner.stop(runner);
+      io?.disconnect();
+      document.removeEventListener("visibilitychange", onVis);
       clear();
-      Composite.clear(engine.world, false);
-      Engine.clear(engine);
+      Composite.clear(eng.world, false);
+      Engine.clear(eng);
     },
   };
-
-  const onDown = (e: PointerEvent) => {
-    const r = canvas.getBoundingClientRect();
-    const hit = Query.point(pieces, { x: e.clientX - r.left, y: e.clientY - r.top })[0] as PieceBody | undefined;
-    if (hit) {
-      sel = hit;
-      Body.setVelocity(hit, { x: 0, y: -6 });
-      opts.onSelect(hit.jk ?? null);
-    } else {
-      sel = null;
-      opts.onSelect(null);
-    }
-  };
-  canvas.addEventListener("pointerdown", onDown);
-
-  Runner.run(runner, engine);
-  raf = requestAnimationFrame(draw);
-  return ctl;
 }

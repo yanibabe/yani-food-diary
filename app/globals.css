@@ -297,13 +297,14 @@ select {
   .pic-shimmer { animation: none; }
 }
 
-/* Round 73: the glass jar (nutrient jar card + full jar screen). */
-.jar-glass {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.55));
-  border: 1.5px solid rgba(255, 255, 255, 0.95);
-  box-shadow: inset 0 0 30px rgba(255, 255, 255, 0.6), 0 10px 30px rgba(120, 100, 80, 0.08);
+/* Round 74: the small glass jars on Today. */
+.daily-jar {
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0.7));
+  border: 1.5px solid rgba(150, 130, 110, 0.22);
+  box-shadow: inset 0 0 24px rgba(255, 255, 255, 0.7);
 }
-.jar-glass::before {
+.daily-jar::before {
   content: "";
   position: absolute;
   left: 14%;

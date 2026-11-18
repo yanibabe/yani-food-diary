@@ -5,6 +5,7 @@ import { useLang } from "../lib/lang";
 import { getPhoto } from "../lib/photos";
 import { macroSplit } from "../lib/macroSplit";
 import { macroTip } from "../lib/macroTip";
+import { dailyJarConfig } from "../lib/dailyJars";
 import { sourceLabel } from "../lib/provenance";
 import type { MacroKey, Macros, Provenance } from "../lib/types";
 import { Icon } from "./Icon";
@@ -147,7 +148,10 @@ export function MacroCards({ m, targets, showSplit }: { m: Macros; targets?: { p
 /** One short tip under the tiles on Today: the one thing that matters most right now (no AI). */
 export function MacroTipLine({ m, targets, kcalTarget }: { m: Macros; targets: { protein: number; carbs: number; fat: number }; kcalTarget: number }) {
   const { lang } = useLang();
-  const tip = macroTip(m, targets, kcalTarget);
+  // Round 74: carbs and fat use the top of the jars' good range (same numbers the jars show), so the tip
+  // never says "over" while the jar says "in range". Protein keeps its own target.
+  const cfg = dailyJarConfig(kcalTarget, targets.protein);
+  const tip = macroTip(m, { protein: cfg.p.goal ?? targets.protein, carbs: cfg.c.full, fat: cfg.f.full }, kcalTarget);
   if (!tip) return null;
   const dot = { ok: "bg-ink/30", protein: "bg-protein-dot", carbs: "bg-carbs-dot", fat: "bg-fat-dot" }[tip.key];
   return (
