@@ -9,9 +9,9 @@ import { createErrorText, createFromDraft, emptyDraft, type CreateDraft } from "
 import type { FoodState } from "../lib/types";
 import { NumberField } from "./ui";
 
-export function CreateIngredientForm({ list, onCreated, onCancel }: { list: CustomIngredient[]; onCreated: (next: CustomIngredient[]) => void; onCancel: () => void }) {
+export function CreateIngredientForm({ list, onCreated, onCancel, initialName = "" }: { list: CustomIngredient[]; onCreated: (next: CustomIngredient[]) => void; onCancel: () => void; initialName?: string }) {
   const { tr, lang } = useLang();
-  const [d, setD] = useState<CreateDraft>(emptyDraft);
+  const [d, setD] = useState<CreateDraft>(() => ({ ...emptyDraft(), name: initialName }));
   const [err, setErr] = useState<string | null>(null);
   const set = (p: Partial<CreateDraft>) => setD((x) => ({ ...x, ...p }));
 

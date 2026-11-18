@@ -4,7 +4,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { scanBarcodeFrame, warmUpBarcodeReader } from "../lib/barcodeScan";
-import { getCamera, releaseCamera } from "../lib/cameraStream";
+import { getCamera, releaseCamera, stopCamera } from "../lib/cameraStream";
 import { cameraErrorKind, makeConfirmer, scanArea } from "../lib/liveScan";
 import { useLang } from "../lib/lang";
 import { Icon } from "./Icon";
@@ -106,8 +106,15 @@ export function LiveBarcodeScanner({
       clearTimeout(timer);
       clearTimeout(slowTimer);
       const v = videoRef.current;
-      if (v) v.srcObject = null;
-      if (stream) releaseCamera();
+      if (v) {
+        // Let go of the picture completely so the phone can switch its camera light off.
+        v.pause();
+        v.srcObject = null;
+        v.removeAttribute("src");
+        v.load();
+      }
+      stream = null;
+      stopCamera(); // always, even if the camera was still opening
     };
   }, [tr]);
 

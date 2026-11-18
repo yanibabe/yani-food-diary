@@ -15,8 +15,16 @@ import { readFixes, writeFixes } from "../lib/food/labelFixStore";
 import { stopCamera } from "../lib/cameraStream";
 import { LiveBarcodeScanner } from "./LiveBarcodeScanner";
 import { OffAttribution } from "./OffAttribution";
-import { NumberField, WaitPopup } from "./ui";
+import { NumberField, Sheet, WaitPopup } from "./ui";
 import { Icon } from "./Icon";
+
+/** A product we have no database entry for: only the barcode is known; her label photo (or typing) fills the numbers. */
+function blankName(code: string, th: boolean) {
+  return th ? `สินค้า (บาร์โค้ด ${code})` : `Product (barcode ${code})`;
+}
+function blankFood(code: string, th: boolean): Food {
+  return { source: "off", sourceId: code, name: blankName(code, th), brand: null, servingSize: null, kcal: null, protein: null, carbs: null, fat: null };
+}
 
 export function BarcodeLookup({
   onPick,
@@ -38,6 +46,9 @@ export function BarcodeLookup({
   const [reading, setReading] = useState(false);
   const [readByAi, setReadByAi] = useState(false);
   const [live, setLive] = useState(false);
+  /** Round 65: a popup that tells her what happened and what to do next (product not found / look-up failed). */
+  const [offer, setOffer] = useState<null | { kind: "notfound" } | { kind: "error"; message: string }>(null);
+  const labelRootRef = useRef<HTMLInputElement>(null);
   /** The database's own numbers (before her label fix), so she can go back to them. */
   const [original, setOriginal] = useState<Food | null>(null);
   const [fixed, setFixed] = useState<LabelFix | null>(null);
@@ -55,6 +66,7 @@ export function BarcodeLookup({
     if (!file) return;
     setError(null);
     setNotFound(false);
+    setOffer(null);
     setFood(null);
     setReadByAi(false);
     setReading(true);
@@ -108,6 +120,7 @@ export function BarcodeLookup({
   function startLive() {
     setError(null);
     setNotFound(false);
+    setOffer(null);
     setFood(null);
     setLive(true);
   }
@@ -142,7 +155,10 @@ export function BarcodeLookup({
 
   /** Photo of the nutrition label → the AI reads the pack's numbers → saved as her fix for this barcode. */
   async function fromLabelPhoto(file: File | undefined) {
-    if (!file || !original) return;
+    // A product that is not in the database has no `original` yet: start from a blank one for this barcode.
+    const base = original ?? (notFound || offer ? blankFood(cleanBarcode(code) ?? code, lang === "th") : null);
+    if (!file || !base) return;
+    setOffer(null);
     setError(null);
     setReadingLabel(true);
     try {
@@ -166,7 +182,7 @@ export function BarcodeLookup({
         return;
       }
       setFixForm(null);
-      keepFix({ ...data.label, via: "photo" });
+      keepFix({ ...data.label, via: "photo" }, base);
     } catch (e) {
       setError(`${tr("อ่านรูปไม่ได้", "Couldn't read the photo")}: ${e instanceof Error ? e.message : String(e)}`);
     } finally {
@@ -174,16 +190,19 @@ export function BarcodeLookup({
     }
   }
 
-  function keepFix(v: Omit<LabelFix, "code" | "updatedAt">) {
-    if (!original) return;
-    const fix: LabelFix = { code: original.sourceId, ...v, updatedAt: Date.now() };
+  function keepFix(v: Omit<LabelFix, "code" | "updatedAt">, baseFood?: Food) {
+    const base = baseFood ?? original;
+    if (!base) return;
+    const fix: LabelFix = { code: base.sourceId, ...v, updatedAt: Date.now() };
     if (!fixIsValid(fix)) return;
     const err = writeFixes(upsertFix(readFixes(), fix));
     if (err) {
       setError(`${tr("บันทึกไม่ได้", "Couldn't save")}: ${err}`);
       return;
     }
-    setFood(applyLabelFix(original, fix));
+    setOriginal(base);
+    setNotFound(false);
+    setFood(applyLabelFix(base, fix));
     setGrams(fix.servingG);
     setFixed(fix);
     setFixForm(null);
@@ -204,6 +223,7 @@ export function BarcodeLookup({
   async function lookup(typed: string = code) {
     setError(null);
     setNotFound(false);
+    setOffer(null);
     setFood(null);
     const clean = cleanBarcode(typed);
     if (!clean) {
@@ -220,17 +240,27 @@ export function BarcodeLookup({
       const res = await aiFetch("/api/food/barcode", { code: clean, lang }, lang);
       const data = (await res.json().catch(() => null)) as { found?: boolean; code?: string; product?: OffProduct; message?: string } | null;
       if (!res.ok || !data) {
-        setError(data?.message ?? `${tr("เซิร์ฟเวอร์ตอบกลับ", "Server replied")} ${res.status}`);
+        const message = data?.message ?? `${tr("เซิร์ฟเวอร์ตอบกลับ", "Server replied")} ${res.status}`;
+        setError(message);
+        setOffer({ kind: "error", message });
         return;
       }
       if (!data.found || !data.product || !data.code) {
+        // Not in the database. If she already saved a label for this barcode, use it straight away.
+        if (findFix(readFixes(), clean)) {
+          show(blankFood(clean, lang === "th"));
+          return;
+        }
         setNotFound(true);
+        setOffer({ kind: "notfound" });
         return;
       }
       await putOffProduct(data.code, data.product);
       show(normalizeOffProduct(data.code, data.product));
     } catch (e) {
-      setError(`${tr("เชื่อมต่อไม่ได้", "Couldn't connect")}: ${e instanceof Error ? e.message : String(e)}`);
+      const message = `${tr("เชื่อมต่อไม่ได้", "Couldn't connect")}: ${e instanceof Error ? e.message : String(e)}`;
+      setError(message);
+      setOffer({ kind: "error", message });
     } finally {
       setBusy(false);
     }
@@ -433,9 +463,59 @@ export function BarcodeLookup({
           <button className="btn-primary w-full" disabled={!(grams && grams > 0)} onClick={() => grams && onPick(food, grams)}>
             {tr("ต่อไป", "Next")}
           </button>
-          <OffAttribution />
+          {!(food.source === "off" && food.name === blankName(food.sourceId, lang === "th")) && <OffAttribution />}
         </div>
       )}
+
+      <input
+        ref={labelRootRef}
+        type="file"
+        accept="image/*"
+        hidden
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          e.target.value = "";
+          fromLabelPhoto(f);
+        }}
+        data-testid="offer-label-input"
+      />
+      <Sheet
+        open={!!offer && !busy && !reading && !readingLabel && !live}
+        onClose={() => setOffer(null)}
+        title={offer?.kind === "error" ? tr("ค้นหาสินค้าไม่สำเร็จ", "Couldn't look it up") : tr("ไม่พบสินค้านี้", "Product not found")}
+      >
+        <div className="space-y-3 pb-4" data-testid="barcode-offer">
+          <p className="text-[15px] text-muted">
+            {offer?.kind === "error"
+              ? `${offer.message} · ${tr("ลองใหม่ หรือให้ AI ช่วยแทนก็ได้", "Try again, or let the AI help instead.")}`
+              : tr("ฐานข้อมูลยังไม่มีสินค้านี้ ให้ AI ช่วยได้ 2 แบบ", "The database doesn't have this product yet. The AI can help in two ways.")}
+          </p>
+          {onUsePhotoAi && (
+            <button className="btn-primary w-full" onClick={onUsePhotoAi} data-testid="offer-photo-ai">
+              <Icon name="camera" className="mr-1.5 inline-block h-5 w-5 align-[-4px]" />
+              {tr("ถ่ายรูปอาหารให้ AI ประเมิน", "Take a photo, AI estimates it")}
+            </button>
+          )}
+          <button className="btn-soft w-full" onClick={() => labelRootRef.current?.click()} data-testid="offer-label-photo">
+            {tr("ถ่ายรูปฉลากโภชนาการให้ AI กรอก", "Photo of the nutrition label, AI fills it in")}
+          </button>
+          {offer?.kind === "error" && (
+            <button className="btn-soft w-full" onClick={() => lookup()} data-testid="offer-retry">
+              {tr("ลองค้นหาใหม่", "Try the look-up again")}
+            </button>
+          )}
+          <button
+            className="w-full py-2 text-[15px] text-muted underline"
+            onClick={() => {
+              setOffer(null);
+              onManual();
+            }}
+            data-testid="offer-manual"
+          >
+            {tr("กรอกเองจากฉลาก", "Type it myself")}
+          </button>
+        </div>
+      </Sheet>
 
       {live && (
         <LiveBarcodeScanner

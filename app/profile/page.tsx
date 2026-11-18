@@ -168,6 +168,9 @@ export default function ProfilePage() {
               <Method />
             </ListRow>
           </section>
+          <p className="pt-2 text-center text-[12px] text-muted" data-testid="build-id">
+            SnapCal · {tr("เวอร์ชัน", "build")} {process.env.NEXT_PUBLIC_BUILD ?? "dev"}
+          </p>
         </>
       )}
     </main>

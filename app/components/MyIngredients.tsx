@@ -2,20 +2,34 @@
 // Round 47: "My ingredients" — the foods she saved ("Save for future use"), in plain sight, with Edit and Delete.
 // The edit form is the shared CustomIngredientList (same one as the search's "Manage" fold).
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLang } from "../lib/lang";
-import { forgetPickEverywhere, loadCustom, loadPrefs, saveCustom, savePrefs, type CustomIngredient } from "../lib/customIngredients";
+import { addCustom, forgetPickEverywhere, loadCustom, loadPrefs, saveCustom, savePrefs, type CustomIngredient } from "../lib/customIngredients";
 import { filterMine, sortMine } from "../lib/myIngredients";
 import { CustomIngredientList } from "./CustomIngredientList";
 import { CreateIngredientForm } from "./CreateIngredientForm";
+import { AddIngredientSheet } from "./AddIngredientSheet";
+import { customInputFromItem, findSameName } from "../lib/saveCustomFromItem";
+import { ingredientToItem } from "../lib/searchFood";
+import { newId } from "../lib/nutrition";
+import type { Ingredient } from "../lib/types";
 import { Icon } from "./Icon";
 import { Sheet } from "./ui";
 
 export function MyIngredients() {
-  const { tr } = useLang();
+  const { tr, lang } = useLang();
   const [custom, setCustom] = useState<CustomIngredient[]>(() => loadCustom());
   const [query, setQuery] = useState("");
-  const [adding, setAdding] = useState(false);
+  /** Round 65: the "+" opens the same ingredient search the recipes use; picking one saves it here, per 100 g (or per unit). */
+  const [searching, setSearching] = useState(false);
+  /** The words she typed when she chose "create my own" in that search (null = the form is closed). */
+  const [creating, setCreating] = useState<string | null>(null);
+  const [note, setNote] = useState<string | null>(null);
+  useEffect(() => {
+    if (!note) return;
+    const t = setTimeout(() => setNote(null), 4000);
+    return () => clearTimeout(t);
+  }, [note]);
   const sorted = useMemo(() => sortMine(custom), [custom]);
   const shown = useMemo(() => filterMine(sorted, query), [sorted, query]);
 
@@ -28,23 +42,67 @@ export function MyIngredients() {
     savePrefs(forgetPickEverywhere(loadPrefs(), { kind: "custom", id: c.id, name: c.name }));
   }
 
+  function picked(ing: Ingredient) {
+    const item = ingredientToItem(ing, newId("it"), lang, 0);
+    setSearching(false);
+    if (!item) {
+      // The numbers for this pick are not known yet (e.g. the search could not work them out).
+      setNote(tr("ยังไม่มีตัวเลขของวัตถุดิบนี้ ลองเลือกตัวอื่น หรือสร้างเอง", "No numbers for this one yet. Try another, or create your own."));
+      return;
+    }
+    const base = customInputFromItem(item);
+    if (!base) {
+      setNote(tr("ยังไม่มีตัวเลขของวัตถุดิบนี้ ลองเลือกตัวอื่น หรือสร้างเอง", "No numbers for this one yet. Try another, or create your own."));
+      return;
+    }
+    // Keep what the search knows about the unit (e.g. 1 egg ≈ 50 g), so the saved food also works in grams in a recipe.
+    const r = addCustom(custom, { ...base, unit: base.basis === "perUnit" ? ing.unit : null, gramsPerUnit: ing.gramsPerUnit ?? null, gPerMl: ing.gPerMl ?? null }, Date.now());
+    if (r.ok) {
+      change(r.list);
+      setQuery("");
+      setNote(tr(`เพิ่ม “${r.item.name}” แล้ว`, `Added “${r.item.name}”`));
+    } else if (r.error === "duplicate") {
+      const name = findSameName(custom, item.name)?.name ?? item.name;
+      setNote(tr(`“${name}” มีอยู่แล้วในวัตถุดิบของฉัน`, `“${name}” is already in My ingredients`));
+    } else {
+      setNote(tr("เพิ่มไม่สำเร็จ ลองใหม่อีกครั้ง", "Couldn't add it. Please try again."));
+    }
+  }
+
   const addBtn = (main: boolean) => (
-    <button type="button" className={`${main ? "btn-primary" : "btn-soft"} !min-h-[48px] w-full`} onClick={() => setAdding(true)} data-testid="my-ingredients-add">
+    <button type="button" className={`${main ? "btn-primary" : "btn-soft"} !min-h-[48px] w-full`} onClick={() => setSearching(true)} data-testid="my-ingredients-add">
       {tr("+ เพิ่มวัตถุดิบของฉัน", "+ Add my ingredient")}
     </button>
   );
   const sheet = (
-    <Sheet open={adding} onClose={() => setAdding(false)} title={tr("เพิ่มวัตถุดิบของฉัน", "Add my ingredient")} keyboardSafe>
-      <CreateIngredientForm
-        list={custom}
-        onCancel={() => setAdding(false)}
-        onCreated={(next) => {
-          change(next);
-          setQuery("");
-          setAdding(false);
+    <>
+      <AddIngredientSheet
+        open={searching}
+        onClose={() => setSearching(false)}
+        onAdd={picked}
+        onCreateCustom={(name) => {
+          setSearching(false);
+          setCreating(name);
         }}
       />
-    </Sheet>
+      <Sheet open={creating !== null} onClose={() => setCreating(null)} title={tr("สร้างวัตถุดิบเอง", "Create my own ingredient")} keyboardSafe>
+        <CreateIngredientForm
+          list={custom}
+          initialName={creating ?? ""}
+          onCancel={() => setCreating(null)}
+          onCreated={(next) => {
+            change(next);
+            setQuery("");
+            setCreating(null);
+          }}
+        />
+      </Sheet>
+      {note && (
+        <p className="glass px-3 py-2 text-center text-[15px]" role="status" data-testid="my-ingredients-note">
+          {note}
+        </p>
+      )}
+    </>
   );
 
   if (custom.length === 0) {
