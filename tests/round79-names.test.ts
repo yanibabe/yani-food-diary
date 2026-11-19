@@ -271,12 +271,13 @@ test("backfill: a name translated before comes from the memory, not the AI", asy
   assert.equal(data.entries[0].alt?.en, "Mackerel");
 });
 
-test("backfill: a failure stops the AI until tomorrow; offline makes no call; the daily budget is respected", async () => {
+test("backfill: a failure pauses the AI for one hour; offline makes no call; the daily budget is respected", async () => {
   const fresh = () => ({ entries: [entry("ปลาทู", [item("ปลาทู")])], recipes: [] as Recipe[], custom: [] as { name: string; alt?: NameAlt }[] });
   const storage = memStorage();
   let data = fresh();
   let n = 0;
-  const io = (today: string, translate: (names: string[]) => Promise<NamePair[]>, online = true) => ({ read: () => data, apply: (l: Parameters<typeof applyLookup>[1]) => { data = applyLookup(data, l); }, translate, cache: {}, storage, today, online });
+  const T0 = Date.parse("2026-11-19T10:00:00Z");
+  const io = (today: string, translate: (names: string[]) => Promise<NamePair[]>, online = true, now = T0) => ({ read: () => data, apply: (l: Parameters<typeof applyLookup>[1]) => { data = applyLookup(data, l); }, translate, cache: {}, storage, today, online, now });
 
   const off = await runBackfill(io("2026-11-19", async () => { n++; return []; }, false));
   assert.equal(off.stoppedBy, "offline");
@@ -287,19 +288,20 @@ test("backfill: a failure stops the AI until tomorrow; offline makes no call; th
   assert.equal(n, 1);
   assert.equal(data.entries[0].alt, undefined, "data unchanged after a failure");
 
-  const sameDay = await runBackfill(io("2026-11-19", async () => { n++; return []; }));
-  assert.equal(sameDay.stoppedBy, "failed");
-  assert.equal(n, 1, "no retry the same day");
+  const soon = await runBackfill(io("2026-11-19", async () => { n++; return []; }, true, T0 + 59 * 60 * 1000));
+  assert.equal(soon.stoppedBy, "failed");
+  assert.equal(n, 1, "no retry inside the hour");
 
-  const nextDay = await runBackfill(io("2026-11-20", async (names) => { n++; return names.map((src) => ({ src, th: src, en: "Mackerel" })); }));
-  assert.equal(nextDay.stoppedBy, "done");
-  assert.equal(n, 2);
+  const later = await runBackfill(io("2026-11-19", async (names) => { n++; return names.map((src) => ({ src, th: src, en: "Mackerel" })); }, true, T0 + 61 * 60 * 1000));
+  assert.equal(later.stoppedBy, "done");
+  assert.equal(n, 2, "retried after the hour, same day");
   assert.equal(data.entries[0].alt?.en, "Mackerel");
 
   // budget: a model that never returns anything is asked at most MAX_CALLS_PER_DAY times a day
   data = fresh();
+  assert.equal(MAX_CALLS_PER_DAY, 12);
   let asked = 0;
-  for (let i = 0; i < 10; i++) await runBackfill(io("2026-11-21", async () => { asked++; return []; }));
+  for (let i = 0; i < 20; i++) await runBackfill(io("2026-11-21", async () => { asked++; return []; }, true, T0 + 48 * 3600 * 1000));
   assert.equal(asked, MAX_CALLS_PER_DAY);
   assert.deepEqual(batches([1, 2, 3, 4, 5], 2), [[1, 2], [3, 4], [5]]);
 });

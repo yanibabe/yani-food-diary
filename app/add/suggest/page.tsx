@@ -14,6 +14,7 @@ import { aiDairy } from "../../lib/dairy";
 import { guessSlot, thaiDateKey, thaiHour } from "../../lib/date";
 import { macroTargets, proteinTargetG } from "../../lib/energy";
 import { useLang } from "../../lib/lang";
+import { displayUnit } from "../../lib/unitNames";
 import { fmtKcal, newId, pickMacros, sumMacros } from "../../lib/nutrition";
 import { totalsForRecipe } from "../../lib/recipe";
 import { useStore } from "../../lib/store";
@@ -281,7 +282,7 @@ function SuggestInner() {
     </li>
   );
   const protein = (i: Idea) => `${tr("โปรตีน", "Protein")} ${Math.round(i.protein)} g`;
-  const amount = (i: Idea) => (i.amount > 0 && i.unit ? `${i.amount} ${i.unit} · ` : "");
+  const amount = (i: Idea) => (i.amount > 0 && i.unit ? `${i.amount} ${displayUnit(i.unit, lang, i.amount)} · ` : "");
 
   const group = (id: string, dot: string, title: string, body: ReactNode) => (
     <section data-testid={`suggest-group-${id}`}>

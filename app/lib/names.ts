@@ -142,6 +142,147 @@ export function manualAltText(name: string, alt: NameAlt | undefined): string {
   return cleanAltText(validAlt(name, alt)?.[otherLang(name)]) ?? "";
 }
 
+// ---------------------------------------------------------------------------
+// Round 80: the two edit boxes follow the APP language.
+// The big (main) box shows the name in the app language; the small box shows the other language.
+// Under the hood nothing changes: `name` is still the original, `alt` still holds the other language.
+// ---------------------------------------------------------------------------
+
+export type NameBoxes = {
+  /** Text of the big box. */
+  main: string;
+  /** Text of the small box. */
+  small: string;
+  /** The language the small box is written in (for its label). */
+  smallLang: Lang;
+  /** True when the big box holds the saved other-language name (not the original). */
+  mainIsAlt: boolean;
+};
+
+/** What the two boxes show for this name, alt and app language. */
+export function nameBoxes(name: string, alt: NameAlt | undefined, lang: Lang): NameBoxes {
+  const orig = nameLang(name);
+  const other = otherLang(name);
+  const altText = cleanAltText(validAlt(name, alt)?.[other]);
+  // Original is in another language than the app AND we have the app-language name → show that one big.
+  if (orig !== lang && altText) return { main: altText, small: name, smallLang: orig, mainIsAlt: true };
+  return { main: name, small: altText ?? "", smallLang: other, mainIsAlt: false };
+}
+
+/**
+ * She typed in the big box. Returns the new original name and alt.
+ *  - the big box shows the original → the name changes (a name she typed herself keeps its alt; an
+ *    automatic alt is dropped and made again);
+ *  - the big box shows the alt → what she typed becomes the real original name (it is what matching and
+ *    the AI use). The old original stays as her other-language name only if the alt was hers (manual).
+ */
+export function editMainBox(name: string, alt: NameAlt | undefined, lang: Lang, typed: string): { name: string; alt: NameAlt | undefined } {
+  const b = nameBoxes(name, alt, lang);
+  if (!b.mainIsAlt) return { name: typed, alt: renameAlt(alt, name, typed) };
+  const keep = validAlt(name, alt)?.manual === true && nameLang(typed) !== nameLang(name) && typed.trim() !== "";
+  return { name: typed, alt: keep ? ({ [nameLang(name)]: name, src: typed, manual: true } as NameAlt) : undefined };
+}
+
+/**
+ * She typed in the small box. Returns the new original name and alt.
+ *  - the small box shows the other language → it is her own alt (manual), as before;
+ *  - the small box shows the original (big box shows the alt) → the original is edited and the alt that
+ *    is on screen stays (it becomes hers). Emptied → the alt becomes the original.
+ */
+export function editSmallBox(name: string, alt: NameAlt | undefined, lang: Lang, typed: string): { name: string; alt: NameAlt | undefined } {
+  const b = nameBoxes(name, alt, lang);
+  if (!b.mainIsAlt) return { name, alt: setManualAlt(name, alt, typed) };
+  const v = validAlt(name, alt);
+  if (!typed.trim()) return { name: b.main, alt: undefined };
+  return { name: typed, alt: v ? { ...v, src: typed, manual: true } : undefined };
+}
+
+// ---------------------------------------------------------------------------
+// Round 80: the meal title follows a renamed item.
+// ---------------------------------------------------------------------------
+
+export type Renamed = { oldName: string; oldAlt?: NameAlt; newName: string; newAlt?: NameAlt };
+
+/** The name in one language, if we have it (the original or a fitting alt). */
+function textIn(name: string, alt: NameAlt | undefined, l: Lang): string | undefined {
+  if (nameLang(name) === l) return cleanAltText(name) ?? undefined;
+  return cleanAltText(validAlt(name, alt)?.[l]);
+}
+
+/** Replace the first case-insensitive match. Null when `find` is not inside `text`. */
+function replaceFirst(text: string, find: string, repl: string): string | null {
+  const f = find.trim();
+  if (f.length < 2) return null;
+  const at = text.toLowerCase().indexOf(f.toLowerCase());
+  if (at < 0) return null;
+  return text.slice(0, at) + repl + text.slice(at + f.length);
+}
+
+const LANGS: Lang[] = ["th", "en"];
+
+/**
+ * Items were renamed. If the title (typed by the app or the AI, not by her) still contains an old item name —
+ * in either language — put the new name there. The title's other-language name is changed the same way, or
+ * dropped (so it is translated again) when that cannot be done. Null when the title does not change.
+ */
+export function followRenames(title: string, alt: NameAlt | undefined, renames: Renamed[]): { title: string; alt: NameAlt | undefined } | null {
+  let t = title;
+  let a = validAlt(title, alt);
+  const other = otherLang(title);
+  let changed = false;
+  for (const r of renames) {
+    if (r.oldName === r.newName) continue;
+    let done = false;
+    // 1) Swap in the title's own language, only when the new name exists in that language too.
+    for (const l of LANGS) {
+      const old = textIn(r.oldName, r.oldAlt, l);
+      const nu = textIn(r.newName, r.newAlt, l);
+      if (!old || !nu) continue;
+      const next = replaceFirst(t, old, nu);
+      if (next == null) continue;
+      t = next;
+      done = true;
+      break;
+    }
+    // 2) The new name is only in the OTHER language (she typed Thai over an English title): do the swap in
+    //    the title's other-language version and make that the title, so it never ends up half Thai, half
+    //    English. Its translation is made again in the background.
+    if (!done) {
+      const nl = nameLang(r.newName);
+      const oldNl = textIn(r.oldName, r.oldAlt, nl);
+      const curNl = nameLang(t) === nl ? t : cleanAltText(a?.[nl]);
+      const swapped = curNl && oldNl ? replaceFirst(curNl, oldNl, r.newName) : null;
+      if (swapped != null) {
+        t = swapped;
+        a = undefined;
+        changed = true;
+        continue;
+      }
+    }
+    // 3) Last resort: plain swap (may mix languages until the background translation catches up).
+    if (!done) {
+      for (const l of LANGS) {
+        const old = textIn(r.oldName, r.oldAlt, l);
+        const next = old ? replaceFirst(t, old, r.newName) : null;
+        if (next == null) continue;
+        t = next;
+        done = true;
+        break;
+      }
+    }
+    if (!done) continue;
+    changed = true;
+    // The other-language title: same swap in that language; if it cannot be done the alt is dropped.
+    const old = textIn(r.oldName, r.oldAlt, other);
+    const nu = textIn(r.newName, r.newAlt, other);
+    const cur = cleanAltText(a?.[other]);
+    const swapped = cur && old && nu ? replaceFirst(cur, old, nu) : null;
+    a = swapped && a ? { ...a, [other]: swapped } : undefined;
+  }
+  if (!changed) return null;
+  return { title: t, alt: a ? { ...a, src: t } : undefined };
+}
+
 /** True for a name worth translating: has a letter, not too long. */
 export function translatable(name: string): boolean {
   const n = name.trim();

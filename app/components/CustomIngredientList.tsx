@@ -10,7 +10,7 @@ import { deleteCustom, editCustom, type CustomIngredient, type CustomInput } fro
 import { basisLabel, macroText } from "../lib/myIngredients";
 import type { FoodState } from "../lib/types";
 import { NumberField } from "./ui";
-import { renameAlt, type NameAlt } from "../lib/names";
+import { editMainBox, nameBoxes, type NameAlt } from "../lib/names";
 import { OtherNameField } from "./OtherNameField";
 
 const stamp = () => Date.now();
@@ -72,8 +72,8 @@ export function CustomIngredientList({
       <div key={c.id} className="rounded-xl bg-white/70 p-3" data-testid="ai-custom-item">
         {editing === c.id && draft ? (
           <div className="space-y-2" data-testid="ai-custom-edit">
-            <input className="field !min-h-[44px]" value={draft.name} onChange={(e) => set({ name: e.target.value, alt: renameAlt(draft.alt, draft.name, e.target.value) })} aria-label={tr("ชื่อ", "Name")} />
-      {draft.name.trim() && <OtherNameField name={draft.name} alt={draft.alt} onChange={(alt) => set({ alt })} />}
+            <input className="field !min-h-[44px]" value={nameBoxes(draft.name, draft.alt, lang).main} onChange={(e) => set(editMainBox(draft.name, draft.alt, lang, e.target.value))} aria-label={tr("ชื่อ", "Name")} />
+      {draft.name.trim() && <OtherNameField name={draft.name} alt={draft.alt} onChange={(r) => set(r)} />}
             <div className="grid grid-cols-2 gap-2">
               <select className="field !min-h-[44px]" value={draft.basis} onChange={(e) => set({ basis: e.target.value as Draft["basis"] })} aria-label={tr("ค่าต่อ", "Values are per")}>
                 <option value="g">{tr("ต่อ 100 กรัม", "Per 100 g")}</option>

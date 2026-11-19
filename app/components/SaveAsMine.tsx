@@ -4,6 +4,7 @@
 
 import { useState } from "react";
 import { useLang } from "../lib/lang";
+import { displayUnit } from "../lib/unitNames";
 import { loadCustom, saveCustom } from "../lib/customIngredients";
 import { customInputFromItem, itemBasis, itemFromCustom, saveItemAsCustom } from "../lib/saveCustomFromItem";
 import type { FoodItem } from "../lib/types";
@@ -17,7 +18,7 @@ export function SaveAsMine({ item, replace }: { item: FoodItem; replace: (it: Fo
   const sig = JSON.stringify([item.name, item.amount, item.unit, item.kcal, item.protein, item.carbs, item.fat, item.missing ?? []]);
   const now = state && state.sig === sig ? state : null;
   const basis = itemBasis(item);
-  const perWhat = basis === "g" ? tr("ต่อ 100 กรัม", "per 100 g") : basis === "ml" ? tr("ต่อ 100 มล.", "per 100 ml") : tr(`ต่อ 1 ${item.unit.trim() || "หน่วย"}`, `per 1 ${item.unit.trim() || "unit"}`);
+  const perWhat = basis === "g" ? tr("ต่อ 100 กรัม", "per 100 g") : basis === "ml" ? tr("ต่อ 100 มล.", "per 100 ml") : tr(`ต่อ 1 ${displayUnit(item.unit, "th") || "หน่วย"}`, `per 1 ${displayUnit(item.unit, "en") || "unit"}`);
 
   function save() {
     const r = saveItemAsCustom(loadCustom(), item, Date.now());

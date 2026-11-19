@@ -1,6 +1,6 @@
 // Round 79: the phone's memory of names it already translated ("a name is translated once, ever").
 //   yfd:v1:nameTr      = { "<original name>": { th, en } }
-//   yfd:v1:nameTrRuns  = { day, calls, failed }   how many AI calls today (so the cost stays tiny)
+//   yfd:v1:nameTrRuns  = { day, calls, failedAt }   how many AI calls today (so the cost stays tiny); failedAt = when the last call failed (ms, 0 = none)
 // Reading bad / missing text gives an empty memory, never an error.
 
 import { cleanAltText } from "./names.ts";
@@ -13,7 +13,9 @@ export const MAX_CACHED = 3000;
 
 export type StorageLike = Pick<Storage, "getItem" | "setItem">;
 export type NameTrCache = Record<string, { th: string; en: string }>;
-export type Runs = { day: string; calls: number; failed: boolean };
+/** A failed call pauses the AI part for this long (not the whole day). */
+export const FAIL_PAUSE_MS = 60 * 60 * 1000;
+export type Runs = { day: string; calls: number; failedAt: number };
 
 const browserStorage = (): StorageLike | null => {
   try {
@@ -82,11 +84,16 @@ export function cachedPair(name: string): { th: string; en: string } | null {
 export function parseRuns(raw: string | null | undefined, today: string): Runs {
   try {
     const v = raw ? JSON.parse(raw) : null;
-    if (v && v.day === today && Number.isFinite(v.calls)) return { day: today, calls: Math.max(0, Math.floor(v.calls)), failed: v.failed === true };
+    if (v) {
+      // The pause after a failure survives midnight; the call count does not.
+      const failedAt = Number.isFinite(v.failedAt) && v.failedAt > 0 ? Math.floor(v.failedAt) : 0;
+      const calls = v.day === today && Number.isFinite(v.calls) ? Math.max(0, Math.floor(v.calls)) : 0;
+      return { day: today, calls, failedAt };
+    }
   } catch {
     /* new day */
   }
-  return { day: today, calls: 0, failed: false };
+  return { day: today, calls: 0, failedAt: 0 };
 }
 
 export function loadRuns(today: string, storage: StorageLike | null = browserStorage()): Runs {

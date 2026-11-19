@@ -6,7 +6,8 @@ import { blankItem, changeAmount, cleanBox, cleanNumber, energyCheck, fmtAmount,
 import { BUFFER_TEXT, LEGACY_MARGIN_PCT, bufferSummary, cleanBufferPct, dropBuffer, forEnergyCheck, hasLegacyMargin, isBuffered, originalKcal, pctLabel, startBuffer } from "../lib/calorieBuffer";
 import { aiDairy, dairyItems, isDairy, warnDairy } from "../lib/dairy";
 import { useLang } from "../lib/lang";
-import { altFor, renameAlt, type NameAlt } from "../lib/names";
+import { altFor, editMainBox, followRenames, nameBoxes, type NameAlt, type Renamed } from "../lib/names";
+import { displayUnit } from "../lib/unitNames";
 import { OtherNameField } from "./OtherNameField";
 import { useStore } from "../lib/store";
 import { isEstimated, itemProvenance, joinMissing, provFromAi, USER_TYPED } from "../lib/provenance";
@@ -131,8 +132,8 @@ export function ItemEditor({
       )}
       <div>
         <label className="label" htmlFor="it-name">{tr("ชื่อ", "Name")}</label>
-        <input id="it-name" className="field" value={item.name} onChange={(e) => set({ name: e.target.value, alt: renameAlt(item.alt, item.name, e.target.value) })} placeholder={tr("เช่น ไก่ทอด", "e.g. fried chicken")} />
-        {item.name.trim() && <OtherNameField key={item.id} id="it-name-other" name={item.name} alt={item.alt} onChange={(alt) => set({ alt })} />}
+        <input id="it-name" className="field" value={nameBoxes(item.name, item.alt, lang).main} onChange={(e) => set(editMainBox(item.name, item.alt, lang, e.target.value))} placeholder={tr("เช่น ไก่ทอด", "e.g. fried chicken")} />
+        {item.name.trim() && <OtherNameField key={item.id} id="it-name-other" name={item.name} alt={item.alt} onChange={(r) => set(r)} />}
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
@@ -242,6 +243,8 @@ export function MealReview({
   saveLabel ??= tr("บันทึกลงวันนี้", "Save to my diary");
   const [title, setTitle] = useState(initial.title);
   const [titleAlt, setTitleAlt] = useState<NameAlt | undefined>(initial.alt);
+  // Round 80: true once she typed the title herself — then a renamed item never changes it.
+  const [titleTyped, setTitleTyped] = useState(false);
   const [slot, setSlot] = useState<MealSlot>(initial.slot);
   const [items, setItems] = useState<FoodItem[]>(initial.items);
   const [editingId, setEditingId] = useState<string | null>(startEditingId ?? null);
@@ -261,7 +264,7 @@ export function MealReview({
   const milky = avoidDairy ? dairyItems(items) : [];
   const editing = items.find((i) => i.id === editingId) ?? null;
   const amountSummary = items.length
-    ? items.map((i) => `${dn(i.name, i.alt) || tr("ไม่มีชื่อ", "No name")} ${fmtAmount(i.amount)} ${i.unit}`).join(" · ")
+    ? items.map((i) => `${dn(i.name, i.alt) || tr("ไม่มีชื่อ", "No name")} ${fmtAmount(i.amount)} ${displayUnit(i.unit, lang, i.amount)}`).join(" · ")
     : tr("ยังไม่มีรายการ", "Nothing yet");
 
   async function sendChat() {
@@ -309,6 +312,7 @@ export function MealReview({
       if (newTitle && newTitle !== title) {
         setTitle(newTitle);
         setTitleAlt(altFor(newTitle, { th: r.title_th, en: r.title_en }));
+        setTitleTyped(false);
       }
       const changed: string[] = [];
       setItems((prev) => {
@@ -443,15 +447,17 @@ export function MealReview({
       <div className="card space-y-4 p-5">
         <input
           className="w-full bg-transparent text-center text-[24px] font-semibold outline-none"
-          value={title}
+          value={nameBoxes(title, titleAlt, lang).main}
           onChange={(e) => {
-            setTitleAlt(renameAlt(titleAlt, title, e.target.value));
-            setTitle(e.target.value);
+            const r = editMainBox(title, titleAlt, lang, e.target.value);
+            setTitleAlt(r.alt);
+            setTitle(r.name);
+            setTitleTyped(true);
           }}
           placeholder={tr("ชื่อมื้อ", "Meal name")}
           aria-label={tr("ชื่อมื้อ", "Meal name")}
         />
-        {title.trim() && <OtherNameField id="title-other" name={title} alt={titleAlt} onChange={setTitleAlt} />}
+        {title.trim() && <OtherNameField id="title-other" name={title} alt={titleAlt} onChange={(r) => { setTitle(r.name); setTitleAlt(r.alt); setTitleTyped(true); }} />}
         <p className="text-center text-[14px] text-muted" data-testid="amount-summary">{amountSummary}</p>
         <KcalBig kcal={total.kcal} />
         <MacroCards m={total} />
@@ -508,7 +514,7 @@ export function MealReview({
                     {avoidDairy && isDairy(i) && <Badge>🥛 {tr("นม", "Milk")}</Badge>}
                   </div>
                   <div className="text-[14px] text-muted">
-                    {fmtAmount(i.amount)} {i.unit}
+                    {fmtAmount(i.amount)} {displayUnit(i.unit, lang, i.amount)}
                     {i.note ? ` · ${i.note}` : ""}
                   </div>
                 </div>
@@ -591,8 +597,21 @@ export function MealReview({
           className="btn-primary flex-[2]"
           disabled={!canSave}
           onClick={() => {
-            const t = title.trim();
-            const alt = t ? (titleAlt && (titleAlt.manual || titleAlt.src === title) ? { ...titleAlt, src: t } : undefined) : items[0]?.alt;
+            let t = title.trim();
+            let alt = t ? (titleAlt && (titleAlt.manual || titleAlt.src === title) ? { ...titleAlt, src: t } : undefined) : items[0]?.alt;
+            // Round 80: an item was renamed and the title (not typed by her) still names the old food → follow it.
+            if (t && !titleTyped) {
+              const renames: Renamed[] = [];
+              for (const it of items) {
+                const was = initial.items.find((x) => x.id === it.id);
+                if (was && was.name !== it.name) renames.push({ oldName: was.name, oldAlt: was.alt, newName: it.name, newAlt: it.alt });
+              }
+              const f = renames.length ? followRenames(t, alt, renames) : null;
+              if (f) {
+                t = f.title;
+                alt = f.alt;
+              }
+            }
             onSave({ title: t || items[0]?.name || tr("อาหาร", "Meal"), ...(alt ? { alt } : {}), slot, items });
           }}
         >

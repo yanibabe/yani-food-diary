@@ -213,7 +213,7 @@ export function ShareDayButton({
       ? makeWeekPicture({ entries, date, target, proteinTarget: mt.protein, lang })
       : makePicture(
       {
-        day: buildShareDay(entries, date, readPics(), dn),
+        day: buildShareDay(entries, date, readPics(), dn, lang),
         date,
         dateLabel: thaiDateLabel(date, lang),
         name,

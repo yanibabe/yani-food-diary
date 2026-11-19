@@ -9,7 +9,7 @@ import { ingredientMacros, recipeTotals } from "../../../lib/recipe";
 import { matchRef, STATE_LABEL } from "../../../lib/foodRef";
 import type { LabelInfo } from "../../../lib/types";
 import { useLang } from "../../../lib/lang";
-import { renameAlt, type NameAlt } from "../../../lib/names";
+import { editMainBox, nameBoxes, type NameAlt } from "../../../lib/names";
 import { OtherNameField } from "../../../components/OtherNameField";
 import { useStore } from "../../../lib/store";
 import { PIECE_LIKE, RECIPE_CATEGORIES, UNIT_GROUPS, UNITS, unitKind, type Ingredient, type IngredientUnit, type Recipe, type RecipeCategory } from "../../../lib/types";
@@ -151,8 +151,8 @@ function IngredientCard({
       <IngredientScan ing={ing} onPatch={onPatch} />
       <div className="flex items-start gap-3">
         <div className="flex-1 space-y-2">
-          <input className="field" value={ing.name} onChange={(e) => { set({ name: e.target.value, alt: renameAlt(ing.alt, ing.name, e.target.value) }); setAiMsg(null); }} onBlur={() => { if (!hasAi && !hasPick && !usdaOn && !refKnown()) void lookUp(); }} placeholder={tr("ชื่อวัตถุดิบ เช่น ไข่ไก่", "Ingredient, e.g. egg")} aria-label={tr("ชื่อวัตถุดิบ", "Ingredient name")} />
-          {ing.name.trim() && <OtherNameField key={ing.id} name={ing.name} alt={ing.alt} onChange={(alt) => set({ alt })} />}
+          <input className="field" value={nameBoxes(ing.name, ing.alt, lang).main} onChange={(e) => { set(editMainBox(ing.name, ing.alt, lang, e.target.value)); setAiMsg(null); }} onBlur={() => { if (!hasAi && !hasPick && !usdaOn && !refKnown()) void lookUp(); }} placeholder={tr("ชื่อวัตถุดิบ เช่น ไข่ไก่", "Ingredient, e.g. egg")} aria-label={tr("ชื่อวัตถุดิบ", "Ingredient name")} />
+          {ing.name.trim() && <OtherNameField key={ing.id} name={ing.name} alt={ing.alt} onChange={(r) => set(r)} />}
           <div className="grid grid-cols-[1fr_auto] gap-2">
             <NumberField value={ing.amount || null} onChange={(n) => set({ amount: n ?? 0 })} placeholder={tr("ปริมาณ", "Amount")} aria-label={tr("ปริมาณ", "Amount")} />
             <select className="field !w-auto max-w-[150px]" value={ing.unit} onChange={(e) => changeUnit(e.target.value as IngredientUnit)} aria-label={tr("หน่วย", "Unit")}>
@@ -468,8 +468,8 @@ function RecipeForm({ initial, onSave, onCancel }: { initial: Recipe | null; onS
       <div className="card space-y-4 p-4">
         <div>
           <label className="label" htmlFor="rc-name">{tr("ชื่อเมนู", "Dish name")}</label>
-          <input id="rc-name" className="field" value={name} onChange={(e) => { setNameAlt(renameAlt(nameAlt, name, e.target.value)); setName(e.target.value); }} placeholder={tr("เช่น ไข่เจียวแหนม", "e.g. omelet with naem")} />
-          {name.trim() && <OtherNameField id="rc-name-other" name={name} alt={nameAlt} onChange={setNameAlt} />}
+          <input id="rc-name" className="field" value={nameBoxes(name, nameAlt, lang).main} onChange={(e) => { const r = editMainBox(name, nameAlt, lang, e.target.value); setNameAlt(r.alt); setName(r.name); }} placeholder={tr("เช่น ไข่เจียวแหนม", "e.g. omelet with naem")} />
+          {name.trim() && <OtherNameField id="rc-name-other" name={name} alt={nameAlt} onChange={(r) => { setName(r.name); setNameAlt(r.alt); }} />}
         </div>
         <div>
           <span className="label">{tr("หมวด", "Category")}</span>

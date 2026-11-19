@@ -7,6 +7,8 @@ import { SLOTS, type Entry, type Macros, type MealSlot } from "./types.ts";
 import { findPic, type MealPics } from "./mealPics.ts";
 import { isEstimated } from "./provenance.ts";
 import type { NameAlt } from "./names.ts";
+import type { Lang } from "./i18n.ts";
+import { displayUnit } from "./unitNames.ts";
 
 export type ShareMeal = {
   title: string;
@@ -32,7 +34,9 @@ function roundM(m: Macros): Macros {
   return { kcal: Math.round(m.kcal), protein: Math.round(m.protein), carbs: Math.round(m.carbs), fat: Math.round(m.fat) };
 }
 
-export function buildShareDay(entries: Entry[], date: string, pics: MealPics = {}, show: (name: string, alt?: NameAlt) => string = (n) => n): ShareDay {
+export function buildShareDay(entries: Entry[], date: string, pics: MealPics = {}, show: (name: string, alt?: NameAlt) => string = (n) => n, lang?: Lang): ShareDay {
+  // Round 80: units in the app language (only when the caller says which).
+  const unit = (i: { unit: string; amount: number }) => (lang ? displayUnit(i.unit, lang, i.amount) : i.unit);
   const day = entries.filter((e) => e.date === date).sort((a, b) => a.createdAt - b.createdAt);
   const slots = SLOTS.map((slot) => {
     const meals = day
@@ -40,10 +44,10 @@ export function buildShareDay(entries: Entry[], date: string, pics: MealPics = {
       .map((e) => ({
         title: show(e.title, e.alt),
         m: roundM(sumMacros(e.items.map(pickMacros))),
-        detail: e.items.length > 1 ? e.items.map((i) => `${show(i.name, i.alt)} ${fmtAmount(i.amount)} ${i.unit}`.trim()).join(" · ") : "",
+        detail: e.items.length > 1 ? e.items.map((i) => `${show(i.name, i.alt)} ${fmtAmount(i.amount)} ${unit(i)}`.trim()).join(" · ") : "",
         photoId: e.photoId ?? null,
         picId: findPic(pics, e.title)?.photoId ?? e.photoId ?? null,
-        items: e.items.map((i) => ({ text: `${show(i.name, i.alt)} ${fmtAmount(i.amount)} ${i.unit}`.trim(), est: isEstimated(i, e) })),
+        items: e.items.map((i) => ({ text: `${show(i.name, i.alt)} ${fmtAmount(i.amount)} ${unit(i)}`.trim(), est: isEstimated(i, e) })),
         est: e.items.some((i) => isEstimated(i, e)),
       }));
     return { slot, meals, m: roundM(sumMacros(meals.map((x) => x.m))) };
