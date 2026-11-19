@@ -12,6 +12,7 @@ import { runBackfill } from "../lib/nameBackfill";
 import { parseTranslateReply } from "../lib/translateNames";
 import { PASSCODE_HEADER, PASSCODE_KEY, passcodeHeaderValue } from "../lib/passcode";
 import { thaiDateKey } from "../lib/date";
+import { parseTitleReply, runTitleCheck, type TitleAsk } from "../lib/mealTitles";
 
 const WAIT_MS = 3000;
 
@@ -30,8 +31,22 @@ async function translateCall(names: string[], lang: string) {
   return parseTranslateReply({ names: data?.pairs }, names);
 }
 
+async function titleCall(meals: TitleAsk[], lang: string) {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  try {
+    const code = localStorage.getItem(PASSCODE_KEY);
+    if (code) headers[PASSCODE_HEADER] = passcodeHeaderValue(code);
+  } catch {
+    /* no passcode saved */
+  }
+  const res = await fetch("/api/meal-titles", { method: "POST", headers, body: JSON.stringify({ meals, lang }) });
+  if (!res.ok) throw new Error(`meal-titles ${res.status}`);
+  const data = await res.json();
+  return parseTitleReply({ meals: (data?.fixes ?? []).map((f: { id: string; th: string; en: string }) => ({ id: f.id, title_th: f.th, title_en: f.en })) }, meals.map((m) => m.id));
+}
+
 export function NameBackfill() {
-  const { ready, entries, recipes, applyNames } = useStore();
+  const { ready, entries, recipes, applyNames, applyTitleFixes } = useStore();
   const { lang } = useLang();
   const busy = useRef(false);
   const latest = useRef({ entries, recipes });
@@ -64,12 +79,25 @@ export function NameBackfill() {
         });
       } catch {
         /* background work: stay silent, try again next time */
+      }
+      // Round 81: meal names made only from the foods in each meal (Thai first), checked once per meal.
+      try {
+        const res = await runTitleCheck({
+          meals: latest.current.entries,
+          ask: (meals) => titleCall(meals, lang),
+          storage: localStorage,
+          today: thaiDateKey(),
+          online: typeof navigator === "undefined" ? true : navigator.onLine !== false,
+        });
+        if (res.fixes.length) applyTitleFixes(res.fixes);
+      } catch {
+        /* stay silent */
       } finally {
         busy.current = false;
       }
     }, WAIT_MS);
     return () => clearTimeout(timer);
-  }, [ready, entries, recipes, lang, applyNames]);
+  }, [ready, entries, recipes, lang, applyNames, applyTitleFixes]);
 
   return null;
 }
