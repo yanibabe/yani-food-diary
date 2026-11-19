@@ -79,6 +79,9 @@ export const RefineSchema = z.object({
   question: z.string().nullish(),
   edits: z.array(EditSchema).catch([]).describe("ONLY items the user's message is about"),
   adds: z.array(ItemSchema).catch([]).describe("New items the user mentioned (e.g. oil, sauce)"),
+  title: z.string().nullish().catch(null).describe("A NEW meal title only when the change makes the current title wrong (e.g. it names a food that turned out to be something else); otherwise null"),
+  title_th: z.string().nullish().catch(null).describe("The new title in Thai (same meaning), when title is given"),
+  title_en: z.string().nullish().catch(null).describe("The new title in English (same meaning), when title is given"),
 });
 export type Refine = z.infer<typeof RefineSchema>;
 
@@ -133,6 +136,7 @@ Rules:
 - If they mention oil, sauce or add-ons that are not in the list, add them in adds (kind "extra"); if the amount is unclear, give a typical amount, set estimated=true, and say so in note.
 - For every item you return, set dairy=true (and dairySource) when it likely contains ANY milk product.
 - If a change is ambiguous, make no edit for it and ask one short question.
+- If the user says an item is actually a DIFFERENT food (e.g. "this is not fried chicken, it is แหนมเอ็นหมูทอด"), update that item: new name in their words, nutrients for the new food. If the meal title names the old food, also return a new title (with title_th / title_en) in the user's words, e.g. "ข้าวไก่ทอด" → "ข้าวแหนมเอ็นหมูทอด".
 - Every item you return has name_th and name_en: the SAME name as "name" in Thai and in English (a translation of "name", never a new guess).
 - ${languageRule(lang)}
 Return ONLY a JSON object matching this JSON Schema:

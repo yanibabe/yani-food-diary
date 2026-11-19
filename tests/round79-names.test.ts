@@ -396,3 +396,11 @@ test("an already-saved wrong-meat name is ignored and asked again", () => {
   assert.ok(needsAlt("แหนมเอ็นหมู", bad));
   assert.equal(displayName("แหนมเอ็นหมู", { en: "Chicken!", manual: true }, "en"), "Chicken!");
 });
+
+test("refine may return a new meal title (and it is optional)", async () => {
+  const { RefineSchema } = await import("../app/lib/server/ai.ts");
+  const withTitle = RefineSchema.parse({ reply: "ok", edits: [], adds: [], title: "ข้าวแหนมเอ็นหมูทอด", title_en: "Rice with fried fermented pork tendon" });
+  assert.equal(withTitle.title, "ข้าวแหนมเอ็นหมูทอด");
+  assert.equal(altFor(withTitle.title!, { en: withTitle.title_en })?.en, "Rice with fried fermented pork tendon");
+  assert.equal(RefineSchema.parse({ reply: "ok", edits: [], adds: [] }).title ?? null, null);
+});

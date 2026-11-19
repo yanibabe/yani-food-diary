@@ -6,7 +6,7 @@ import { blankItem, changeAmount, cleanBox, cleanNumber, energyCheck, fmtAmount,
 import { BUFFER_TEXT, LEGACY_MARGIN_PCT, bufferSummary, cleanBufferPct, dropBuffer, forEnergyCheck, hasLegacyMargin, isBuffered, originalKcal, pctLabel, startBuffer } from "../lib/calorieBuffer";
 import { aiDairy, dairyItems, isDairy, warnDairy } from "../lib/dairy";
 import { useLang } from "../lib/lang";
-import { renameAlt, type NameAlt } from "../lib/names";
+import { altFor, renameAlt, type NameAlt } from "../lib/names";
 import { OtherNameField } from "./OtherNameField";
 import { useStore } from "../lib/store";
 import { isEstimated, itemProvenance, joinMissing, provFromAi, USER_TYPED } from "../lib/provenance";
@@ -300,7 +300,16 @@ export function MealReview({
         question: string | null;
         edits: { id: string; action: "update" | "remove"; item: (Omit<FoodItem, "id"> & { userAmount?: boolean }) | null }[];
         adds: (Omit<FoodItem, "id"> & { userAmount?: boolean })[];
+        title?: string | null;
+        title_th?: string | null;
+        title_en?: string | null;
       };
+      // The AI renamed the meal (an item turned out to be another food) → new title + its other-language name.
+      const newTitle = typeof r.title === "string" ? r.title.trim().slice(0, 200) : "";
+      if (newTitle && newTitle !== title) {
+        setTitle(newTitle);
+        setTitleAlt(altFor(newTitle, { th: r.title_th, en: r.title_en }));
+      }
       const changed: string[] = [];
       setItems((prev) => {
         let next = [...prev];
@@ -328,6 +337,8 @@ export function MealReview({
             const updated: FoodItem = {
               ...dropBuffer(old),
               name: e.item.name || old.name,
+              // Renamed → the other-language name comes with the AI's answer (or the background translation).
+              alt: e.item.name && e.item.name !== old.name ? altFor(e.item.name, { th: (e.item as { name_th?: unknown }).name_th, en: (e.item as { name_en?: unknown }).name_en }) : old.alt,
               amount: cleanNumber(e.item.amount),
               unit: e.item.unit || old.unit,
               kcal: cleanNumber(e.item.kcal),
@@ -372,6 +383,7 @@ export function MealReview({
             box: cleanBox(a.box),
             dairy: aiDairy(a.name, a.dairy),
             dairySource: a.dairySource ?? null,
+            alt: altFor(a.name, { th: (a as { name_th?: unknown }).name_th, en: (a as { name_en?: unknown }).name_en }),
             fromLabel: a.fromLabel === true,
             prov: provFromAi({ fromLabel: a.fromLabel === true, userAmount: userAmount === true, estimated: Boolean(a.estimated), kind: a.kind }),
           }, bufferPct));
