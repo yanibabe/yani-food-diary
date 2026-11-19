@@ -61,8 +61,12 @@ export function sanitizeAlt(v: unknown): NameAlt | undefined {
 /** The alt, only if it still fits this name (made for it, or typed by her). Otherwise undefined. */
 export function validAlt(name: string, alt: NameAlt | undefined | null): NameAlt | undefined {
   if (!alt || typeof alt !== "object") return undefined;
-  if (alt.manual === true || alt.src === name) return alt;
-  return undefined;
+  if (alt.manual === true) return alt;
+  if (alt.src !== name) return undefined;
+  // An automatic name that names a different meat (saved before this check existed) is not trusted.
+  const other = alt[otherLang(name)];
+  if (typeof other === "string" && !sameProtein(name, other)) return undefined;
+  return alt;
 }
 
 /**
@@ -77,11 +81,37 @@ export function displayName(original: string, alt: NameAlt | undefined | null, l
   return cleanAltText(a?.[lang]) ?? original;
 }
 
+const PROTEINS: [RegExp, RegExp][] = [
+  [/หมู/, /\b(pork|pig|ham|bacon)\b/i],
+  [/ไก่/, /\b(chicken|hen)\b/i],
+  [/เนื้อวัว|เนื้อ(?!ปลา|ปู|หมู|ไก่)/, /\bbeef\b/i],
+  [/กุ้ง/, /\b(shrimps?|prawns?)\b/i],
+  [/ปลา/, /\b(fish|salmon|tuna|mackerel|tilapia|catfish|sea ?bass)\b/i],
+  [/เป็ด/, /\bduck\b/i],
+];
+
+/** Do a Thai name and an English name agree on which meat it is? (A name with no meat word agrees.) */
+export function sameProtein(a: string, b: string): boolean {
+  const th = nameLang(a) === "th" ? a : b;
+  const en = th === a ? b : a;
+  const thHas = PROTEINS.map(([t]) => t.test(th));
+  const enHas = PROTEINS.map(([, e]) => e.test(en));
+  // A meat named on one side but a DIFFERENT meat (and not this one) on the other side = they disagree.
+  for (let i = 0; i < PROTEINS.length; i++) {
+    if (thHas[i] && !enHas[i] && enHas.some((x, j) => x && !thHas[j])) return false;
+    if (enHas[i] && !thHas[i] && thHas.some((x, j) => x && !enHas[j])) return false;
+  }
+  return true;
+}
+
 /** Build an alt from names in both languages (e.g. the AI's name_th / name_en). Keeps only the other-language one. */
 export function altFor(name: string, names: { th?: unknown; en?: unknown }): NameAlt | undefined {
   const other = otherLang(name);
   const text = cleanAltText(names[other]);
   if (!text) return undefined;
+  // The AI sometimes keeps her Thai name but writes the English from the photo ("แหนมเอ็นหมู" → "…chicken").
+  // A pair that disagrees on the main meat is dropped; the background translation then makes a true one.
+  if (!sameProtein(name, text)) return undefined;
   return { [other]: text, src: name } as NameAlt;
 }
 

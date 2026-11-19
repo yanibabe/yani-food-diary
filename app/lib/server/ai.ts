@@ -114,7 +114,7 @@ Rules:
 - box: when there is a photo and you can locate the food, give its bounding box as fractions (0..1) of the image. Otherwise null.
 - question: if an important detail is missing and you cannot see or reasonably infer it — portion size, how much cooking oil, a sauce or dressing, sugar or milk in a drink, fried vs steamed/boiled — and the answer would change the meal's kcal a lot (roughly 100 kcal or 20% or more), ask ONE short, easy question about the biggest one (e.g. "Was it stir-fried with a lot of oil or a little?"). Still give your best estimate now and set estimated=true on that item. Do NOT ask about small things (garnish, herbs, a pinch of salt, a splash of sauce). If nothing important is unclear, null.
 - visual: always write it in English (whatever language the other fields use), keep a Thai dish name next to the English one, and mention only foods you listed in items. Describe ONLY the food or drink itself and the plate, bowl or glass it is in. NEVER mention scales, tables, packaging, hands, utensils in the background, phones, receipts or anything else around it.
-- name_th / name_en (and title_th / title_en for the whole meal): give the SAME name in BOTH languages, every time, whatever the app language is: Thai in common natural Thai, English the way a menu would say it (e.g. "ข้าวหน้าปลาทู" and "Rice with mackerel"). Short, no explanations, keep brand names. "name" and "title" keep following the language rule above.
+- name_th / name_en (and title_th / title_en for the whole meal): give the SAME name in BOTH languages, every time, whatever the app language is: Thai in common natural Thai, English the way a menu would say it (e.g. "ข้าวหน้าปลาทู" and "Rice with mackerel"). Short, no explanations, keep brand names. "name" and "title" keep following the language rule above. name_th/name_en are a TRANSLATION of "name" (and title_th/title_en of "title"), never a new guess: if the user named the dish or an item (e.g. "แหนมเอ็นหมู"), use their words and translate exactly those ("Fermented pork tendon"), even if the photo looks like something else.
 - en, grams and state are used to look the real nutrition numbers up in a food database, so make them exact: en is always English; state says raw / cooked / boiled / steamed / fried / grilled / baked / dried (use "cooked" for plain cooked rice and noodles, "other" for sauces and mixed dishes). Do not put oil, sauce or other items inside a plain item's en.
 - Use typical Thai portion sizes and Thai food composition values (e.g. INMU Thai Food Composition Table). Be realistic: do not shrink portions or leave out cooking fat.
 Return ONLY a JSON object matching this JSON Schema:
@@ -133,6 +133,7 @@ Rules:
 - If they mention oil, sauce or add-ons that are not in the list, add them in adds (kind "extra"); if the amount is unclear, give a typical amount, set estimated=true, and say so in note.
 - For every item you return, set dairy=true (and dairySource) when it likely contains ANY milk product.
 - If a change is ambiguous, make no edit for it and ask one short question.
+- Every item you return has name_th and name_en: the SAME name as "name" in Thai and in English (a translation of "name", never a new guess).
 - ${languageRule(lang)}
 Return ONLY a JSON object matching this JSON Schema:
 ${shapeOf(RefineSchema)}`;

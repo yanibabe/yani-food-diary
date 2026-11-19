@@ -379,3 +379,20 @@ test("backfill asks for the newest meals first", () => {
   const names = missingNames({ entries: [e("2026-01-01", "ข้าวผัดเก่า"), e("2026-11-19", "ข้าวหน้าปลาทู"), e("2026-06-01", "ส้มตำ")], recipes: [], custom: [] }, () => undefined);
   assert.deepEqual(names.slice(0, 3), ["ข้าวหน้าปลาทู", "ส้มตำ", "ข้าวผัดเก่า"]);
 });
+
+test("a scan name pair that disagrees on the meat is dropped", () => {
+  assert.equal(altFor("แหนมเอ็นหมู", { en: "Fried chicken cartilage" }), undefined);
+  assert.equal(altFor("แหนมเอ็นหมู", { en: "Fermented pork tendon" })?.en, "Fermented pork tendon");
+  assert.equal(altFor("ข้าวหน้าปลาทู", { en: "Rice with mackerel" })?.en, "Rice with mackerel");
+  assert.equal(altFor("กะเพราไก่ไข่ดาว", { en: "Stir-fried basil chicken with fried egg" })?.en, "Stir-fried basil chicken with fried egg");
+  assert.equal(altFor("Grilled pork", { th: "ไก่ย่าง" }), undefined);
+  assert.equal(altFor("ส้มตำไทย", { en: "Thai papaya salad" })?.en, "Thai papaya salad");
+  assert.equal(altFor("ข้าวผัดหมูใส่ไก่", { en: "Fried rice with pork and chicken" })?.en, "Fried rice with pork and chicken");
+});
+
+test("an already-saved wrong-meat name is ignored and asked again", () => {
+  const bad: NameAlt = { en: "Fried chicken", src: "แหนมเอ็นหมู" };
+  assert.equal(displayName("แหนมเอ็นหมู", bad, "en"), "แหนมเอ็นหมู");
+  assert.ok(needsAlt("แหนมเอ็นหมู", bad));
+  assert.equal(displayName("แหนมเอ็นหมู", { en: "Chicken!", manual: true }, "en"), "Chicken!");
+});
