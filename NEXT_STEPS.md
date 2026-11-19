@@ -1584,3 +1584,8 @@ After 4 tries her real meal still said "ไก่ย่างเสียบไ�
 - Real AI test in the app with 4 meals: her meal saved in English → "ตูดไก่ปิ้ง ตับไก่ปิ้ง และแหนมกระดูกอ่อนทอด" / "Grilled Chicken Tails, Grilled Chicken Liver, and Fried Fermented Pork Cartilage"; her meal saved in Thai → "ตูดไก่ปิ้งและแหนมกระดูกอ่อนทอด"; ข้าวหน้าปลาทูแกะ kept; typed name untouched. 593 tests, tsc clean, lint 0 errors.
 - Lesson: when a fix depends on data I can't see on her phone, build it so it works from ANY saved state, and test several states.
 Round 81 DEPLOYED (2026-11-19, 79ac7eb): on the live site, copies of her meal (English-saved and Thai-saved) were renamed within ~30 s ("ตูดไก่ปิ้ง ตับไก่ปิ้ง และแหนมกระดูกอ่อนทอด" / "Grilled Chicken Tail Skewers, …Fried Fermented Pork Rib Cartilage"), ข้าวหน้าปลาทูแกะ kept. Test data removed.
+
+## Round 82 — meat-swap translations never stick (2026-11-19, committed, NOT live yet)
+- Bug: แหนม item stayed English in Thai mode. The AI once translated "…pork rib cartilage (Naem…)" as "แหนมเอ็นข้อไก่…". The meat check rejected it on screen, but the bad pair stayed in the phone's translation memory (yfd:v1:nameTr), so the backfill reused it forever.
+- Fix (one rule, two gates): `parseTranslateReply` drops a pair whose meats disagree (`sameProtein`), and `parseNameTr` forgets such saved pairs, so the name is simply asked again. Prompt rule added: keep the same meat. Test: tests/round82-meat-pairs.test.ts. Checked against her real backup: exactly 1 of 111 saved pairs is dropped (the แหนม one) and it is queued for re-translation.
+- Not in this round (left uncommitted on purpose): `carryPic` in mealPicClient.ts/store.tsx — AI pictures linked by meal name were lost when Round 81 renamed meals. Pictures still exist on her phone.

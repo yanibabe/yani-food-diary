@@ -3,7 +3,7 @@
 //   yfd:v1:nameTrRuns  = { day, calls, failedAt }   how many AI calls today (so the cost stays tiny); failedAt = when the last call failed (ms, 0 = none)
 // Reading bad / missing text gives an empty memory, never an error.
 
-import { cleanAltText } from "./names.ts";
+import { cleanAltText, sameProtein } from "./names.ts";
 import type { NamePair } from "./translateNames.ts";
 
 export const NAME_TR_KEY = "yfd:v1:nameTr";
@@ -35,7 +35,8 @@ export function parseNameTr(raw: string | null | undefined): NameTrCache {
       if (!p || typeof p !== "object") continue;
       const th = cleanAltText((p as { th?: unknown }).th);
       const en = cleanAltText((p as { en?: unknown }).en);
-      if (th && en) out[src] = { th, en };
+      // A saved pair whose meats disagree is forgotten, so the name is translated again (no endless loop).
+      if (th && en && sameProtein(th, en)) out[src] = { th, en };
     }
   } catch {
     /* empty memory */

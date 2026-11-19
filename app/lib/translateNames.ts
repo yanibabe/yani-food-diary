@@ -1,7 +1,7 @@
 // Round 79: the request / answer of POST /api/translate-names. No React, no network here, so the
 // server route, the phone and the tests all use the same rules.
 
-import { MAX_NAME_LEN, cleanAltText, nameLang } from "./names.ts";
+import { MAX_NAME_LEN, cleanAltText, nameLang, sameProtein } from "./names.ts";
 
 export const MAX_NAMES = 60;
 
@@ -50,6 +50,8 @@ export function parseTranslateReply(raw: unknown, asked: string[]): NamePair[] {
       en = src;
       if (!th) continue;
     }
+    // A "translation" that changes the meat (pork → ไก่) is wrong: drop it, the name is asked again later.
+    if (!sameProtein(th, en)) continue;
     seen.add(src);
     out.push({ src, th, en });
   }
@@ -66,6 +68,7 @@ Rules:
 - Keep them short, like a dish name. No sentences, no explanations.
 - Keep brand names as they are (e.g. "KFC", "Oatly").
 - Keep numbers and sizes.
+- Keep the SAME meat or seafood: pork stays หมู, chicken stays ไก่, beef stays เนื้อ. Never swap one for another.
 - "src" must be copied EXACTLY from the input.
 - If a name is already in one language, copy it to that side and translate it to the other.
 Return ONLY JSON: {"names":[{"src":"...","th":"...","en":"..."}]}`;
