@@ -113,3 +113,54 @@ export function recipePictureItems(ingredients: Pick<Ingredient, "name" | "amoun
     .filter((i) => i.name.trim() !== "")
     .map((i) => ({ name: i.name.trim(), amount: i.amount, unit: UNIT_LABEL[i.unit]?.en ?? String(i.unit) }));
 }
+
+/**
+ * Round 83: pictures are stored under the meal NAME, so when Round 81 renamed meals, their pictures lost
+ * their meal (the files are still on the phone). Find each lost picture's meal using only sure signs:
+ *  1. time — a picture is drawn right after its meal is saved (within 2 minutes; closest wins), or
+ *  2. the old name — the translation memory says the old name means the meal's current name, or the old
+ *     name is the current name plus a weight ("ข้าวไข่เจียวแหนม 50 g"), or the old name was the food list itself
+ *     ("Paleo Robbie / Grass fed rump steak"; a cut-short food name counts if 12+ letters match).
+ * Never guesses from look-alike names. Returns [old key, new title] pairs to copy.
+ */
+export function lostPicLinks(
+  pics: MealPics,
+  meals: { title: string; createdAt?: string | number; alt?: { th?: string; en?: string }; items?: { name: string }[] }[],
+  memory: Record<string, { th: string; en: string }>,
+): [string, string][] {
+  // Not used by any meal (a recipe cover counts too: a meal made from a recipe used to share its cover).
+  const used = new Set(meals.map((m) => dishKey(m.title)));
+  const lost = new Set(Object.keys(pics).filter((k) => !used.has(k)));
+  const want = meals.filter((m) => !pics[dishKey(m.title)]);
+  const out: [string, string][] = [];
+  const done = new Set<string>();
+  const link = (k: string, title: string) => {
+    if (!lost.has(k) || done.has(dishKey(title))) return;
+    lost.delete(k);
+    done.add(dishKey(title));
+    out.push([k, title]);
+  };
+  // 1. time, closest pairs first
+  const near: { k: string; title: string; d: number }[] = [];
+  for (const m of want) {
+    const t = new Date(m.createdAt ?? 0).getTime();
+    if (!t) continue;
+    for (const k of lost) {
+      const d = Math.abs(pics[k].createdAt - t);
+      if (d <= 2 * 60 * 1000) near.push({ k, title: m.title, d });
+    }
+  }
+  near.sort((a, b) => a.d - b.d).forEach((n) => link(n.k, n.title));
+  // 2. old name
+  const noWeight = (k: string) => k.replace(/\s*\d+(\.\d+)?\s*(g|กรัม|ml|มล)$/i, "");
+  for (const m of want) {
+    const names = new Set([m.title, m.alt?.th, m.alt?.en].filter(Boolean).map((s) => dishKey(s!)));
+    const foods = dishKey((m.items ?? []).map((i) => i.name).join(" "));
+    for (const k of [...lost]) {
+      const p = memory[Object.keys(memory).find((src) => dishKey(src) === k) ?? ""];
+      const sameFoods = foods.length >= 12 && k.startsWith(foods);
+      if ((p && (names.has(dishKey(p.th)) || names.has(dishKey(p.en)))) || names.has(noWeight(k)) || sameFoods) link(k, m.title);
+    }
+  }
+  return out;
+}

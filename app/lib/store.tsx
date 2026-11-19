@@ -7,7 +7,7 @@ import type { Entry, Goals, Recipe } from "./types.ts";
 import { upsertLog, type BodyLog } from "./body.ts";
 import { setGlasses, type WaterLog } from "./water.ts";
 import { upgradeSlot } from "./date.ts";
-import { drawInBackground } from "./mealPicClient.ts";
+import { carryPic, drawInBackground, relinkLostPics } from "./mealPicClient.ts";
 import { recipePictureItems } from "./mealPics.ts";
 import { mapEntries, mapRecipes, resolveAlt, type Lookup } from "./names.ts";
 import { applyTitleFix, type TitleFix } from "./mealTitles.ts";
@@ -92,6 +92,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     setGoalsState({ ...DEFAULT_GOALS, ...read(KEY.goals, DEFAULT_GOALS) });
     setBodyLogs(read(KEY.body, []));
     setWaterLogs(read(KEY.water, []));
+    relinkLostPics(upgraded); // Round 83: once, give renamed meals their AI pictures back
     setReady(true);
   }, []);
 
@@ -101,7 +102,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     entriesRef.current = entries;
   }, [entries]);
   const upsertEntry = useCallback((e: Entry) => {
-    if (!entriesRef.current.some((x) => x.id === e.id)) drawInBackground(e.title, e.items);
+    const before = entriesRef.current.find((x) => x.id === e.id);
+    if (!before) drawInBackground(e.title, e.items);
+    else if (before.title !== e.title) carryPic(before.title, e.title); // renamed meal keeps its AI picture
     setEntries((prev) => {
       const next = prev.some((x) => x.id === e.id) ? prev.map((x) => (x.id === e.id ? e : x)) : [...prev, e];
       setSaveError(write(KEY.entries, next));
@@ -157,7 +160,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         const f = byId.get(e.id);
         if (!f) return e;
         const y = applyTitleFix(e, f);
-        if (y !== e) changed = true;
+        if (y !== e) {
+          changed = true;
+          carryPic(e.title, y.title); // the AI picture is stored under the meal name: keep it
+        }
         return y;
       });
       if (!changed) return prev;

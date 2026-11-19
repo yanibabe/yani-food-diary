@@ -1589,3 +1589,9 @@ Round 81 DEPLOYED (2026-11-19, 79ac7eb): on the live site, copies of her meal (E
 - Bug: แหนม item stayed English in Thai mode. The AI once translated "…pork rib cartilage (Naem…)" as "แหนมเอ็นข้อไก่…". The meat check rejected it on screen, but the bad pair stayed in the phone's translation memory (yfd:v1:nameTr), so the backfill reused it forever.
 - Fix (one rule, two gates): `parseTranslateReply` drops a pair whose meats disagree (`sameProtein`), and `parseNameTr` forgets such saved pairs, so the name is simply asked again. Prompt rule added: keep the same meat. Test: tests/round82-meat-pairs.test.ts. Checked against her real backup: exactly 1 of 111 saved pairs is dropped (the แหนม one) and it is queued for re-translation.
 - Not in this round (left uncommitted on purpose): `carryPic` in mealPicClient.ts/store.tsx — AI pictures linked by meal name were lost when Round 81 renamed meals. Pictures still exist on her phone.
+
+## Round 83 — AI pictures come back after renames (2026-11-19, committed, NOT live yet)
+- Cause: AI pictures are stored under the meal NAME (yfd:v1:mealPics). Round 81 renamed meals → their pictures lost their meal. Files were never deleted.
+- Fix 1 (future): `carryPic` — when a meal is renamed (edit or title check), its picture follows the new name.
+- Fix 2 (once per phone, flag yfd:v1:picsRelinked83): `lostPicLinks` + `relinkLostPics` on app load reconnect lost pictures using sure signs only: drawn within 2 min of the meal (closest wins), or old name known via translation memory / name + weight / the food list (12+ letters). Never look-alike guesses.
+- Checked against her real backup: 13 pictures reconnected, all correct (incl. recipe covers shared by meals made from recipes). Some meals (e.g. กล้วยหอม) never had a picture, so nothing to bring back. Tests: tests/round83-relink-pics.test.ts. Preview check: seeded renamed meal got its picture on load, flag set.

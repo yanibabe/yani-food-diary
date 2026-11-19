@@ -7,7 +7,8 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { aiFetch } from "./aiFetch";
 import { PASSCODE_HEADER, PASSCODE_KEY, passcodeHeaderValue } from "./passcode";
 import { deletePhoto, getPhoto, savePhoto, shrinkDataUrl } from "./photos";
-import { MEAL_PICS_KEY, PIC_QUALITY, PIC_SIZE, copyPic, dishKey, findPic, newPicId, orphanPicId, parseMealPics, pictureRequest, planEarlyClaim, shouldDraw, withPic, type MealPic, type MealPics } from "./mealPics";
+import { MEAL_PICS_KEY, PIC_QUALITY, PIC_SIZE, copyPic, dishKey, findPic, lostPicLinks, newPicId, orphanPicId, parseMealPics, pictureRequest, planEarlyClaim, shouldDraw, withPic, type MealPic, type MealPics } from "./mealPics";
+import { loadNameTr } from "./nameTr";
 import type { Lang } from "./i18n";
 import type { FoodItem } from "./types";
 
@@ -242,5 +243,38 @@ export async function chooseOwnPhoto(title: string, photoDataUrl: string): Promi
     return { ok: true };
   } catch (e) {
     return { ok: false, message: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+/**
+ * Round 81 fix: a meal got a new name (background name check or a rename) → its picture goes with it.
+ * The old name keeps its picture too (another meal may still use it). Nothing is drawn or copied as a file.
+ */
+export function carryPic(fromTitle: string, toTitle: string) {
+  load();
+  if (!fromTitle || !toTitle || dishKey(fromTitle) === dishKey(toTitle)) return;
+  if (!findPic(pics, fromTitle) || findPic(pics, toTitle)) return;
+  pics = copyPic(pics, fromTitle, toTitle);
+  persist();
+  srcCache.clear();
+  bump();
+}
+
+/** Round 83: once per phone, give meals renamed by Round 81 their AI pictures back (see lostPicLinks). */
+export function relinkLostPics(meals: Parameters<typeof lostPicLinks>[1]) {
+  const FLAG = "yfd:v1:picsRelinked83";
+  try {
+    if (localStorage.getItem(FLAG)) return;
+    load();
+    const links = lostPicLinks(pics, meals, loadNameTr());
+    for (const [k, title] of links) pics = withPic(pics, title, pics[k]);
+    if (links.length) persist();
+    localStorage.setItem(FLAG, "1");
+    if (links.length) {
+      srcCache.clear();
+      bump();
+    }
+  } catch {
+    /* tried again next time */
   }
 }
