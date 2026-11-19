@@ -1560,3 +1560,4 @@ Her wish: in English mode every food name (even typed in Thai) shows in English;
 - NOT verified: real AI translation and real scan returning both names (no local OPENROUTER key) — check on the live app after deploy; iPhone; dark mode.
 - Still original-only: chat/suggest idea cards, link-preview tags of shared recipes, an edit sheet already open when backfill finishes.
 Round 79 DEPLOYED (2026-11-19, 5824b5f): Vercel build succeeded; live /api/translate-names translated ข้าวหน้าปลาทู → Rice with mackerel, Iced latte → ลาเต้เย็น. Local AI key restored in .env.local (2026-11-19; she pasted it in chat — Machina may rotate it). Real scan returns title_th/title_en + name_th/name_en (checked locally). Next: she switches the app to English on her iPhone; old names fill in over 1–2 days (≤4 AI calls/day).
+- 2026-11-19 small fix: backfill translates newest meals first (missingNames sorts entries by date desc), so today is in the first batch.

@@ -373,3 +373,9 @@ test("backup: the name memory is an optional part (old backups do not wipe it)",
   assert.equal(restoreAction("nameTr", null), "keep");
   assert.equal(restoreAction("nameTr", "{}"), "set");
 });
+
+test("backfill asks for the newest meals first", () => {
+  const e = (date: string, title: string) => ({ date, title, items: [], recipe: null });
+  const names = missingNames({ entries: [e("2026-01-01", "ข้าวผัดเก่า"), e("2026-11-19", "ข้าวหน้าปลาทู"), e("2026-06-01", "ส้มตำ")], recipes: [], custom: [] }, () => undefined);
+  assert.deepEqual(names.slice(0, 3), ["ข้าวหน้าปลาทู", "ส้มตำ", "ข้าวผัดเก่า"]);
+});

@@ -243,7 +243,8 @@ export function applyLookup<E extends EntryLike, R extends RecipeLike, C extends
   return { entries: mapEntries(data.entries, fix), recipes: mapRecipes(data.recipes, fix), custom: fixCustom(data.custom, fix) };
 }
 
-/** Every distinct name (in first-seen order) that still lacks its other-language name. */
+/** Every distinct name that still lacks its other-language name. Newest meals first (by date), so today's
+ *  meals are translated in the first batch even with a long history; then recipes, then my ingredients. */
 export function missingNames(
   data: { entries: EntryLike[]; recipes: RecipeLike[]; custom: ({ name: string } & Named)[] },
   lookup: Lookup,
@@ -253,7 +254,8 @@ export function missingNames(
     if (needsAlt(n, a) && !resolveAlt(n, a, lookup)?.[otherLang(n)]) seen.add(n);
     return a;
   };
-  data.entries.forEach((e) => fixEntry(e, collect));
+  const day = (e: EntryLike) => String((e as { date?: unknown }).date ?? "");
+  [...data.entries].sort((a, b) => day(b).localeCompare(day(a))).forEach((e) => fixEntry(e, collect));
   data.recipes.forEach((r) => fixRecipe(r, collect));
   fixCustom(data.custom, collect);
   return [...seen];
