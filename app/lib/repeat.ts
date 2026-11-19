@@ -32,7 +32,8 @@ export function searchMeals(list: Entry[], query: string): Entry[] {
   const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
   if (words.length === 0) return list;
   return list.filter((e) => {
-    const text = [e.title, ...e.items.map((i) => i.name)].join(" ").toLowerCase();
+    // Round 79: the other-language names find a meal too (type "mackerel" for a Thai-named meal).
+    const text = [e.title, e.alt?.th, e.alt?.en, ...e.items.flatMap((i) => [i.name, i.alt?.th, i.alt?.en])].filter(Boolean).join(" ").toLowerCase();
     return words.every((w) => text.includes(w));
   });
 }

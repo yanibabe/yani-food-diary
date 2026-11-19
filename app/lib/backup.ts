@@ -20,11 +20,13 @@ export const BACKUP_KEYS = {
   chat: "yfd:v1:chat",
   // Round 67: which AI picture belongs to which dish name (the pictures themselves are in `photos`).
   mealPics: "yfd:v1:mealPics",
+  // Round 79: names already translated (the names saved inside meals / recipes travel with those).
+  nameTr: "yfd:v1:nameTr",
 } as const;
 
 export type BackupPart = keyof typeof BACKUP_KEYS;
 /** Parts added after the first backups. Older callers / files may leave them out (read as "nothing saved"). */
-type NewerPart = "customIngredients" | "ingredientPrefs" | "chat" | "mealPics";
+type NewerPart = "customIngredients" | "ingredientPrefs" | "chat" | "mealPics" | "nameTr";
 
 export type Backup = {
   app: "snapcal";
@@ -37,11 +39,11 @@ export type Backup = {
 };
 
 export function makeBackup(data: Record<Exclude<BackupPart, NewerPart>, string | null> & Partial<Record<NewerPart, string | null>>, photos: Record<string, string>, now = Date.now()): Backup {
-  return { app: "snapcal", version: 1, savedAt: now, data: { ...data, customIngredients: data.customIngredients ?? null, ingredientPrefs: data.ingredientPrefs ?? null, chat: data.chat ?? null, mealPics: data.mealPics ?? null }, photos };
+  return { app: "snapcal", version: 1, savedAt: now, data: { ...data, customIngredients: data.customIngredients ?? null, ingredientPrefs: data.ingredientPrefs ?? null, chat: data.chat ?? null, mealPics: data.mealPics ?? null, nameTr: data.nameTr ?? null }, photos };
 }
 
 /** Parts that older backup files do not have. Restoring such a file must not wipe what is on the phone now. */
-export const KEEP_IF_ABSENT: readonly BackupPart[] = ["customIngredients", "ingredientPrefs", "chat", "mealPics"];
+export const KEEP_IF_ABSENT: readonly BackupPart[] = ["customIngredients", "ingredientPrefs", "chat", "mealPics", "nameTr"];
 
 /**
  * What restore does with ONE saved part:

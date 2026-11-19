@@ -7,6 +7,7 @@
 
 import type { AiRef, FoodState, IngredientUnit, MacroKey, UsdaPick } from "./types.ts";
 import { UNITS } from "./types.ts";
+import { sanitizeAlt, type NameAlt } from "./names.ts";
 
 export const CUSTOM_KEY = "yfd:v1:customIngredients";
 export const PREFS_KEY = "yfd:v1:ingredientPrefs";
@@ -20,6 +21,8 @@ const STATES: FoodState[] = ["raw", "cooked", "dried", "prepared"];
 export type CustomIngredient = {
   id: string;
   name: string;
+  /** Round 79: the name in the other language (display only). */
+  alt?: NameAlt;
   /** raw / cooked / dried / prepared, when she says. */
   state: FoodState | null;
   /** per100 = numbers are per 100 g (or 100 ml). perUnit = numbers are for ONE unit (one serving / piece / pack). */
@@ -50,6 +53,7 @@ export type CustomIngredient = {
 /** What the "add custom ingredient" form gives us. */
 export type CustomInput = {
   name: string;
+  alt?: NameAlt;
   state?: FoodState | null;
   basis?: "per100" | "perUnit";
   per?: "g" | "ml";
@@ -105,6 +109,8 @@ export function makeCustom(input: CustomInput, id: string, now: number, createdA
     if (Object.keys(e).length) item.extra = e;
   }
   if (input.unit && input.unit in UNITS) item.unit = input.unit;
+  const alt = sanitizeAlt(input.alt);
+  if (alt) item.alt = alt;
   const aliases = (input.aliases ?? []).map(cleanName).filter(Boolean).slice(0, 8);
   if (aliases.length) item.aliases = aliases;
   const barcode = String(input.barcode ?? "").replace(/\D/g, "");
@@ -154,6 +160,7 @@ export function parseCustom(raw: string | null | undefined): CustomIngredient[] 
     const made = makeCustom(
       {
         name: o.name as string,
+        alt: sanitizeAlt(o.alt),
         state: o.state as FoodState | null,
         basis: o.basis as "per100" | "perUnit",
         per: o.per as "g" | "ml",

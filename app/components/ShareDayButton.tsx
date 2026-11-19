@@ -196,7 +196,7 @@ export function ShareDayButton({
   macroTargets: { protein: number; carbs: number; fat: number };
   water: { glasses: number; goal: number };
 }) {
-  const { tr, lang } = useLang();
+  const { tr, lang, dn } = useLang();
   const [open, setOpen] = useState(false);
   // Round 74: "day" (the picture of this day) or "week" (the weekly card for her trainer).
   const [range, setRange] = useState<"day" | "week">("day");
@@ -213,7 +213,7 @@ export function ShareDayButton({
       ? makeWeekPicture({ entries, date, target, proteinTarget: mt.protein, lang })
       : makePicture(
       {
-        day: buildShareDay(entries, date, readPics()),
+        day: buildShareDay(entries, date, readPics(), dn),
         date,
         dateLabel: thaiDateLabel(date, lang),
         name,

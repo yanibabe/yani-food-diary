@@ -6,6 +6,8 @@ import { blankItem, changeAmount, cleanBox, cleanNumber, energyCheck, fmtAmount,
 import { BUFFER_TEXT, LEGACY_MARGIN_PCT, bufferSummary, cleanBufferPct, dropBuffer, forEnergyCheck, hasLegacyMargin, isBuffered, originalKcal, pctLabel, startBuffer } from "../lib/calorieBuffer";
 import { aiDairy, dairyItems, isDairy, warnDairy } from "../lib/dairy";
 import { useLang } from "../lib/lang";
+import { renameAlt, type NameAlt } from "../lib/names";
+import { OtherNameField } from "./OtherNameField";
 import { useStore } from "../lib/store";
 import { isEstimated, itemProvenance, joinMissing, provFromAi, USER_TYPED } from "../lib/provenance";
 import { SLOT_LABEL, SLOTS, type Entry, type FoodItem, type MacroKey, type MealSlot } from "../lib/types";
@@ -16,6 +18,8 @@ import { applyUsdaToItem } from "../lib/food/toItem";
 
 export type MealDraft = {
   title: string;
+  /** Round 79: the title in the other language (display only). */
+  alt?: NameAlt;
   slot: MealSlot;
   items: FoodItem[];
 };
@@ -24,7 +28,7 @@ type ChatMsg = { role: "user" | "assistant"; text: string; error?: boolean };
 
 /** Photo with food labels drawn where the AI found each item. */
 export function LabeledPhoto({ src, items, onTap }: { src: string; items: FoodItem[]; onTap?: (id: string) => void }) {
-  const { tr } = useLang();
+  const { tr, dn } = useLang();
   return (
     <div className="relative overflow-hidden rounded-[26px] bg-line">
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -39,7 +43,7 @@ export function LabeledPhoto({ src, items, onTap }: { src: string; items: FoodIt
               onClick={() => onTap?.(i.id)}
               className="absolute rounded-2xl border-2 border-white/90 shadow-[0_0_0_1px_rgba(0,0,0,0.15)]"
               style={{ left: `${b.x * 100}%`, top: `${b.y * 100}%`, width: `${b.w * 100}%`, height: `${b.h * 100}%` }}
-              aria-label={`${i.name} ${Math.round(i.kcal)} kcal`}
+              aria-label={`${dn(i.name, i.alt)} ${Math.round(i.kcal)} kcal`}
             >
               {/* The label may be wider than a small box; kcal is never cut off. */}
               <span
@@ -47,7 +51,7 @@ export function LabeledPhoto({ src, items, onTap }: { src: string; items: FoodIt
                   b.x + b.w / 2 > 0.6 ? "right-1.5" : "left-1.5"
                 }`}
               >
-                <span className="min-w-0 truncate">{i.name}</span>
+                <span className="min-w-0 truncate">{dn(i.name, i.alt)}</span>
                 <span className="num shrink-0">· {fmtKcal(i.kcal)}{isEstimated(i) ? "~" : ""}</span>
               </span>
             </button>
@@ -127,7 +131,8 @@ export function ItemEditor({
       )}
       <div>
         <label className="label" htmlFor="it-name">{tr("ชื่อ", "Name")}</label>
-        <input id="it-name" className="field" value={item.name} onChange={(e) => set({ name: e.target.value })} placeholder={tr("เช่น ไก่ทอด", "e.g. fried chicken")} />
+        <input id="it-name" className="field" value={item.name} onChange={(e) => set({ name: e.target.value, alt: renameAlt(item.alt, item.name, e.target.value) })} placeholder={tr("เช่น ไก่ทอด", "e.g. fried chicken")} />
+        {item.name.trim() && <OtherNameField key={item.id} id="it-name-other" name={item.name} alt={item.alt} onChange={(alt) => set({ alt })} />}
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
@@ -233,9 +238,10 @@ export function MealReview({
   onDelete?: () => void;
   startEditingId?: string | null;
 }) {
-  const { tr, lang } = useLang();
+  const { tr, lang, dn } = useLang();
   saveLabel ??= tr("บันทึกลงวันนี้", "Save to my diary");
   const [title, setTitle] = useState(initial.title);
+  const [titleAlt, setTitleAlt] = useState<NameAlt | undefined>(initial.alt);
   const [slot, setSlot] = useState<MealSlot>(initial.slot);
   const [items, setItems] = useState<FoodItem[]>(initial.items);
   const [editingId, setEditingId] = useState<string | null>(startEditingId ?? null);
@@ -255,7 +261,7 @@ export function MealReview({
   const milky = avoidDairy ? dairyItems(items) : [];
   const editing = items.find((i) => i.id === editingId) ?? null;
   const amountSummary = items.length
-    ? items.map((i) => `${i.name || tr("ไม่มีชื่อ", "No name")} ${fmtAmount(i.amount)} ${i.unit}`).join(" · ")
+    ? items.map((i) => `${dn(i.name, i.alt) || tr("ไม่มีชื่อ", "No name")} ${fmtAmount(i.amount)} ${i.unit}`).join(" · ")
     : tr("ยังไม่มีรายการ", "Nothing yet");
 
   async function sendChat() {
@@ -416,7 +422,7 @@ export function MealReview({
         <div className="rounded-[22px] bg-warn px-4 py-3 text-warn-ink" role="note" data-testid="dairy-warning">
           <p className="font-semibold">🥛 {tr("อาจมีนม", "May contain milk")}</p>
           <p className="text-[15px]">
-            {milky.map((i) => `${i.name || tr("ไม่มีชื่อ", "No name")}${i.dairySource ? ` (${i.dairySource})` : ""}`).join(" · ")}
+            {milky.map((i) => `${dn(i.name, i.alt) || tr("ไม่มีชื่อ", "No name")}${i.dairySource ? ` (${i.dairySource})` : ""}`).join(" · ")}
           </p>
           <p className="mt-1 text-[13px] opacity-80">{tr("คุณตั้งไว้ว่าเลี่ยงนม · เป็นการเดา ไม่ใช่ข้อมูลแน่นอน", "You chose to avoid milk · This is a guess, not a sure thing")}</p>
         </div>
@@ -426,10 +432,14 @@ export function MealReview({
         <input
           className="w-full bg-transparent text-center text-[24px] font-semibold outline-none"
           value={title}
-          onChange={(e) => setTitle(e.target.value)}
+          onChange={(e) => {
+            setTitleAlt(renameAlt(titleAlt, title, e.target.value));
+            setTitle(e.target.value);
+          }}
           placeholder={tr("ชื่อมื้อ", "Meal name")}
           aria-label={tr("ชื่อมื้อ", "Meal name")}
         />
+        {title.trim() && <OtherNameField id="title-other" name={title} alt={titleAlt} onChange={setTitleAlt} />}
         <p className="text-center text-[14px] text-muted" data-testid="amount-summary">{amountSummary}</p>
         <KcalBig kcal={total.kcal} />
         <MacroCards m={total} />
@@ -473,7 +483,7 @@ export function MealReview({
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="font-medium">{i.name || tr("ไม่มีชื่อ", "No name")}</span>
+                    <span className="font-medium">{dn(i.name, i.alt) || tr("ไม่มีชื่อ", "No name")}</span>
                     {i.kind === "extra" && <Badge tone="olive">{tr("เพิ่มเติม", "Extra")}</Badge>}
                     {(i.estimated || prov.verification === "estimated") && <Badge>{tr("ประมาณ", "Estimate")}</Badge>}
                     {isBuffered(i) && <Badge tone="muted">{pctLabel(i.bufferPct ?? 0)}</Badge>}
@@ -568,7 +578,11 @@ export function MealReview({
         <button
           className="btn-primary flex-[2]"
           disabled={!canSave}
-          onClick={() => onSave({ title: title.trim() || items[0]?.name || tr("อาหาร", "Meal"), slot, items })}
+          onClick={() => {
+            const t = title.trim();
+            const alt = t ? (titleAlt && (titleAlt.manual || titleAlt.src === title) ? { ...titleAlt, src: t } : undefined) : items[0]?.alt;
+            onSave({ title: t || items[0]?.name || tr("อาหาร", "Meal"), ...(alt ? { alt } : {}), slot, items });
+          }}
         >
           {saveLabel}
         </button>

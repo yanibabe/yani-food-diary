@@ -9,6 +9,7 @@ import { setGlasses, type WaterLog } from "./water.ts";
 import { upgradeSlot } from "./date.ts";
 import { drawInBackground } from "./mealPicClient.ts";
 import { recipePictureItems } from "./mealPics.ts";
+import { mapEntries, mapRecipes, resolveAlt, type Lookup } from "./names.ts";
 
 const KEY = {
   entries: "yfd:v1:entries",
@@ -55,6 +56,8 @@ type Store = {
   upsertRecipe: (r: Recipe) => void;
   deleteRecipe: (id: string) => void;
   setGoals: (g: Goals) => void;
+  /** Round 79: fill in other-language names from a lookup. Quiet: updatedAt is not touched. */
+  applyNames: (lookup: Lookup) => void;
   bodyLogs: BodyLog[];
   /** Save weight and/or steps for one day (null clears that part). */
   setBody: (date: string, patch: Partial<Pick<BodyLog, "weightKg" | "steps">>) => void;
@@ -129,6 +132,19 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       return next;
     });
   }, []);
+  const applyNames = useCallback((lookup: Lookup) => {
+    const fix = (n: string, a: Parameters<typeof resolveAlt>[1]) => resolveAlt(n, a, lookup);
+    setEntries((prev) => {
+      const next = mapEntries(prev, fix);
+      if (next !== prev) setSaveError(write(KEY.entries, next));
+      return next;
+    });
+    setRecipes((prev) => {
+      const next = mapRecipes(prev, fix);
+      if (next !== prev) setSaveError(write(KEY.recipes, next));
+      return next;
+    });
+  }, []);
   const setGoals = useCallback((g: Goals) => {
     setGoalsState(g);
     setSaveError(write(KEY.goals, g));
@@ -151,8 +167,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ ready, saveError, entries, recipes, goals, upsertEntry, deleteEntry, upsertRecipe, deleteRecipe, setGoals, bodyLogs, setBody, waterLogs, setWater }),
-    [ready, saveError, entries, recipes, goals, upsertEntry, deleteEntry, upsertRecipe, deleteRecipe, setGoals, bodyLogs, setBody, waterLogs, setWater],
+    () => ({ ready, saveError, entries, recipes, goals, upsertEntry, deleteEntry, upsertRecipe, deleteRecipe, setGoals, applyNames, bodyLogs, setBody, waterLogs, setWater }),
+    [ready, saveError, entries, recipes, goals, upsertEntry, deleteEntry, upsertRecipe, deleteRecipe, setGoals, applyNames, bodyLogs, setBody, waterLogs, setWater],
   );
   // Draw screens only after the saved data is loaded on the device, so the
   // first paint always matches (avoids React "hydration mismatch").

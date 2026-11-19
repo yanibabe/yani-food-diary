@@ -51,6 +51,8 @@ const ItemSchema = z.object({
 // Round 69: for the photo / text read the model ALSO names each item for the local food table, and gives its weight and state.
 // The server then looks the numbers up (see foodDbPick.ts); the model's own kcal/macros are only the fallback.
 const AnalyzeItemSchema = ItemSchema.extend({
+  name_th: z.string().optional().catch("").describe("The SAME food name in common Thai, short, e.g. \"ข้าวหน้าปลาทู\". Brand names stay as they are."),
+  name_en: z.string().optional().catch("").describe("The SAME food name in English the way a menu would say it, short, e.g. \"Rice with mackerel\". Brand names stay as they are."),
   en: z.string().optional().catch("").describe("ENGLISH name to search a food database, 1-4 plain words, the way USDA names foods, e.g. \"rice white cooked\", \"egg whole boiled\", \"banana\", \"oyster sauce\", \"vegetable oil\", \"chicken breast grilled\". For a mixed Thai dish give the closest plain English name, e.g. \"stir-fried basil chicken\", \"papaya salad\". Always English, whatever language the other fields use."),
   grams: num.optional().describe("Weight EATEN in grams (a number, never 0 for a real food). Work this out BEFORE kcal."),
   state: z.enum(["raw", "cooked", "boiled", "steamed", "fried", "grilled", "baked", "dried", "other"]).optional().catch("other").describe("How the food was eaten: raw (fresh fruit, raw veg), cooked (plain cooked, e.g. rice), boiled, steamed, fried, grilled, baked, dried; other for sauces, drinks, mixed dishes"),
@@ -58,6 +60,8 @@ const AnalyzeItemSchema = ItemSchema.extend({
 
 export const AnalysisSchema = z.object({
   title: z.string().catch("").describe("Short name for the whole meal"),
+  title_th: z.string().optional().catch("").describe("The same meal name in common Thai"),
+  title_en: z.string().optional().catch("").describe("The same meal name in English, as a menu would say it"),
   items: z.array(AnalyzeItemSchema),
   question: z.string().nullish().describe("ONE short, easy question ONLY if a missing detail (portion size, cooking oil, sauce/dressing, sugar, fried vs steamed…) would change the meal's kcal a lot; else null"),
   visual: z.string().nullish().describe("ONE short ENGLISH sentence saying how the whole meal looks (used to draw a picture of it), e.g. \"Thai pad kra pao (ผัดกะเพรา): stir-fried basil pork with a fried egg over rice on a white plate\". Only the food and its plate/bowl/glass (no scale, table, packaging, hands or other props). Only foods really in the items list. Else null"),
@@ -110,6 +114,7 @@ Rules:
 - box: when there is a photo and you can locate the food, give its bounding box as fractions (0..1) of the image. Otherwise null.
 - question: if an important detail is missing and you cannot see or reasonably infer it — portion size, how much cooking oil, a sauce or dressing, sugar or milk in a drink, fried vs steamed/boiled — and the answer would change the meal's kcal a lot (roughly 100 kcal or 20% or more), ask ONE short, easy question about the biggest one (e.g. "Was it stir-fried with a lot of oil or a little?"). Still give your best estimate now and set estimated=true on that item. Do NOT ask about small things (garnish, herbs, a pinch of salt, a splash of sauce). If nothing important is unclear, null.
 - visual: always write it in English (whatever language the other fields use), keep a Thai dish name next to the English one, and mention only foods you listed in items. Describe ONLY the food or drink itself and the plate, bowl or glass it is in. NEVER mention scales, tables, packaging, hands, utensils in the background, phones, receipts or anything else around it.
+- name_th / name_en (and title_th / title_en for the whole meal): give the SAME name in BOTH languages, every time, whatever the app language is: Thai in common natural Thai, English the way a menu would say it (e.g. "ข้าวหน้าปลาทู" and "Rice with mackerel"). Short, no explanations, keep brand names. "name" and "title" keep following the language rule above.
 - en, grams and state are used to look the real nutrition numbers up in a food database, so make them exact: en is always English; state says raw / cooked / boiled / steamed / fried / grilled / baked / dried (use "cooked" for plain cooked rice and noodles, "other" for sauces and mixed dishes). Do not put oil, sauce or other items inside a plain item's en.
 - Use typical Thai portion sizes and Thai food composition values (e.g. INMU Thai Food Composition Table). Be realistic: do not shrink portions or leave out cooking fat.
 Return ONLY a JSON object matching this JSON Schema:
@@ -133,12 +138,13 @@ Return ONLY a JSON object matching this JSON Schema:
 ${shapeOf(RefineSchema)}`;
 
 export class AiError extends Error {
-  constructor(
-    public code: "not-configured" | "auth" | "rate-limit" | "credits" | "timeout" | "network" | "bad-output" | "api",
-    message: string,
-    public status = 502,
-  ) {
+  // (plain fields, not constructor parameter properties, so the tests can load this file directly)
+  code: "not-configured" | "auth" | "rate-limit" | "credits" | "timeout" | "network" | "bad-output" | "api";
+  status: number;
+  constructor(code: AiError["code"], message: string, status = 502) {
     super(message);
+    this.code = code;
+    this.status = status;
   }
 }
 
@@ -174,7 +180,7 @@ function extractJson(content: string, lang: Lang): unknown {
 /** Round 68: extra OpenRouter settings for the slow photo read (never used by the text-only routes). */
 type CallOpts = { reasoning?: { effort: string }; max_tokens?: number; provider?: { sort: string } };
 
-async function callAi<T>(system: string, content: Part[], schema: z.ZodType<T>, lang: Lang, opts: CallOpts = {}): Promise<T> {
+export async function callAi<T>(system: string, content: Part[], schema: z.ZodType<T>, lang: Lang, opts: CallOpts = {}): Promise<T> {
   const t = trFor(lang);
   const key = process.env.OPENROUTER_API_KEY;
   if (!key) throw new AiError("not-configured", t("ยังไม่ได้ตั้งค่า OpenRouter API key บนเซิร์ฟเวอร์", "The OpenRouter API key is not set up on the server"), 503);
@@ -358,9 +364,9 @@ export async function chatReply(input: ChatRequest): Promise<ChatReply> {
 function mockAnalyze(input: { images: string[]; text: string; lang: Lang }): AnalysisOut {
   const hasImage = input.images.length > 0;
   const items = [
-    { name: "ข้าวสวย", amount: 1, unit: "ทัพพี", kcal: 160, protein: 3, carbs: 35, fat: 0.4, estimated: false, kind: "food", note: null, box: hasImage ? { x: 0.08, y: 0.45, w: 0.4, h: 0.4 } : null },
-    { name: "ไก่ทอด", amount: 1, unit: "ชิ้น", kcal: 290, protein: 24, carbs: 9, fat: 17, estimated: false, kind: "food", note: null, box: hasImage ? { x: 0.5, y: 0.15, w: 0.38, h: 0.38 } : null },
-    { name: "ผักลวก", amount: 1, unit: "ถ้วย", kcal: 35, protein: 2, carbs: 6, fat: 0.3, estimated: false, kind: "food", note: null, box: hasImage ? { x: 0.52, y: 0.58, w: 0.36, h: 0.3 } : null },
+    { name: "ข้าวสวย", name_th: "ข้าวสวย", name_en: "Steamed rice", amount: 1, unit: "ทัพพี", kcal: 160, protein: 3, carbs: 35, fat: 0.4, estimated: false, kind: "food", note: null, box: hasImage ? { x: 0.08, y: 0.45, w: 0.4, h: 0.4 } : null },
+    { name: "ไก่ทอด", name_th: "ไก่ทอด", name_en: "Fried chicken", amount: 1, unit: "ชิ้น", kcal: 290, protein: 24, carbs: 9, fat: 17, estimated: false, kind: "food", note: null, box: hasImage ? { x: 0.5, y: 0.15, w: 0.38, h: 0.38 } : null },
+    { name: "ผักลวก", name_th: "ผักลวก", name_en: "Blanched vegetables", amount: 1, unit: "ถ้วย", kcal: 35, protein: 2, carbs: 6, fat: 0.3, estimated: false, kind: "food", note: null, box: hasImage ? { x: 0.52, y: 0.58, w: 0.36, h: 0.3 } : null },
   ] as Analysis["items"];
   const t = input.text;
   if (/ครึ่ง/.test(t) && /ไก่/.test(t)) {
@@ -383,7 +389,7 @@ function mockAnalyze(input: { images: string[]; text: string; lang: Lang }): Ana
   }
   // Round 40: an important detail is missing (how much oil) → ask, instead of adding anything silently.
   const question = /ผัด/.test(t) && !/น้ำมัน/.test(t) ? "ผัดใช้น้ำมันเยอะหรือน้อยคะ? (เช่น 1 ช้อนชา หรือ 1 ช้อนโต๊ะ)" : null;
-  return { title: "ข้าวไก่ทอดกับผักลวก", items, question, visual: "Thai ข้าวไก่ทอด (fried chicken rice): fried chicken piece with steamed rice and blanched vegetables on a plate" };
+  return { title: "ข้าวไก่ทอดกับผักลวก", title_th: "ข้าวไก่ทอดกับผักลวก", title_en: "Fried chicken rice with blanched vegetables", items, question, visual: "Thai ข้าวไก่ทอด (fried chicken rice): fried chicken piece with steamed rice and blanched vegetables on a plate" };
 }
 
 function mockRefine(input: RefineInput): Refine {

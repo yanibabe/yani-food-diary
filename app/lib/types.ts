@@ -1,6 +1,7 @@
 // Shared data shapes for the whole app. Everything here is saved on the device.
 
 import type { L } from "./i18n.ts";
+import type { NameAlt } from "./names.ts";
 
 export type Macros = {
   kcal: number;
@@ -61,6 +62,8 @@ export type Box = { x: number; y: number; w: number; h: number };
 export type FoodItem = Macros & {
   id: string;
   name: string;
+  /** Round 79: the name in the other language (display only). See names.ts. */
+  alt?: NameAlt;
   amount: number;
   unit: string;
   /** true when the numbers are a guess (portion or oil/sauce not clear). */
@@ -234,6 +237,8 @@ export type LabelInfo = Macros & {
 export type Ingredient = {
   id: string;
   name: string;
+  /** Round 79: the name in the other language (display only). */
+  alt?: NameAlt;
   amount: number;
   unit: IngredientUnit;
   label: LabelInfo | null;
@@ -267,6 +272,8 @@ export type AiRef = {
 export type Recipe = {
   id: string;
   name: string;
+  /** Round 79: the name in the other language (display only). */
+  alt?: NameAlt;
   servings: number;
   /** Total weight after cooking, in grams. Optional. */
   cookedWeight: number | null;
@@ -286,6 +293,8 @@ export type Recipe = {
 export type RecipeLog = {
   recipeId: string;
   recipeName: string;
+  /** Round 79: the recipe name in the other language (display only). */
+  alt?: NameAlt;
   mode: "servings" | "grams";
   servings: number | null;
   grams: number | null;
@@ -301,6 +310,8 @@ export type Entry = {
   date: string;
   slot: MealSlot;
   title: string;
+  /** Round 79: the title in the other language (display only). */
+  alt?: NameAlt;
   items: FoodItem[];
   source: "photo" | "text" | "recipe" | "manual" | "barcode";
   /** The cover photo (the first one). */

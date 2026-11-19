@@ -331,7 +331,7 @@ export function searchLocal(query: string, ctx: SearchCtx): LocalResult {
   // 1. her custom ingredients
   const customRows: Suggestion[] = [];
   for (const c of custom) {
-    const sc = scoreAny(forms, [c.name, ...(c.aliases ?? [])]);
+    const sc = scoreAny(forms, [c.name, ...(c.alt?.th ? [c.alt.th] : []), ...(c.alt?.en ? [c.alt.en] : []), ...(c.aliases ?? [])]);
     if (sc >= MIN_SCORE) customRows.push(customSuggestion(c, lang, sc, wantState));
   }
   customRows.sort(orderBy);
@@ -583,6 +583,7 @@ export function buildIngredient(s: Suggestion, amount: number, unit: IngredientU
   } else {
     const c = s.custom;
     if (c) {
+      if (c.alt && name === c.name) ing.alt = c.alt;
       const missing = customMissing(c);
       const label: LabelInfo = {
         basis: c.basis,

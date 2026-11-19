@@ -1550,3 +1550,12 @@ She picked "แบบ B · จดหมายสั้นๆ" from public/_try/r
 - NOT verified: real iPhone share sheet + LINE preview card; a brand-new receiver with no profile is sent to /welcome after saving (recipe is saved); no rate limit on uploads (passcode off).
 - Later: "family kitchen" group page (needs simple sign-in).
 Round 78 DEPLOYED (2026-11-18, f94c992): Vercel build succeeded; live /r/<id> has og tags, cover 200 image/jpeg, bad POST → 400, letter page renders with the real cover. Next: she shares a real recipe to her boyfriend via LINE on her iPhone (check the LINE card + save).
+
+## Round 79 (2026-11-19) — food names follow the app language (built, NOT deployed)
+Her wish: in English mode every food name (even typed in Thai) shows in English; back to Thai → Thai.
+- Both names stored once: `alt = {th?, en?, src?, manual?}` next to name/title on FoodItem, Entry, Recipe, Ingredient, RecipeLog, CustomIngredient. `src` = the original the alt was made for (a renamed item ignores a stale alt unless manual). Original name untouched — matching/search/USDA still use it. Display via displayName / useLang().dn (app/lib/names.ts).
+- Sources: FOOD_REF exact names (no AI) → meal scan returns name_th/name_en/title_th/title_en in the same call → typed names via POST /api/translate-names (≤60 names, same OpenRouter helper/MODEL as the rest of the app) → background backfill (NameBackfill.tsx; 3 s after open + on changes; max 4 AI calls/day; a failure stops AI for the day; memory yfd:v1:nameTr).
+- Edit sheets have an optional other-language name box (manual, never overwritten). Recipe sharing + backup carry alt names.
+- Checked: 559 tests, tsc clean, lint 0 errors. Helper saw Today / meal edit / recipes flip TH↔EN at 375px with seeded alt names; with no AI key locally the translate route gives 503 and nothing breaks.
+- NOT verified: real AI translation and real scan returning both names (no local OPENROUTER key) — check on the live app after deploy; iPhone; dark mode.
+- Still original-only: chat/suggest idea cards, link-preview tags of shared recipes, an edit sheet already open when backfill finishes.

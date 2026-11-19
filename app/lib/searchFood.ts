@@ -47,6 +47,7 @@ export function ingredientToItem(ing: Ingredient, id: string, lang: Lang = "th",
     prov: res.prov,
   };
   if (res.missing.length) item.missing = [...res.missing];
+  if (ing.alt) item.alt = ing.alt; // Round 79: the same name in the other language
   // A USDA food she picked in plain grams / ml: keep USDA's frozen numbers on the item, so a later
   // "ate half" in review rescales from USDA's own values (same as Round 41).
   if (ing.usda && ing.usda.name === item.name && (ing.unit === "g" || ing.unit === "ml") && ing.usda.per === ing.unit) {

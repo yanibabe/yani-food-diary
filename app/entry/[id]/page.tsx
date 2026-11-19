@@ -17,7 +17,7 @@ export default function EntryPage() {
   const router = useRouter();
   const { ready, entries, upsertEntry, deleteEntry } = useStore();
   const ai = useAiStatus();
-  const { tr } = useLang();
+  const { tr, dn } = useLang();
   const entry = entries.find((e) => e.id === id);
   const photoId = entry?.photoId ?? null;
   const [loaded, setLoaded] = useState<{ id: string; src: string | null } | null>(null);
@@ -69,8 +69,8 @@ export default function EntryPage() {
       {entry.recipe && (
         <p className="mb-4 rounded-2xl bg-olive-soft px-4 py-3 text-[14px] text-olive-dark">
           {tr(
-            `จากสูตร “${entry.recipe.recipeName}” — แก้ตรงนี้มีผลกับมื้อนี้เท่านั้น สูตรต้นฉบับไม่เปลี่ยน`,
-            `From the recipe “${entry.recipe.recipeName}” — changes here only affect this meal. The recipe itself stays the same.`,
+            `จากสูตร “${dn(entry.recipe.recipeName, entry.recipe.alt)}” — แก้ตรงนี้มีผลกับมื้อนี้เท่านั้น สูตรต้นฉบับไม่เปลี่ยน`,
+            `From the recipe “${dn(entry.recipe.recipeName, entry.recipe.alt)}” — changes here only affect this meal. The recipe itself stays the same.`,
           )}
         </p>
       )}
@@ -88,12 +88,14 @@ export default function EntryPage() {
         }
         entrySource={entry.source}
         photo={hasPicture ? null : photo}
-        initial={{ title: entry.title, slot: entry.slot, items: entry.items }}
+        initial={{ title: entry.title, alt: entry.alt, slot: entry.slot, items: entry.items }}
         chatEnabled={!!ai && (ai.configured || ai.mock)}
         chatDisabledReason={tr("ยังไม่ได้ตั้งค่า AI (OpenRouter) — แตะรายการเพื่อแก้เองได้", "The AI (OpenRouter) is not set up — tap an item to edit it yourself")}
         saveLabel={tr("บันทึกการแก้ไข", "Save changes")}
         onSave={(d) => {
-          upsertEntry({ ...entry, title: d.title, slot: d.slot, items: d.items, updatedAt: Date.now() });
+          const { alt: _drop, ...base } = entry;
+          void _drop;
+          upsertEntry({ ...base, title: d.title, ...(d.alt ? { alt: d.alt } : {}), slot: d.slot, items: d.items, updatedAt: Date.now() });
           router.push(`/?date=${entry.date}`);
         }}
         onCancel={() => router.push(`/?date=${entry.date}`)}

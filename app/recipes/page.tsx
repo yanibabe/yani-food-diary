@@ -36,7 +36,7 @@ function Chevron({ open }: { open: boolean }) {
 
 function RecipesInner() {
   const { ready, recipes } = useStore();
-  const { tr, lang } = useLang();
+  const { tr, lang, dn } = useLang();
   const sp = useSearchParams();
   const date = sp.get("date");
   const [tab, setTab] = useState<"recipes" | "ingredients">(sp.get("tab") === "ingredients" ? "ingredients" : "recipes");
@@ -175,7 +175,7 @@ function RecipesInner() {
                     >
                       <MealThumb title={r.name} className="h-[38px] w-[38px] shrink-0 rounded-[11px]" fallback={<PotTile id={r.id} size={38} radius={11} />} />
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-[16px]">{r.name}</span>
+                        <span className="block truncate text-[16px]">{dn(r.name, r.alt)}</span>
                         {r.sharedFrom && (
                           <span className="block truncate text-[12px]" style={{ color: "#C9845F" }} data-testid="recipe-shared-from">
                             💌 {tr("จาก", "from")} {r.sharedFrom}

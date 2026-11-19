@@ -27,7 +27,7 @@ function LeafTile({ id, size, radius }: { id: string; size: number; radius: numb
 }
 
 export function MyIngredients({ query, searching, onSearching, onQueryClear }: { query: string; searching: boolean; onSearching: (v: boolean) => void; onQueryClear: () => void }) {
-  const { tr, lang } = useLang();
+  const { tr, lang, dn } = useLang();
   const [custom, setCustom] = useState<CustomIngredient[]>(() => loadCustom());
   const [editId, setEditId] = useState<string | null>(null);
   /** Round 65: the "+" opens the same ingredient search the recipes use; picking one saves it here, per 100 g (or per unit). */
@@ -69,7 +69,7 @@ export function MyIngredients({ query, searching, onSearching, onQueryClear }: {
     if (r.ok) {
       change(r.list);
       onQueryClear();
-      setNote(tr(`เพิ่ม “${r.item.name}” แล้ว`, `Added “${r.item.name}”`));
+      setNote(tr(`เพิ่ม “${dn(r.item.name, r.item.alt)}” แล้ว`, `Added “${dn(r.item.name, r.item.alt)}”`));
     } else if (r.error === "duplicate") {
       const name = findSameName(custom, item.name)?.name ?? item.name;
       setNote(tr(`“${name}” มีอยู่แล้วในวัตถุดิบของฉัน`, `“${name}” is already in My ingredients`));
@@ -102,7 +102,7 @@ export function MyIngredients({ query, searching, onSearching, onQueryClear }: {
           }}
         />
       </Sheet>
-      <Sheet open={editing !== null} onClose={() => setEditId(null)} title={editing?.name ?? ""} keyboardSafe>
+      <Sheet open={editing !== null} onClose={() => setEditId(null)} title={editing ? dn(editing.name, editing.alt) : ""} keyboardSafe>
         {editing && <IngredientEditForm key={editing.id} item={editing} list={custom} onChange={change} onForget={forget} onClose={() => setEditId(null)} />}
       </Sheet>
     </>
@@ -149,7 +149,7 @@ export function MyIngredients({ query, searching, onSearching, onQueryClear }: {
               <button key={c.id} type="button" className="flex w-full items-center gap-3 border-t border-line py-2.5 text-left active:opacity-70" onClick={() => setEditId(c.id)} data-testid="ai-custom-item">
                 <LeafTile id={c.id} size={38} radius={11} />
                 <span className="min-w-0 flex-1 truncate text-[16px] font-normal">
-                  {c.name}
+                  {dn(c.name, c.alt)}
                   {c.state && <span className="text-muted"> · {STATE_LABEL[c.state][lang]}</span>}
                 </span>
                 <span className="shrink-0 text-right">

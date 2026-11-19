@@ -535,12 +535,12 @@ export function IngredientSearch({
 
 /** One row (or the head of the open row): name, state, kcal per 100. Provenance is NOT shown here. */
 function RowHead({ s, lang }: { s: Suggestion; lang: "th" | "en" }) {
-  const { tr } = useLang();
+  const { tr, dn } = useLang();
   const per = s.basis === "perUnit" ? tr("ต่อ 1 หน่วย", "per 1 unit") : `/100 ${s.per === "ml" ? tr("มล.", "ml") : tr("ก.", "g")}`;
   return (
     <span className="block">
       <span className="flex items-start justify-between gap-2">
-        <span className="text-[15px] font-medium leading-snug">{s.name}</span>
+        <span className="text-[15px] font-medium leading-snug">{s.custom ? dn(s.name, s.custom.alt) : s.name}</span>
         {s.kind === "custom" && <Badge tone="olive">{tr("ของฉัน", "Mine")}</Badge>}
         {s.kind === "preferred" && <Badge tone="olive">{tr("ใช้บ่อย", "Usual")}</Badge>}
         {s.kind === "ai" && <Badge>{tr("ประมาณ", "Estimate")}</Badge>}
@@ -579,7 +579,7 @@ function ManageFold({
   onPrefs: (l: IngredientPrefPick[]) => void;
   onForgetCustom: (c: CustomIngredient) => void;
 }) {
-  const { tr } = useLang();
+  const { tr, dn } = useLang();
   const sortedPrefs = useMemo(() => [...prefs].sort((a, b) => b.lastUsed - a.lastUsed), [prefs]);
 
   return (
@@ -598,7 +598,7 @@ function ManageFold({
           {sortedPrefs.map((p) => (
             <div key={`${p.queryKey}|${p.pick.kind}|${p.pick.name}`} className="flex items-center justify-between gap-2 rounded-xl bg-white/70 px-3 py-1.5" data-testid="ai-pref-item">
               <p className="min-w-0 truncate text-[14px]">
-                “{p.queryKey}” <span className="text-muted">→ {p.pick.name}</span>
+                “{p.queryKey}” <span className="text-muted">→ {dn(p.pick.name)}</span>
               </p>
               <button type="button" className="min-h-[40px] shrink-0 px-2 text-[14px] text-muted" onClick={() => onPrefs(forgetPick(prefs, p.queryKey, p.pick))} data-testid="ai-pref-forget">
                 {tr("ลืมตัวเลือกนี้", "Forget")}

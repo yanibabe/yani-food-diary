@@ -24,7 +24,7 @@ function LogSheet({ recipe, open, onClose, date }: { recipe: Recipe; open: boole
   const [slot, setSlot] = useState<MealSlot>(guessSlot());
   const [tweak, setTweak] = useState(false);
   const [ings, setIngs] = useState<Ingredient[]>(recipe.ingredients);
-  const { tr, lang } = useLang();
+  const { tr, lang, dn } = useLang();
 
   const meal = useMemo(
     () => mealFromRecipe(ings, recipe.servings, recipe.cookedWeight, mode, value ?? 0),
@@ -44,12 +44,14 @@ function LogSheet({ recipe, open, onClose, date }: { recipe: Recipe; open: boole
       date,
       slot,
       title: recipe.name,
+      ...(recipe.alt ? { alt: recipe.alt } : {}),
       source: "recipe",
       photoId: null,
       items: [
         {
           id: newId("it"),
           name: recipe.name,
+          ...(recipe.alt ? { alt: recipe.alt } : {}),
           amount: value,
           unit: mode === "servings" ? tr("เสิร์ฟ", "serving") : tr("กรัม", "g"),
           ...meal.macros,
@@ -67,6 +69,7 @@ function LogSheet({ recipe, open, onClose, date }: { recipe: Recipe; open: boole
       recipe: {
         recipeId: recipe.id,
         recipeName: recipe.name,
+        ...(recipe.alt ? { alt: recipe.alt } : {}),
         mode,
         servings: mode === "servings" ? value : null,
         grams: mode === "grams" ? value : null,
@@ -135,12 +138,12 @@ function LogSheet({ recipe, open, onClose, date }: { recipe: Recipe; open: boole
             <p className="text-[13px] text-muted">{tr("ปริมาณ “ทั้งหม้อ” ที่ใช้จริงครั้งนี้ — สูตรต้นฉบับไม่เปลี่ยน", "Amounts for the “whole pot” you really used this time — the recipe itself stays the same")}</p>
             {ings.map((i) => (
               <div key={i.id} className="flex items-center gap-2">
-                <span className="flex-1 truncate">{i.name}</span>
+                <span className="flex-1 truncate">{dn(i.name, i.alt)}</span>
                 <NumberField
                   className="field num !w-24 text-right"
                   value={i.amount}
                   onChange={(n) => setIngs((p) => p.map((x) => (x.id === i.id ? { ...x, amount: n ?? 0 } : x)))}
-                  aria-label={`${tr("ปริมาณ", "Amount")} ${i.name}`}
+                  aria-label={`${tr("ปริมาณ", "Amount")} ${dn(i.name, i.alt)}`}
                 />
                 <span className="w-12 text-[14px] text-muted">{UNIT_LABEL[i.unit][lang]}</span>
               </div>
@@ -181,7 +184,7 @@ function RecipeInner() {
   const recipe = recipes.find((r) => r.id === id);
   const [logOpen, setLogOpen] = useState(false);
   const [confirmDel, setConfirmDel] = useState(false);
-  const { tr, lang } = useLang();
+  const { tr, lang, dn } = useLang();
   // Round 70: her own cover photo (if any) is shown as "My photo" under the AI picture.
   const coverId = recipe?.coverPhotoId ?? null;
   const [ownCover, setOwnCover] = useState<{ id: string; src: string } | null>(null);
@@ -226,7 +229,7 @@ function RecipeInner() {
       </div>
 
       <div className="space-y-1 text-center">
-        <h1 className="text-[28px] font-bold">{recipe.name}</h1>
+        <h1 className="text-[28px] font-bold">{dn(recipe.name, recipe.alt)}</h1>
         <p className="text-[15px] text-muted">
           {fmtAmount(recipe.servings)} {tr("เสิร์ฟ", "servings")}
           {recipe.cookedWeight ? ` · ${tr("หลังปรุง", "cooked")} ${fmtAmount(recipe.cookedWeight)} g` : ""}
@@ -250,7 +253,7 @@ function RecipeInner() {
       {milky.length > 0 && (
         <div className="rounded-[22px] bg-warn px-4 py-3 text-warn-ink" role="note" data-testid="dairy-warning">
           <p className="font-semibold">🥛 {tr("สูตรนี้มีนม", "This recipe has milk")}</p>
-          <p className="text-[15px]">{milky.map((i) => i.name).join(" · ")}</p>
+          <p className="text-[15px]">{milky.map((i) => dn(i.name, i.alt)).join(" · ")}</p>
         </div>
       )}
 
@@ -266,7 +269,7 @@ function RecipeInner() {
             return (
               <div key={i.id} className="card w-[150px] overflow-hidden" data-testid="ingredient-tile">
                 <div className="p-3">
-                  <div className="truncate font-semibold">{i.name}</div>
+                  <div className="truncate font-semibold">{dn(i.name, i.alt)}</div>
                   <div className="text-[14px] text-muted">{fmtAmount(i.amount)} {UNIT_LABEL[i.unit][lang]}</div>
                   <div className="num mt-1 text-[15px] font-semibold">{r.ok ? `${fmtKcal(r.macros.kcal)} kcal` : "–"}</div>
                   {r.ok && <div className="mt-1"><ProvenanceBadge prov={r.prov} /></div>}

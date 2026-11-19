@@ -143,6 +143,7 @@ function SuggestInner() {
       date: today,
       slot: d.slot,
       title: d.title,
+      ...(d.alt ? { alt: d.alt } : {}),
       items: d.items,
       source: recipe ? "recipe" : "text",
       photoId: null,
@@ -150,6 +151,7 @@ function SuggestInner() {
         ? {
             recipeId: recipe.id,
             recipeName: recipe.name,
+            ...(recipe.alt ? { alt: recipe.alt } : {}),
             mode: "servings",
             servings: d.items[0]?.amount ?? 1,
             grams: null,

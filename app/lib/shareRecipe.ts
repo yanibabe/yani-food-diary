@@ -5,6 +5,7 @@
 // ingredients with their nutrition data, steps). Local-only fields (ids, photo ids, dates) never leave the phone.
 
 import { recipeTotals, type RecipeTotals } from "./recipe.ts";
+import { sanitizeAlt, type NameAlt } from "./names.ts";
 import { UNITS, RECIPE_CATEGORIES, type AiRef, type Ingredient, type IngredientUnit, type LabelInfo, type Macros, type Recipe, type RecipeCategory, type UsdaPick } from "./types.ts";
 
 // ---- limits ----
@@ -21,6 +22,8 @@ export const DEFAULT_FROM = "เพื่อน";
 export type SharedIngredient = Omit<Ingredient, "id" | "photoId">;
 export type SharedRecipe = {
   name: string;
+  /** Round 79: the name in the other language (checked: short texts only). */
+  alt?: NameAlt;
   servings: number;
   cookedWeight: number | null;
   category?: RecipeCategory;
@@ -230,6 +233,8 @@ function ingredient(v: unknown, k: number): Checked<SharedIngredient> {
   const u = usda(v.usda);
   if (u === "bad") return bad(`${at}: USDA data is not valid`);
   if (u) out.usda = u;
+  const alt = sanitizeAlt(v.alt);
+  if (alt) out.alt = alt;
   return { ok: true, value: out };
 }
 
@@ -265,6 +270,8 @@ export function sanitizeSharedRecipe(input: unknown): Checked<SharedRecipe> {
     if (t) steps.push(t);
   }
   const out: SharedRecipe = { name, servings, cookedWeight, ingredients, steps };
+  const alt = sanitizeAlt(input.alt);
+  if (alt) out.alt = alt;
   if (typeof input.category === "string" && RECIPE_CATEGORIES.some((c) => c.key === input.category)) out.category = input.category as RecipeCategory;
   return { ok: true, value: out };
 }
@@ -316,6 +323,7 @@ function base64ToBytes(b64: string): Uint8Array {
 export function toSharePayload(r: Recipe): unknown {
   return {
     name: r.name,
+    alt: r.alt,
     servings: r.servings,
     cookedWeight: r.cookedWeight,
     category: r.category,
@@ -389,6 +397,7 @@ export function recipeFromShare(
   return {
     id: newId("rc"),
     name: s.recipe.name,
+    ...(s.recipe.alt ? { alt: s.recipe.alt } : {}),
     servings: s.recipe.servings,
     cookedWeight: s.recipe.cookedWeight,
     ingredients: s.recipe.ingredients.map((i) => ({ ...i, id: newId("ig"), photoId: null })),

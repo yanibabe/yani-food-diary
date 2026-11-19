@@ -32,6 +32,7 @@ export function customInputFromItem(item: FoodItem): CustomInput | null {
   const scale = (key: MacroKey) => (missing.has(key) ? null : item[key] * k);
   return {
     name: item.name,
+    ...(item.alt ? { alt: item.alt } : {}),
     basis: basis === "unit" ? "perUnit" : "per100",
     per: basis === "ml" ? "ml" : "g",
     kcal: item.kcal * k,

@@ -7,6 +7,7 @@ import { IngredientSearch } from "./AddIngredientSheet";
 import { BarcodeLookup } from "./BarcodeLookup";
 import { SaveAsMine } from "./SaveAsMine";
 import { MealReview, type MealDraft } from "./MealReview";
+import { altFor } from "../lib/names";
 import { useAiStatus, WaitPopup } from "./ui";
 import { guessSlot } from "../lib/date";
 import { useLang } from "../lib/lang";
@@ -83,7 +84,7 @@ export function AddFlow({ mode, date, dateParam, prefill, auto = false, fromShee
   const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState<MealDraft>(() => {
     const first = blankItem(defaultUnit);
-    return { title: handoffItem?.name ?? "", slot: guessSlot(), items: mode === "manual" ? [first] : handoffItem ? [handoffItem] : [] };
+    return { title: handoffItem?.name ?? "", ...(handoffItem?.alt ? { alt: handoffItem.alt } : {}), slot: guessSlot(), items: mode === "manual" ? [first] : handoffItem ? [handoffItem] : [] };
   });
   const [question, setQuestion] = useState<string | null>(null);
   const [mock, setMock] = useState(false);
@@ -117,7 +118,7 @@ export function AddFlow({ mode, date, dateParam, prefill, auto = false, fromShee
       const ing = takeHandoff(store, Date.now());
       const item = ing ? ingredientToItem(ing, newId("it"), lang, cleanBufferPct(goals.calorieBuffer)) : null;
       if (item) {
-        setDraft((d) => ({ ...d, title: item.name, items: [item] }));
+        setDraft((d) => ({ ...d, title: item.name, alt: item.alt, items: [item] }));
         setStartEdit(null);
         setStep("review");
       }
@@ -175,13 +176,15 @@ export function AddFlow({ mode, date, dateParam, prefill, auto = false, fromShee
         setStep("input");
         return;
       }
-      const r = data.result as { title: string; question: string | null; visual?: string | null; items: Omit<FoodItem, "id">[] };
+      const r = data.result as { title: string; title_th?: string; title_en?: string; question: string | null; visual?: string | null; items: (Omit<FoodItem, "id"> & { name_th?: string; name_en?: string })[] };
       // Round 67: how the AI saw the meal, used later to draw its picture (photo meals only).
       visualRef.current = mode === "photo" && typeof r.visual === "string" ? r.visual : null;
       const pct = cleanBufferPct(goals.calorieBuffer);
       const items: FoodItem[] = r.items.map((a): FoodItem => startBuffer({
         id: newId("it"),
         name: a.name,
+        // Round 79: the same name in the other language, from the same AI call (missing = filled in later).
+        ...(altFor(a.name, { th: a.name_th, en: a.name_en }) ? { alt: altFor(a.name, { th: a.name_th, en: a.name_en }) } : {}),
         amount: cleanNumber(a.amount),
         unit: a.unit,
         kcal: cleanNumber(a.kcal),
@@ -204,7 +207,8 @@ export function AddFlow({ mode, date, dateParam, prefill, auto = false, fromShee
       }, pct));
       // Boxes belong to one photo: with 2+ photos they are dropped (1 photo = same as before).
       const title = r.title || tr("อาหาร", "Meal");
-      setDraft({ title, slot: draft.slot, items: boxesForPhotoCount(items, photos.length) });
+      const titleAlt = r.title ? altFor(title, { th: r.title_th, en: r.title_en }) : undefined;
+      setDraft({ title, ...(titleAlt ? { alt: titleAlt } : {}), slot: draft.slot, items: boxesForPhotoCount(items, photos.length) });
       // Round 68: start drawing the picture now, while she checks the result (photo: from the AI's `visual`; text: the server writes one).
       earlyTitleRef.current = title;
       startEarlyDraw(title, items, visualRef.current);
@@ -221,7 +225,7 @@ export function AddFlow({ mode, date, dateParam, prefill, auto = false, fromShee
   function pickBarcode(food: Food, grams: number) {
     const item = { ...foodToItem(food, grams, newId("it"), tr("สินค้า", "Product")) };
     item.dairy = aiDairy(item.name, undefined);
-    setDraft((d) => ({ ...d, title: item.name, items: [item] }));
+    setDraft((d) => ({ ...d, title: item.name, alt: item.alt, items: [item] }));
     setStartEdit(null);
     setStep("review");
   }
@@ -230,7 +234,7 @@ export function AddFlow({ mode, date, dateParam, prefill, auto = false, fromShee
   function pickSearched(ing: Ingredient) {
     const item = ingredientToItem(ing, newId("it"), lang, cleanBufferPct(goals.calorieBuffer));
     if (!item) return;
-    setDraft((d) => ({ ...d, title: item.name, items: [item] }));
+    setDraft((d) => ({ ...d, title: item.name, alt: item.alt, items: [item] }));
     setStartEdit(null);
     setStep("review");
   }
@@ -239,7 +243,7 @@ export function AddFlow({ mode, date, dateParam, prefill, auto = false, fromShee
   function pickMine(c: CustomIngredient) {
     const item = itemFromCustom(c, { id: newId("it"), amount: 100, unit: "g" }, lang);
     if (!item) return;
-    setDraft((d) => ({ ...d, title: item.name, items: [item] }));
+    setDraft((d) => ({ ...d, title: item.name, alt: item.alt, items: [item] }));
     setStartEdit(null);
     setStep("review");
   }
@@ -275,7 +279,7 @@ export function AddFlow({ mode, date, dateParam, prefill, auto = false, fromShee
     // Round 45: numbers she leaves empty stay unknown (not a real 0), so a saved copy keeps them unknown too.
     const first: FoodItem = { ...blankItem(defaultUnit), name: name.trim(), missing: ["protein", "carbs", "fat"] };
     setCustomId(first.id);
-    setDraft((d) => ({ ...d, title: first.name, items: [first] }));
+    setDraft((d) => ({ ...d, title: first.name, alt: first.alt, items: [first] }));
     setStartEdit(first.id);
     setStep("review");
   }
@@ -312,6 +316,7 @@ export function AddFlow({ mode, date, dateParam, prefill, auto = false, fromShee
       date,
       slot: d.slot,
       title: d.title,
+      ...(d.alt ? { alt: d.alt } : {}),
       items: d.items,
       // "Search food" is a diary entry she made by hand: it uses the existing "manual" kind (no new saved kind).
       source: mode === "search" ? "manual" : mode,

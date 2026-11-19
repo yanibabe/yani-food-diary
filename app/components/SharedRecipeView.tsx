@@ -22,7 +22,7 @@ function blobToDataUrl(b: Blob): Promise<string> {
 }
 
 export function SharedRecipeView({ shareId, share, coverUrl, perServing }: { shareId: string; share: StoredShare; coverUrl: string | null; perServing: Macros | null }) {
-  const { tr, lang } = useLang();
+  const { tr, lang, dn } = useLang();
   const router = useRouter();
   const { recipes, upsertRecipe } = useStore();
   const [showIng, setShowIng] = useState(false);
@@ -86,9 +86,9 @@ export function SharedRecipeView({ shareId, share, coverUrl, perServing }: { sha
       <section className="glass p-3 text-center">
         {coverUrl && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={coverUrl} alt={r.name} className="mb-3 aspect-[1.3] w-full rounded-[20px] object-cover" data-testid="share-cover" />
+          <img src={coverUrl} alt={dn(r.name, r.alt)} className="mb-3 aspect-[1.3] w-full rounded-[20px] object-cover" data-testid="share-cover" />
         )}
-        <h1 className="text-[20px] font-medium" data-testid="share-name">{r.name}</h1>
+        <h1 className="text-[20px] font-medium" data-testid="share-name">{dn(r.name, r.alt)}</h1>
         <p className="mt-1 text-[13px] text-muted">
           {perServing ? `${fmtKcal(perServing.kcal)} kcal · ${tr("โปรตีน", "protein")} ${fmtG(perServing.protein)} g · ` : ""}
           {r.ingredients.length} {tr("วัตถุดิบ", "ingredients")}
@@ -107,7 +107,7 @@ export function SharedRecipeView({ shareId, share, coverUrl, perServing }: { sha
         <section className="glass px-4 py-2" data-testid="share-ingredients">
           {r.ingredients.map((i, k) => (
             <div key={k} className="flex justify-between gap-3 border-b border-line py-2 text-[15px] last:border-0">
-              <span className="min-w-0 truncate">{i.name}</span>
+              <span className="min-w-0 truncate">{dn(i.name, i.alt)}</span>
               <span className="shrink-0 text-muted">{fmtAmount(i.amount)} {UNIT_LABEL[i.unit][lang]}</span>
             </div>
           ))}

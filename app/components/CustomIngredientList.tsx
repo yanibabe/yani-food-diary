@@ -10,15 +10,17 @@ import { deleteCustom, editCustom, type CustomIngredient, type CustomInput } fro
 import { basisLabel, macroText } from "../lib/myIngredients";
 import type { FoodState } from "../lib/types";
 import { NumberField } from "./ui";
+import { renameAlt, type NameAlt } from "../lib/names";
+import { OtherNameField } from "./OtherNameField";
 
 const stamp = () => Date.now();
 
-type Draft = { name: string; state: FoodState | ""; basis: "g" | "ml" | "unit"; kcal: number | null; protein: number | null; carbs: number | null; fat: number | null; gpu: number | null };
+type Draft = { name: string; alt?: NameAlt; state: FoodState | ""; basis: "g" | "ml" | "unit"; kcal: number | null; protein: number | null; carbs: number | null; fat: number | null; gpu: number | null };
 
-const draftOf = (c: CustomIngredient): Draft => ({ name: c.name, state: c.state ?? "", basis: c.basis === "perUnit" ? "unit" : c.per, kcal: c.kcal, protein: c.protein, carbs: c.carbs, fat: c.fat, gpu: c.gramsPerUnit });
+const draftOf = (c: CustomIngredient): Draft => ({ name: c.name, alt: c.alt, state: c.state ?? "", basis: c.basis === "perUnit" ? "unit" : c.per, kcal: c.kcal, protein: c.protein, carbs: c.carbs, fat: c.fat, gpu: c.gramsPerUnit });
 
 function inputOf(d: Draft, old: CustomIngredient): CustomInput {
-  return { ...old, name: d.name, state: d.state || null, basis: d.basis === "unit" ? "perUnit" : "per100", per: d.basis === "ml" ? "ml" : "g", kcal: d.kcal, protein: d.protein, carbs: d.carbs, fat: d.fat, gramsPerUnit: d.gpu };
+  return { ...old, name: d.name, alt: d.alt, state: d.state || null, basis: d.basis === "unit" ? "perUnit" : "per100", per: d.basis === "ml" ? "ml" : "g", kcal: d.kcal, protein: d.protein, carbs: d.carbs, fat: d.fat, gramsPerUnit: d.gpu };
 }
 
 /**
@@ -36,7 +38,7 @@ export function CustomIngredientList({
   onCustom: (l: CustomIngredient[]) => void;
   onForgetCustom: (c: CustomIngredient) => void;
 }) {
-  const { tr, lang } = useLang();
+  const { tr, lang, dn } = useLang();
   const [editing, setEditing] = useState<string | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -70,7 +72,8 @@ export function CustomIngredientList({
       <div key={c.id} className="rounded-xl bg-white/70 p-3" data-testid="ai-custom-item">
         {editing === c.id && draft ? (
           <div className="space-y-2" data-testid="ai-custom-edit">
-            <input className="field !min-h-[44px]" value={draft.name} onChange={(e) => set({ name: e.target.value })} aria-label={tr("ชื่อ", "Name")} />
+            <input className="field !min-h-[44px]" value={draft.name} onChange={(e) => set({ name: e.target.value, alt: renameAlt(draft.alt, draft.name, e.target.value) })} aria-label={tr("ชื่อ", "Name")} />
+      {draft.name.trim() && <OtherNameField name={draft.name} alt={draft.alt} onChange={(alt) => set({ alt })} />}
             <div className="grid grid-cols-2 gap-2">
               <select className="field !min-h-[44px]" value={draft.basis} onChange={(e) => set({ basis: e.target.value as Draft["basis"] })} aria-label={tr("ค่าต่อ", "Values are per")}>
                 <option value="g">{tr("ต่อ 100 กรัม", "Per 100 g")}</option>
@@ -112,7 +115,7 @@ export function CustomIngredientList({
         ) : (
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0 text-[14px]">
-              <p className="truncate font-medium">{c.name}{c.state ? ` · ${STATE_LABEL[c.state][lang]}` : ""}</p>
+              <p className="truncate font-medium">{dn(c.name, c.alt)}{c.state ? ` · ${STATE_LABEL[c.state][lang]}` : ""}</p>
               <p className="text-[12px] text-muted">
                 <span className="num">{fmtKcal(c.kcal)} kcal</span> {basisLabel(c, lang)} · {macroText(c)}
               </p>

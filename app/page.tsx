@@ -86,7 +86,7 @@ function TodayInner() {
   const [againView, setAgainView] = useState(false);
   const [againQuery, setAgainQuery] = useState("");
   const [addText, setAddText] = useState("");
-  const { tr, lang } = useLang();
+  const { tr, lang, dn } = useLang();
 
   const dayEntries = useMemo(() => entries.filter((e) => e.date === date).sort((a, b) => a.createdAt - b.createdAt), [entries, date]);
   // Round 76: the week card can be shared even on a day with no meals yet, as long as the week has some.
@@ -379,7 +379,7 @@ function TodayInner() {
           data-testid="removed-toast"
         >
           <span className="min-w-0 flex-1 truncate text-[15px]">
-            {tr("ลบแล้ว", "Deleted")} · <b className="font-semibold">{removed.title}</b>
+            {tr("ลบแล้ว", "Deleted")} · <b className="font-semibold">{dn(removed.title, removed.alt)}</b>
           </span>
           <button className="shrink-0 rounded-full bg-paper/15 px-4 py-2 text-[15px] font-semibold" onClick={undoRemove} data-testid="removed-undo">
             {tr("เลิกทำ", "Undo")}
@@ -394,7 +394,7 @@ function TodayInner() {
           data-testid="eat-again-toast"
         >
           <span className="min-w-0 flex-1 text-[15px]">
-            ✓ {tr("เพิ่ม", "Added")} <b className="font-semibold">{added.title}</b> {tr("ใน", "to")} {SLOT_LABEL[added.slot][lang]}
+            ✓ {tr("เพิ่ม", "Added")} <b className="font-semibold">{dn(added.title, added.alt)}</b> {tr("ใน", "to")} {SLOT_LABEL[added.slot][lang]}
           </span>
           <button
             className="shrink-0 rounded-full bg-paper/15 px-4 py-2 text-[15px] font-semibold"
@@ -500,7 +500,7 @@ function TodayInner() {
                         }
                       />
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-[16px] font-medium">{e.title}</span>
+                        <span className="block truncate text-[16px] font-medium">{dn(e.title, e.alt)}</span>
                         <span className="block text-[13px] text-muted">
                           {tr("กินล่าสุด", "Last eaten")} {shortDayLabel(e.date, today, lang)} · <span className="num">{fmtKcal(sumMacros(e.items.map(pickMacros)).kcal)}</span> kcal
                         </span>
@@ -627,14 +627,14 @@ function SourceIcon({ e, small }: { e: Entry; small?: boolean }) {
 }
 
 function EntryRow({ e, onDelete }: { e: Entry; onDelete: () => void }) {
-  const { tr } = useLang();
+  const { tr, dn } = useLang();
   const m = sumMacros(e.items.map(pickMacros));
   // Round 39: "~" = some numbers are estimates; "?" = a nutrient is unknown for some item.
   const approx = e.items.some((i) => isEstimated(i, e));
   const gap = joinMissing(...e.items.map((i) => i.missing));
   const q = (k: "protein" | "carbs" | "fat") => (gap.includes(k) ? "?" : "");
   return (
-    <SwipeRow onDelete={onDelete} label={`${tr("ลบ", "Delete")} ${e.title}`}>
+    <SwipeRow onDelete={onDelete} label={`${tr("ลบ", "Delete")} ${dn(e.title, e.alt)}`}>
       <Link href={`/entry/${e.id}`} className="flex items-center gap-3 px-1 py-3" data-testid="entry-row">
         <MealThumb
           title={e.title}
@@ -646,7 +646,7 @@ function EntryRow({ e, onDelete }: { e: Entry; onDelete: () => void }) {
           }
         />
         <div className="min-w-0 flex-1">
-          <div className="truncate font-medium">{e.title}</div>
+          <div className="truncate font-medium">{dn(e.title, e.alt)}</div>
           <div className="truncate text-[14px] text-muted">
             P {Math.round(m.protein)}{q("protein")} · C {Math.round(m.carbs)}{q("carbs")} · F {Math.round(m.fat)}{q("fat")} g
           </div>
