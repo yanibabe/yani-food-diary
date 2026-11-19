@@ -326,7 +326,9 @@ export function resolveAlt(name: string, alt: NameAlt | undefined, lookup: Looku
   const found = refPair(name) ?? lookup(name);
   const other = otherLang(name);
   const text = cleanAltText(found?.[other]);
-  if (!text) return alt;
+  // Nothing new found: never hand back a stale alt (left over from the name before a rename) as if it
+  // were a translation — that made the backfill think the name was done and skip it forever.
+  if (!text) return validAlt(name, alt);
   const base = validAlt(name, alt) ?? {};
   return { ...base, [other]: text, src: name };
 }
@@ -360,8 +362,29 @@ function fixList<T extends { name: string } & Named>(list: T[], fix: (n: string,
   return changed ? out : list;
 }
 
+/**
+ * A meal whose item was renamed BEFORE titles followed renames still says the old food in its title
+ * ("…and Fried Chicken" after the item became แหนมกระดูกอ่อนทอด). The item's left-over automatic alt still
+ * remembers its old name (alt.src) — use it once to swap the title. A title she typed herself is left alone.
+ */
+export function repairTitle<E extends EntryLike>(e: E): E {
+  if (e.alt?.manual === true) return e;
+  const renames: Renamed[] = [];
+  for (const it of e.items) {
+    const a = it.alt;
+    if (!a || a.manual === true || typeof a.src !== "string" || !a.src.trim() || a.src === it.name) continue;
+    renames.push({ oldName: a.src, oldAlt: a, newName: it.name, newAlt: undefined });
+  }
+  if (!renames.length) return e;
+  const next = followRenames(e.title, e.alt, renames);
+  if (!next || next.title === e.title) return e;
+  const { alt: _old, ...rest } = e;
+  void _old;
+  return (next.alt ? { ...rest, title: next.title, alt: next.alt } : { ...rest, title: next.title }) as E;
+}
+
 export function fixEntry<E extends EntryLike>(e: E, fix: (n: string, a: NameAlt | undefined) => NameAlt | undefined): E {
-  let out = fixOne(e, e.title, fix);
+  let out = fixOne(repairTitle(e), repairTitle(e).title, fix);
   const items = fixList(out.items, fix);
   if (items !== out.items) out = { ...out, items };
   if (out.recipe) {

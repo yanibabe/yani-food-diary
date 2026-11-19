@@ -166,3 +166,25 @@ test("Thai typed over an English item: the title switches to Thai, not half and 
   assert.equal(out?.title, "ไก่ย่างเสียบไม้และแหนมกระดูกอ่อนทอด");
   assert.equal(out?.alt, undefined);
 });
+
+test("a renamed item with a stale alt is still sent for translation", async () => {
+  const { missingNames } = await import("../app/lib/names.ts");
+  const e = { date: "2026-11-19", title: "x", items: [{ name: "Fried fermented pork rib cartilage", alt: { th: "ไก่ทอด", src: "Fried chicken" } }], recipe: null };
+  assert.ok(missingNames({ entries: [e], recipes: [], custom: [] }, () => undefined).includes("Fried fermented pork rib cartilage"));
+});
+
+test("an old meal title is repaired from the item's left-over old name", async () => {
+  const { repairTitle } = await import("../app/lib/names.ts");
+  const e = {
+    title: "Grilled Chicken Skewers and Fried Chicken",
+    alt: { th: "ไก่ย่างเสียบไม้และไก่ทอด", src: "Grilled Chicken Skewers and Fried Chicken" },
+    items: [{ name: "Fried fermented pork rib cartilage (Naem kradook oon)", alt: { th: "ไก่ทอด", src: "Fried chicken" } }],
+    recipe: null,
+  };
+  const out = repairTitle(e);
+  assert.ok(!/fried chicken/i.test(out.title), out.title);
+  assert.match(out.title, /fermented pork/i);
+  assert.ok(!out.alt || !/ไก่ทอด/.test(out.alt.th ?? ""));
+  const typed = { ...e, alt: { th: "ของฉัน", manual: true } };
+  assert.equal(repairTitle(typed), typed);
+});
