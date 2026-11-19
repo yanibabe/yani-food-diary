@@ -1574,3 +1574,4 @@ Her meal was scanned in English mode; in Thai mode the edit page showed the Engl
 - Units shown in the app language (app/lib/unitNames.ts displayUnit: skewer↔ไม้, portion↔ที่, piece↔ชิ้น…); the unit input itself still shows the saved text.
 - Checked: 586 tests, tsc clean, lint 0 errors; helper preview at 375px (Thai mode): Thai title in the big box, English in the small box, "2 ไม้ · 1 ที่".
 - Limits: her already-fixed meal needs its title edited once (old item name is gone). Refine sometimes leaves name_th/name_en empty → background translation fills them.
+Round 80 DEPLOYED (2026-11-19, 90b83f4): build succeeded; unit dictionary in the live bundle; live refine renamed the title ("…and Fried Fermented Pork Cartilage" / "ไก่ย่างเสียบไม้และแหนมกระดูกอ่อนทอด"). Next: she fixes the already-saved meal title once and checks Thai/English on her iPhone.
