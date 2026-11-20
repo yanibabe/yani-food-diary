@@ -232,7 +232,7 @@ function IngredientCard({
                     role="radio"
                     aria-checked={on}
                     onClick={() => set({ label: { ...ing.label!, per: p } })}
-                    className={`min-h-[40px] rounded-xl text-[14px] ${on ? "bg-ink text-white" : "bg-paper"}`}
+                    className={`min-h-[44px] rounded-xl text-[14px] ${on ? "bg-ink text-white" : "bg-paper"}`}
                   >
                     {p === "ml" ? tr("ฉลากต่อ 100 มล.", "Label per 100 ml") : tr("ฉลากต่อ 100 กรัม", "Label per 100 g")}
                   </button>
@@ -254,7 +254,7 @@ function IngredientCard({
               <button
                 key={f.key}
                 type="button"
-                className="min-h-[40px] rounded-full border border-white/80 bg-white/70 px-3 text-[14px]"
+                className="min-h-[44px] rounded-full border border-white/80 bg-white/70 px-3 text-[14px]"
                 onClick={() => onPatch({ refPick: { name: trimmed, key: f.key } })}
                 data-testid="ref-choice"
               >
@@ -285,8 +285,8 @@ function IngredientCard({
       {usdaOn && !ing.label && !showUsda && (
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px]" data-testid="usda-chosen">
           <span className="text-muted">USDA: <span className="text-ink">{ing.usda!.description}</span></span>
-          <button type="button" className="min-h-[36px] font-medium text-olive-dark" onClick={() => setShowUsda(true)}>{tr("เปลี่ยน", "Change")}</button>
-          <button type="button" className="min-h-[36px] text-muted" onClick={() => onPatch({ usda: null })} data-testid="usda-remove">{tr("เลิกใช้ USDA", "Stop using USDA")}</button>
+          <button type="button" className="min-h-[44px] font-medium text-olive-dark" onClick={() => setShowUsda(true)}>{tr("เปลี่ยน", "Change")}</button>
+          <button type="button" className="min-h-[44px] text-muted" onClick={() => onPatch({ usda: null })} data-testid="usda-remove">{tr("เลิกใช้ USDA", "Stop using USDA")}</button>
         </div>
       )}
 
@@ -315,7 +315,7 @@ function IngredientCard({
             // Round 41: USDA's own household weights, as quick choices (she still picks).
             <div className="mt-2 flex flex-wrap gap-2">
               {ing.usda!.portions!.map((p) => (
-                <button key={p.label} type="button" className="min-h-[36px] rounded-full border border-white/80 bg-white/70 px-3 text-[13px]" onClick={() => set({ gramsPerUnit: p.grams })}>
+                <button key={p.label} type="button" className="min-h-[44px] rounded-full border border-white/80 bg-white/70 px-3 text-[13px]" onClick={() => set({ gramsPerUnit: p.grams })}>
                   USDA {p.label} = {fmtG(p.grams)} {tr("ก.", "g")}
                 </button>
               ))}
@@ -351,15 +351,15 @@ function IngredientCard({
           {hasAdvanced && (
             // Round 42: the AI and USDA lookups are still here, but tucked away so the main flow stays calm.
             <details className="mt-1" data-testid="advanced-fold">
-              <summary className="min-h-[36px] cursor-pointer py-1.5 text-[14px] text-muted">{tr("ตัวเลือกขั้นสูง", "Advanced")}</summary>
+              <summary className="min-h-[44px] cursor-pointer py-1.5 text-[14px] text-muted">{tr("ตัวเลือกขั้นสูง", "Advanced")}</summary>
               <div className="flex flex-col items-start pb-1">
                 {showAiBtn && (
-                  <button type="button" className="min-h-[36px] text-[14px] font-medium text-olive-dark" onClick={() => void lookUp()} data-testid="ai-lookup">
+                  <button type="button" className="min-h-[44px] text-[14px] font-medium text-olive-dark" onClick={() => void lookUp()} data-testid="ai-lookup">
                     <Icon name="sparkle" className="mr-1 inline-block h-4 w-4 align-[-3px]" />{ambiguous ? tr("ไม่ใช่ทั้งหมด — ให้ AI หา", "None of these — ask the AI") : tr("ให้ AI หาค่าสารอาหาร", "Let the AI look up the nutrition")}
                   </button>
                 )}
                 {showUsdaBtn && (
-                  <button type="button" className="min-h-[36px] text-[14px] font-medium text-olive-dark" onClick={() => setShowUsda(true)} data-testid="usda-open">
+                  <button type="button" className="min-h-[44px] text-[14px] font-medium text-olive-dark" onClick={() => setShowUsda(true)} data-testid="usda-open">
                     {tr("ค้นหาค่าใน USDA", "Look it up in USDA")}
                   </button>
                 )}
@@ -367,7 +367,7 @@ function IngredientCard({
             </details>
           )}
         </div>
-        <button className="shrink-0 px-2 py-2 text-[14px] text-danger" onClick={onRemove}>{tr("ลบ", "Delete")}</button>
+        <button className="min-h-[44px] min-w-[44px] shrink-0 px-2 py-2 text-[14px] text-danger" onClick={onRemove}>{tr("ลบ", "Delete")}</button>
       </div>
     </div>
   );
@@ -481,7 +481,7 @@ function RecipeForm({ initial, onSave, onCancel }: { initial: Recipe | null; onS
                 role="radio"
                 aria-checked={category === c.key}
                 onClick={() => setCategory(c.key)}
-                className={`min-h-[40px] rounded-full border px-4 text-[14px] ${category === c.key ? "border-ink bg-ink text-white" : "border-white/80 bg-white/60"}`}
+                className={`min-h-[44px] rounded-full border px-4 text-[14px] ${category === c.key ? "border-ink bg-ink text-white" : "border-white/80 bg-white/60"}`}
               >
                 {c.label[lang]}
               </button>
@@ -548,7 +548,7 @@ function RecipeForm({ initial, onSave, onCancel }: { initial: Recipe | null; onS
               onChange={(e) => setSteps((p) => p.map((x, j) => (j === k ? e.target.value : x)))}
               aria-label={tr(`ขั้นตอนที่ ${k + 1}`, `Step ${k + 1}`)}
             />
-            <button className="mt-2 px-2 py-2 text-danger" onClick={() => setSteps((p) => p.filter((_, j) => j !== k))} aria-label={tr("ลบขั้นตอน", "Delete step")}><Icon name="x" className="h-5 w-5" /></button>
+            <button className="mt-2 flex min-h-[44px] min-w-[44px] items-center justify-center px-2 py-2 text-danger" onClick={() => setSteps((p) => p.filter((_, j) => j !== k))} aria-label={tr("ลบขั้นตอน", "Delete step")}><Icon name="x" className="h-5 w-5" /></button>
           </div>
         ))}
         <button className="btn-soft w-full" onClick={() => setSteps((p) => [...p, ""])}>+ {tr("เพิ่มขั้นตอน", "Add step")}</button>

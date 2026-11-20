@@ -120,7 +120,7 @@ export function UsdaPicker({
     <div className="space-y-3 rounded-2xl bg-cream p-3" data-testid="usda-picker">
       <div className="flex items-center justify-between">
         <p className="text-[15px] font-semibold">{tr("ค้นหาใน USDA", "Search USDA")}</p>
-        <button type="button" className="min-h-[36px] px-2 text-[14px] text-muted" onClick={onClose}>{tr("ปิด", "Close")}</button>
+        <button type="button" className="min-h-[44px] px-2 text-[14px] text-muted" onClick={onClose}>{tr("ปิด", "Close")}</button>
       </div>
 
       {phase.k !== "detail" && (
@@ -200,7 +200,7 @@ export function UsdaPicker({
       )}
 
       {phase.k !== "detail" && (
-        <button type="button" className="min-h-[36px] text-[14px] font-medium text-olive-dark" onClick={() => setBranded((b) => !b)} data-testid="usda-branded">
+        <button type="button" className="min-h-[44px] text-[14px] font-medium text-olive-dark" onClick={() => setBranded((b) => !b)} data-testid="usda-branded">
           {branded ? tr("← กลับไปค้นวัตถุดิบทั่วไป", "← Back to generic foods") : tr("เป็นสินค้าแบรนด์ (ของแพ็คสำเร็จ)? ค้นสินค้าแบรนด์", "A packaged product? Search branded foods")}
         </button>
       )}
@@ -231,7 +231,7 @@ export function UsdaPicker({
               {phase.food.portions.length > 0 && (
                 <div className="flex flex-wrap gap-2">
                   {phase.food.portions.map((p) => (
-                    <button key={p.label} type="button" className="min-h-[36px] rounded-full border border-white/80 bg-white/70 px-3 text-[13px]" onClick={() => setAmount(p.grams)}>
+                    <button key={p.label} type="button" className="min-h-[44px] rounded-full border border-white/80 bg-white/70 px-3 text-[13px]" onClick={() => setAmount(p.grams)}>
                       {p.label} = {fmtG(p.grams)} {tr("ก.", "g")}
                     </button>
                   ))}

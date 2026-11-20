@@ -75,7 +75,7 @@ function WeightEntry({ date, today, onDate, value, onSave }: { date: string; tod
         <span className="whitespace-nowrap">{date === today ? tr("ของวันนี้", "For today") : tr("ของวันที่", "For the day")}</span>
         <input
           type="date"
-          className="field !min-h-[40px] w-auto !py-1 text-[15px] text-ink"
+          className="field !min-h-[44px] w-auto !py-1 text-[15px] text-ink"
           value={date}
           max={today}
           onChange={(e) => e.target.value && onDate(e.target.value > today ? today : e.target.value)}
@@ -201,7 +201,7 @@ function WeightChart({ logs, today, target, selected, onPick }: { logs: BodyLog[
         <h3 className="text-[15px] font-semibold">{tr("กราฟน้ำหนัก", "Weight chart")}</h3>
         <div className="flex gap-1 rounded-xl bg-cream p-1">
           {RANGES.map((r) => (
-            <button key={r} onClick={() => setDays(r)} aria-pressed={days === r} className={`min-h-[32px] rounded-lg px-2.5 text-[13px] font-medium ${days === r ? "bg-olive text-white" : "text-muted"}`}>
+            <button key={r} onClick={() => setDays(r)} aria-pressed={days === r} className={`hit44 relative min-h-[32px] rounded-lg px-2.5 text-[13px] font-medium ${days === r ? "bg-olive text-white" : "text-muted"}`}>
               {r === 90 ? tr("3 เดือน", "3 mo") : `${r} ${tr("วัน", "d")}`}
             </button>
           ))}

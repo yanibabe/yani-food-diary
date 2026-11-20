@@ -54,7 +54,7 @@ export function HomeTiles({
             </span>
           </button>
           <button
-            className="absolute bottom-2 right-2 grid h-9 w-9 place-items-center rounded-full bg-water-soft text-[20px] leading-none text-water-ink active:scale-90 disabled:opacity-40"
+            className="hit44 absolute bottom-2 right-2 grid h-9 w-9 place-items-center rounded-full bg-water-soft text-[20px] leading-none text-water-ink active:scale-90 disabled:opacity-40"
             onClick={() => setWater(date, glasses + 1)}
             disabled={glasses >= GLASSES_MAX}
             aria-label={tr("เพิ่มน้ำ 1 แก้ว", "Add 1 glass of water")}

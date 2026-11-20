@@ -70,7 +70,7 @@ export function Sheet({
           {title && (
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-[20px] font-medium">{title}</h2>
-              <button onClick={onClose} className="h-10 w-10 rounded-full bg-white/70 text-[20px] text-muted grid place-items-center" aria-label={tr("ปิด", "Close")}>
+              <button onClick={onClose} className="hit44 relative h-10 w-10 rounded-full bg-white/70 text-[20px] text-muted grid place-items-center" aria-label={tr("ปิด", "Close")}>
                 <Icon name="x" className="h-5 w-5" />
               </button>
             </div>

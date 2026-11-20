@@ -11,7 +11,7 @@
   --paper: #fbf8f4;
   --line: rgba(43, 39, 36, 0.09);
   --ink: #2b2724;
-  --muted: #9c948a;
+  --muted: #66615a; /* Phase 2A: was #9c948a (2.2–3.0:1). Now ≥4.5:1 on every page / card / tile colour (WCAG AA). */
   --olive: #2b2724;
   --olive-dark: #2b2724;
   --olive-soft: #efe6da;
@@ -21,22 +21,22 @@
   --mint: #e2eadb;
   --sky: #e4e2f2;
   --protein: #f7e6dc;
-  --protein-ink: #9a5a3e;
+  --protein-ink: #8e5339; /* Phase 2A: ≥4.5:1 on all tinted tiles */
   --protein-dot: #e0a88c;
   --carbs: #e9e6f5;
   --carbs-ink: #5d5590;
   --carbs-dot: #b3aad8;
   --fat: #e5ecdc;
-  --fat-ink: #56704a;
+  --fat-ink: #516946;
   --fat-dot: #a3bd90;
   --water: #8fb0d6;
   --water-soft: #e6eef7;
-  --water-ink: #4f6f94;
+  --water-ink: #476486;
   --kcal: #f6e3d6;
   --warn: #f6e7d6;
-  --warn-ink: #9a5a3e;
-  --danger: #b24a3a;
-  --over: #d0906f;
+  --warn-ink: #8e5339;
+  --danger: #a44435;
+  --over: #b8704d; /* Phase 2A: ring / bars when over target, ≥3:1 (graphics) */
 }
 
 @theme inline {
@@ -145,6 +145,19 @@ select {
   border: 1px solid var(--line);
   border-radius: 20px;
 }
+/* Phase 2A: keeps a small round / icon button looking the same but gives it a 44×44 px tap area.
+   The element must be positioned (relative / absolute / fixed). */
+.hit44::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 100%;
+  height: 100%;
+  min-width: 44px;
+  min-height: 44px;
+  transform: translate(-50%, -50%);
+}
 .field {
   width: 100%;
   background: rgba(255, 255, 255, 0.7);
@@ -195,7 +208,7 @@ select {
   z-index: 0;
   --calm-bg: #f4efe7;
   --calm-ink: #2b2724;
-  --calm-muted: #9c948a;
+  --calm-muted: #66615a;
   --calm-line: rgba(43, 39, 36, 0.08);
   color: var(--calm-ink);
   font-family: var(--font-calm), var(--font-thai), ui-sans-serif, system-ui, sans-serif;

@@ -82,22 +82,22 @@ export function WaterCard({ date }: { date: string }) {
         <div className="mt-3 flex items-center justify-between rounded-2xl bg-white/55 px-3 py-2" data-testid="water-goal-edit">
           <span className="text-[15px]">{tr("เป้าต่อวัน", "Daily goal")}</span>
           <div className="flex items-center gap-2">
-            <button className="h-9 w-9 rounded-full bg-white/80 text-[18px] disabled:opacity-30" onClick={() => changeGoal(goal - 1)} disabled={goal <= WATER_GOAL_MIN} aria-label={tr("ลดเป้า", "Lower goal")}>
+            <button className="hit44 relative h-9 w-9 rounded-full bg-white/80 text-[18px] disabled:opacity-30" onClick={() => changeGoal(goal - 1)} disabled={goal <= WATER_GOAL_MIN} aria-label={tr("ลดเป้า", "Lower goal")}>
               −
             </button>
             <span className="num w-[72px] text-center text-[16px] font-semibold" data-testid="water-goal">
               {goal} {tr("แก้ว", "glasses")}
             </span>
-            <button className="h-9 w-9 rounded-full bg-white/80 text-[18px] disabled:opacity-30" onClick={() => changeGoal(goal + 1)} disabled={goal >= WATER_GOAL_MAX} aria-label={tr("เพิ่มเป้า", "Raise goal")}>
+            <button className="hit44 relative h-9 w-9 rounded-full bg-white/80 text-[18px] disabled:opacity-30" onClick={() => changeGoal(goal + 1)} disabled={goal >= WATER_GOAL_MAX} aria-label={tr("เพิ่มเป้า", "Raise goal")}>
               +
             </button>
-            <button className="ml-1 rounded-full px-3 py-2 text-[15px] font-medium text-olive-dark" onClick={() => setEditGoal(false)}>
+            <button className="ml-1 min-h-[44px] rounded-full px-3 py-2 text-[15px] font-medium text-olive-dark" onClick={() => setEditGoal(false)}>
               {tr("เสร็จ", "Done")}
             </button>
           </div>
         </div>
       ) : (
-        <button className="mt-2 w-full px-1 py-1 text-center text-[13px] text-muted" onClick={() => setEditGoal(true)} data-testid="water-goal-open">
+        <button className="mt-2 min-h-[44px] w-full px-1 py-1 text-center text-[13px] text-muted" onClick={() => setEditGoal(true)} data-testid="water-goal-open">
           {tr(`เป้า ${goal} แก้ว/วัน · แตะเพื่อเปลี่ยน`, `Goal ${goal} glasses a day · tap to change`)}
         </button>
       )}

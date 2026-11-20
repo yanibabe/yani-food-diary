@@ -122,13 +122,13 @@ export function CustomIngredientList({
             </div>
             {confirmDel === c.id ? (
               <div className="flex shrink-0 items-center gap-1 text-[14px]">
-                <button type="button" className="min-h-[40px] px-2 font-medium text-danger" onClick={() => { onCustom(deleteCustom(custom, c.id)); onForgetCustom(c); setConfirmDel(null); }} data-testid="ai-custom-delete-yes">{tr("ลบเลย", "Delete")}</button>
-                <button type="button" className="min-h-[40px] px-2 text-muted" onClick={() => setConfirmDel(null)}>{tr("ไม่ลบ", "Keep")}</button>
+                <button type="button" className="min-h-[44px] px-2 font-medium text-danger" onClick={() => { onCustom(deleteCustom(custom, c.id)); onForgetCustom(c); setConfirmDel(null); }} data-testid="ai-custom-delete-yes">{tr("ลบเลย", "Delete")}</button>
+                <button type="button" className="min-h-[44px] px-2 text-muted" onClick={() => setConfirmDel(null)}>{tr("ไม่ลบ", "Keep")}</button>
               </div>
             ) : (
               <div className="flex shrink-0 items-center gap-1 text-[14px]">
-                <button type="button" className="min-h-[40px] px-2 font-medium text-olive-dark" onClick={() => startEdit(c)} data-testid="ai-custom-edit-btn">{tr("แก้", "Edit")}</button>
-                <button type="button" className="min-h-[40px] px-2 text-danger" onClick={() => setConfirmDel(c.id)} data-testid="ai-custom-delete">{tr("ลบ", "Delete")}</button>
+                <button type="button" className="min-h-[44px] px-2 font-medium text-olive-dark" onClick={() => startEdit(c)} data-testid="ai-custom-edit-btn">{tr("แก้", "Edit")}</button>
+                <button type="button" className="min-h-[44px] px-2 text-danger" onClick={() => setConfirmDel(c.id)} data-testid="ai-custom-delete">{tr("ลบ", "Delete")}</button>
               </div>
             )}
           </div>

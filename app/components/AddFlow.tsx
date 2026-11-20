@@ -366,7 +366,7 @@ export function AddFlow({ mode, date, dateParam, prefill, auto = false, fromShee
           footer={(typed) =>
             typed.length >= 2 ? (
               <p className="px-1 text-[13px]">
-                <Link href={buildAddUrl("text", dateParam, typed)} className="inline-flex min-h-[40px] items-center text-olive-dark underline-offset-2" data-testid="ai-whole-dish">
+                <Link href={buildAddUrl("text", dateParam, typed)} className="inline-flex min-h-[44px] items-center text-olive-dark underline-offset-2" data-testid="ai-whole-dish">
                   {tr("ให้ AI ดูทั้งจาน", "Let AI look at the whole dish")}
                 </Link>
               </p>

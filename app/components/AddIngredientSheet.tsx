@@ -405,7 +405,7 @@ export function IngredientSearch({
                         {s.source.kind === "usda" && !!s.source.usda.portions?.length && (
                           <div className="mt-2 flex flex-wrap gap-2">
                             {s.source.usda.portions.map((p) => (
-                              <button key={p.label} type="button" className="min-h-[36px] rounded-full border border-white/80 bg-white/70 px-3 text-[13px]" onClick={() => setGpu(p.grams)}>
+                              <button key={p.label} type="button" className="min-h-[44px] rounded-full border border-white/80 bg-white/70 px-3 text-[13px]" onClick={() => setGpu(p.grams)}>
                                 {p.label} = {fmtG(p.grams)} {tr("ก.", "g")}
                               </button>
                             ))}
@@ -435,7 +435,7 @@ export function IngredientSearch({
                     </div>
 
                     <details className="text-[13px]" data-testid="ai-details">
-                      <summary className="min-h-[36px] cursor-pointer py-1.5 text-muted">{tr("รายละเอียดสารอาหาร", "Nutrition details")}</summary>
+                      <summary className="min-h-[44px] cursor-pointer py-1.5 text-muted">{tr("รายละเอียดสารอาหาร", "Nutrition details")}</summary>
                       <div className="space-y-1.5 pb-1 text-muted">
                         {s.per100 && (
                           <p>
@@ -501,7 +501,7 @@ export function IngredientSearch({
         {q.length >= 2 && !online && <p data-testid="ai-offline">{tr("ออฟไลน์ — แสดงเฉพาะที่มีในเครื่อง", "Offline — showing only what is on this phone")}</p>}
         {usdaWanted && noPass && (
           <p data-testid="ai-nopass">
-            <button type="button" className="min-h-[36px] font-medium text-olive-dark" onClick={() => void unlock()}>
+            <button type="button" className="min-h-[44px] font-medium text-olive-dark" onClick={() => void unlock()}>
               {tr("ใส่รหัสผ่านเพื่อค้นใน USDA", "Enter the passcode to search USDA")}
             </button>
           </p>
@@ -600,7 +600,7 @@ function ManageFold({
               <p className="min-w-0 truncate text-[14px]">
                 “{p.queryKey}” <span className="text-muted">→ {dn(p.pick.name)}</span>
               </p>
-              <button type="button" className="min-h-[40px] shrink-0 px-2 text-[14px] text-muted" onClick={() => onPrefs(forgetPick(prefs, p.queryKey, p.pick))} data-testid="ai-pref-forget">
+              <button type="button" className="min-h-[44px] shrink-0 px-2 text-[14px] text-muted" onClick={() => onPrefs(forgetPick(prefs, p.queryKey, p.pick))} data-testid="ai-pref-forget">
                 {tr("ลืมตัวเลือกนี้", "Forget")}
               </button>
             </div>

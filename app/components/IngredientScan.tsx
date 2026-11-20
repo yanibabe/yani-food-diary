@@ -179,7 +179,7 @@ export function IngredientScan({ ing, onPatch }: { ing: Ingredient; onPatch: (p:
     }
   }
 
-  const pill = "flex min-h-[40px] flex-1 items-center justify-center gap-1.5 rounded-full border border-white/80 bg-white/60 px-3 text-[14px] disabled:opacity-60";
+  const pill = "flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-full border border-white/80 bg-white/60 px-3 text-[14px] disabled:opacity-60";
 
   return (
     <div className="space-y-2" data-testid="ingredient-scan">
@@ -241,7 +241,7 @@ export function IngredientScan({ ing, onPatch }: { ing: Ingredient; onPatch: (p:
             </button>
             <button
               type="button"
-              className="flex min-h-[40px] flex-1 items-center justify-center rounded-full bg-olive px-3 text-[14px] font-medium text-white disabled:opacity-60"
+              className="flex min-h-[44px] flex-1 items-center justify-center rounded-full bg-olive px-3 text-[14px] font-medium text-white disabled:opacity-60"
               onClick={() => void readPhotos()}
               disabled={busy !== null}
               data-testid="ing-photo-read"

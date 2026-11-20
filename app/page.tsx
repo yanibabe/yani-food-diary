@@ -270,6 +270,17 @@ function TodayInner() {
         <div className="mt-1 flex flex-wrap items-baseline gap-x-2" data-testid="home-date">
           <h1 className="text-[26px] font-light">{date === today ? tr("วันนี้", "Today") : tr("ย้อนดู", "Looking back")}</h1>
           <p className="text-[14px] text-muted">{thaiDateLabel(date, lang)}</p>
+          {date !== today && (
+            // Phase 2A: one tap back to today (before, the "next day" arrow had to be pressed again and again).
+            <button
+              className="glass ml-auto inline-flex min-h-[44px] items-center gap-1.5 !rounded-full px-4 text-[15px] active:opacity-70"
+              onClick={() => go(today)}
+              data-testid="back-to-today"
+            >
+              <Icon name="caret-right" className="h-4 w-4" />
+              {tr("กลับมาวันนี้", "Back to today")}
+            </button>
+          )}
         </div>
       </header>
 
@@ -443,7 +454,7 @@ function TodayInner() {
               {addText && (
                 <button
                   type="button"
-                  className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-muted active:opacity-60"
+                  className="hit44 absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-muted active:opacity-60"
                   onClick={() => setAddText("")}
                   aria-label={tr("ล้าง", "Clear")}
                   data-testid="add-search-clear"
@@ -566,7 +577,7 @@ function TodayInner() {
           </div>
           <div className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-1 text-[14px] text-muted" data-testid="add-sheet-links">
             {recent.length > 0 && (
-              <button className="min-h-[44px] underline-offset-2 active:opacity-60" onClick={() => setAgainView(true)} data-testid="eat-again-tile">
+              <button className="min-h-[44px] min-w-[44px] px-2 underline-offset-2 active:opacity-60" onClick={() => setAgainView(true)} data-testid="eat-again-tile">
                 {tr("กินซ้ำ", "Eat again")}
               </button>
             )}
