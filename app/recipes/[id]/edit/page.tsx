@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { aiFetch } from "../../../lib/aiFetch";
 import { useParams, useRouter } from "next/navigation";
 import { Badge, EnergyHint, MissingNote, NumberField, ProvenanceBadge, StoredPhoto } from "../../../components/ui";
-import { fmtG, fmtKcal, newId } from "../../../lib/nutrition";
+import { fmtAmount, fmtG, fmtKcal, newId } from "../../../lib/nutrition";
 import { compressImage, savePhoto } from "../../../lib/photos";
 import { ingredientMacros, recipeTotals } from "../../../lib/recipe";
 import { matchRef, STATE_LABEL } from "../../../lib/foodRef";
@@ -58,7 +58,7 @@ function SaveCustomRow({ ing }: { ing: Ingredient }) {
   return (
     <div className="space-y-1" data-testid="save-custom">
       <button type="button" className="min-h-[44px] text-[14px] font-medium text-olive-dark disabled:text-muted" onClick={save} disabled={state === "saved"} data-testid="save-custom-btn">
-        {state === "saved" ? tr("✓ บันทึกไว้แล้ว", "✓ Saved") : tr("บันทึกไว้ใช้ครั้งหน้า", "Save for future use")}
+        {state === "saved" ? tr("✓ บันทึกไว้แล้ว", "✓ Saved") : tr("บันทึกเป็นวัตถุดิบของฉัน", "Save to My ingredients")}
       </button>
       {state === "saved" && <p className="text-[12px] text-muted">{tr("ครั้งหน้าค้นหาชื่อนี้ก็เจอ (แก้/ลบได้ใน “จัดการ”)", "Next time, searching this name finds it (edit or delete in “Manage”)")}</p>}
       {state === "duplicate" && <p className="text-[12px] text-warn-ink">{tr("มีชื่อนี้บันทึกไว้แล้ว — แก้ได้ใน “จัดการ” ในช่องค้นหา", "This name is already saved — edit it in “Manage” in the search sheet")}</p>}
@@ -413,6 +413,7 @@ function RecipeForm({ initial, onSave, onCancel }: { initial: Recipe | null; onS
   /** Blank leftovers (old empty cards) are dropped when something real is added. */
   const withoutBlanks = (list: Ingredient[]) => list.filter((x) => x.name.trim() || x.amount || x.label);
 
+  const noAmount = ings.filter((i) => i.name.trim() && !(i.amount > 0));
   const totals = useMemo(() => recipeTotals(ings, servings ?? 1, cooked, lang), [ings, servings, cooked, lang]);
 
   function save() {
@@ -420,7 +421,6 @@ function RecipeForm({ initial, onSave, onCancel }: { initial: Recipe | null; onS
     if (!name.trim()) return setErr(tr("ใส่ชื่อเมนูก่อน", "Enter the dish name first"));
     if (!(servings && servings > 0)) return setErr(tr("จำนวนเสิร์ฟต้องมากกว่า 0", "Servings must be more than 0"));
     if (clean.length === 0) return setErr(tr("ใส่วัตถุดิบอย่างน้อย 1 อย่าง", "Add at least 1 ingredient"));
-    if (!category) return setErr(tr("เลือกหมวดของเมนูก่อน", "Pick a category first"));
     const now = Date.now();
     onSave({
       id: initial?.id ?? newId("rc"),
@@ -431,7 +431,7 @@ function RecipeForm({ initial, onSave, onCancel }: { initial: Recipe | null; onS
       ingredients: clean,
       steps: steps.map((s) => s.trim()).filter(Boolean),
       coverPhotoId: cover,
-      category,
+      ...(category ? { category } : {}),
       createdAt: initial?.createdAt ?? now,
       updatedAt: now,
     });
@@ -444,16 +444,15 @@ function RecipeForm({ initial, onSave, onCancel }: { initial: Recipe | null; onS
         <h1 className="text-[22px] font-semibold">{initial ? tr("แก้สูตร", "Edit recipe") : tr("สูตรใหม่", "New recipe")}</h1>
       </header>
 
-      <button
-        onClick={() => coverRef.current?.click()}
-        className="flex aspect-[16/10] w-full items-center justify-center overflow-hidden rounded-[26px] bg-olive-soft text-olive-dark"
-      >
-        {cover ? (
+      {cover ? (
+        <button onClick={() => coverRef.current?.click()} className="flex aspect-[16/10] w-full items-center justify-center overflow-hidden rounded-[26px] bg-olive-soft text-olive-dark" aria-label={tr("เปลี่ยนรูปปก", "Change cover photo")}>
           <StoredPhoto id={cover} className="h-full w-full object-cover" alt={tr("รูปปก", "Cover photo")} />
-        ) : (
-          <span className="text-[16px]">{tr("+ เพิ่มรูปปก (ไม่บังคับ)", "+ Add a cover photo (optional)")}</span>
-        )}
-      </button>
+        </button>
+      ) : (
+        <button onClick={() => coverRef.current?.click()} className="flex min-h-[52px] w-full items-center justify-center rounded-[22px] bg-olive-soft px-4 text-[15px] text-olive-dark" data-testid="cover-add">
+          {tr("+ เพิ่มรูปปก (ไม่บังคับ)", "+ Add a cover photo (optional)")}
+        </button>
+      )}
       <input
         ref={coverRef}
         type="file"
@@ -472,7 +471,7 @@ function RecipeForm({ initial, onSave, onCancel }: { initial: Recipe | null; onS
           {name.trim() && <OtherNameField id="rc-name-other" name={name} alt={nameAlt} onChange={(r) => { setName(r.name); setNameAlt(r.alt); }} />}
         </div>
         <div>
-          <span className="label">{tr("หมวด", "Category")}</span>
+          <span className="label">{tr("หมวด", "Category")} <span className="font-normal text-muted">({tr("ไม่บังคับ", "optional")})</span></span>
           <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={tr("หมวด", "Category")} data-testid="category-picker">
             {RECIPE_CATEGORIES.map((c) => (
               <button
@@ -488,26 +487,35 @@ function RecipeForm({ initial, onSave, onCancel }: { initial: Recipe | null; onS
             ))}
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="label" htmlFor="rc-serv">{tr("ทำได้กี่เสิร์ฟ", "Makes how many servings")}</label>
-            <NumberField id="rc-serv" value={servings} onChange={setServings} />
-          </div>
-          <div>
-            <label className="label" htmlFor="rc-cooked">{tr("น้ำหนักรวมหลังปรุง (g)", "Total cooked weight (g)")}</label>
-            <NumberField id="rc-cooked" value={cooked} onChange={setCooked} placeholder={tr("ไม่บังคับ", "Optional")} />
+        <div>
+          <label className="label" htmlFor="rc-serv">{tr("ทำได้กี่เสิร์ฟ", "Makes how many servings")}</label>
+          <div className="flex items-center gap-2" data-testid="servings-control">
+            <button type="button" className="hit44 relative h-11 w-11 shrink-0 rounded-full bg-white/80 text-[20px] disabled:opacity-30" onClick={() => setServings(Math.max(1, Math.round((servings ?? 1) - 1)))} disabled={(servings ?? 1) <= 1} aria-label={tr("ลดเสิร์ฟ", "Fewer servings")} data-testid="servings-minus">−</button>
+            <div className="min-w-0 flex-1"><NumberField id="rc-serv" value={servings} onChange={setServings} /></div>
+            <button type="button" className="hit44 relative h-11 w-11 shrink-0 rounded-full bg-white/80 text-[20px]" onClick={() => setServings(Math.round((servings ?? 0) + 1))} aria-label={tr("เพิ่มเสิร์ฟ", "More servings")} data-testid="servings-plus">+</button>
           </div>
         </div>
+        <details className="rounded-2xl bg-cream px-4" open={cooked != null} data-testid="more-options">
+          <summary className="min-h-[44px] cursor-pointer py-3 text-[14px] font-medium">{tr("ตัวเลือกเพิ่มเติม (ไม่บังคับ)", "More options (optional)")}</summary>
+          <div className="pb-3">
+            <label className="label" htmlFor="rc-cooked">{tr("น้ำหนักรวมหลังปรุง (g)", "Total cooked weight (g)")}</label>
+            <NumberField id="rc-cooked" value={cooked} onChange={setCooked} placeholder={tr("ไม่บังคับ", "Optional")} />
+            <p className="mt-1 text-[13px] text-muted">{tr("ใส่แล้วบันทึกเป็นกรัมได้ตอนกิน", "Add it to log by grams when you eat it")}</p>
+          </div>
+        </details>
       </div>
 
       <section className="space-y-3">
         <h2 className="px-1 text-[19px] font-semibold">{tr("วัตถุดิบ", "Ingredients")}</h2>
-        <p className="px-1 text-[14px] text-muted">
-          {tr(
-            "ของที่มีซอง สแกนบาร์โค้ดหรือถ่ายรูปสินค้าได้เลย (หลายรูปก็ได้) ไม่ต้องพิมพ์ ถ้าไม่มีฉลาก AI จะใช้ค่าเฉลี่ยของอาหารนั้นให้เอง",
-            "Packed things: scan the barcode or photo the product (several photos are fine) — no typing. Without a label, the AI uses typical values for that food.",
-          )}
-        </p>
+        <details className="px-1 text-[14px] text-muted" data-testid="ingredient-tip">
+          <summary className="min-h-[44px] cursor-pointer py-2.5">{tr("ของที่มีซองหรือฉลาก? ดูวิธีเพิ่มแบบไม่ต้องพิมพ์", "Packed food? See how to add it without typing")}</summary>
+          <p className="pb-2">
+            {tr(
+              "ของที่มีซอง สแกนบาร์โค้ดหรือถ่ายรูปสินค้าได้เลย (หลายรูปก็ได้) ไม่ต้องพิมพ์ ถ้าไม่มีฉลาก AI จะใช้ค่าเฉลี่ยของอาหารนั้นให้เอง",
+              "Packed things: scan the barcode or photo the product (several photos are fine) — no typing. Without a label, the AI uses typical values for that food.",
+            )}
+          </p>
+        </details>
         {ings.map((ing) => (
           <IngredientCard
             key={ing.id}
@@ -535,10 +543,11 @@ function RecipeForm({ initial, onSave, onCancel }: { initial: Recipe | null; onS
         />
       </section>
 
-      <section className="space-y-3">
-        <h2 className="px-1 text-[19px] font-semibold">
-          {tr("วิธีทำ", "How to make it")} <span className="text-[14px] font-normal text-muted">({tr("ไม่บังคับ", "optional")})</span>
-        </h2>
+      <details className="space-y-3" open={steps.length > 0} data-testid="steps-fold">
+        <summary className="flex min-h-[44px] cursor-pointer items-center px-1 text-[19px] font-semibold">
+          <span>{tr("วิธีทำ", "How to make it")} <span className="text-[14px] font-normal text-muted">({tr("ไม่บังคับ", "optional")})</span></span>
+        </summary>
+        <div className="space-y-3 pt-2">
         {steps.map((s, k) => (
           <div key={k} className="flex items-start gap-2">
             <span className="mt-3 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-olive text-[14px] text-white">{k + 1}</span>
@@ -552,10 +561,17 @@ function RecipeForm({ initial, onSave, onCancel }: { initial: Recipe | null; onS
           </div>
         ))}
         <button className="btn-soft w-full" onClick={() => setSteps((p) => [...p, ""])}>+ {tr("เพิ่มขั้นตอน", "Add step")}</button>
-      </section>
+        </div>
+      </details>
+
 
       <section className="card p-4" data-testid="recipe-totals">
         <h2 className="mb-2 text-[17px] font-semibold">{tr("สรุป", "Summary")}</h2>
+        {noAmount.length > 0 && (
+          <p className="mb-2 rounded-xl bg-warn px-3 py-2 text-[14px] text-warn-ink" data-testid="missing-amounts">
+            {tr(`ยังไม่ได้ใส่ปริมาณ: ${noAmount.map((i) => i.name.trim()).join(", ")} — ใส่แล้วตัวเลขจะครบ`, `No amount yet for: ${noAmount.map((i) => i.name.trim()).join(", ")} — add one to complete the numbers`)}
+          </p>
+        )}
         {totals.problems.length > 0 && (
           <p className="mb-2 rounded-xl bg-warn px-3 py-2 text-[14px] text-warn-ink">
             {tr(
@@ -576,10 +592,13 @@ function RecipeForm({ initial, onSave, onCancel }: { initial: Recipe | null; onS
             <div className="text-[13px] text-muted">kcal</div>
           </div>
         </div>
+        <p className="mt-3 text-center text-[14px] text-muted" data-testid="per-serving-macros">
+          {tr("ต่อเสิร์ฟ", "Per serving")}: {tr("โปรตีน", "Protein")} <span className="num text-ink">{fmtAmount(Math.round(totals.perServing.protein * 10) / 10)}</span> · {tr("คาร์บ", "Carbs")} <span className="num text-ink">{fmtAmount(Math.round(totals.perServing.carbs * 10) / 10)}</span> · {tr("ไขมัน", "Fat")} <span className="num text-ink">{fmtAmount(Math.round(totals.perServing.fat * 10) / 10)}</span> g
+        </p>
       </section>
 
       {err && <p className="rounded-2xl bg-[#f6e1dc] px-4 py-3 text-danger" role="alert">{err}</p>}
-      <div className="flex gap-3">
+      <div className="sticky bottom-0 z-10 -mx-2 flex gap-3 rounded-t-[22px] bg-paper/80 px-2 pb-[max(12px,env(safe-area-inset-bottom))] pt-3 backdrop-blur-md" data-testid="recipe-actions">
         <button className="btn-soft flex-1" onClick={onCancel}>{tr("ยกเลิก", "Cancel")}</button>
         <button className="btn-primary flex-[2]" onClick={save}>{tr("บันทึกสูตร", "Save recipe")}</button>
       </div>

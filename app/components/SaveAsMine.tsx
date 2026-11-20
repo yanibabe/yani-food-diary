@@ -1,6 +1,6 @@
 "use client";
 // Round 45: inside the manual item editor on the Search food page: "Save as my ingredient".
-// Same store as the recipe page's "Save for future use". Her typed numbers are never "verified".
+// Same store as the recipe page's "Save to My ingredients". Her typed numbers are never "verified".
 
 import { useState } from "react";
 import { useLang } from "../lib/lang";

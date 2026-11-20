@@ -40,14 +40,16 @@ import { LangToggle, useLang } from "../lib/lang";
 import { fmtKcal } from "../lib/nutrition";
 import { EMPTY_PROFILE, fillProfile } from "../lib/profile";
 import { useStore } from "../lib/store";
+import { clampGoal, waterGoal, WATER_GOAL_MAX, WATER_GOAL_MIN } from "../lib/water";
 import type { Goals, Profile } from "../lib/types";
 import { Icon } from "../components/Icon";
 
-type Panel = "target" | "body" | "weight" | "buffer" | "avoid" | "lang" | "backup" | "method";
+type Panel = "target" | "water" | "body" | "weight" | "buffer" | "avoid" | "lang" | "backup" | "method";
 
 export default function ProfilePage() {
-  const { goals } = useStore();
+  const { goals, bodyLogs } = useStore();
   const { tr, lang } = useLang();
+  const latestWeight = useMemo(() => [...bodyLogs].filter((l) => l.weightKg != null).sort((a, b) => b.date.localeCompare(a.date))[0]?.weightKg ?? null, [bodyLogs]);
   const [editing, setEditing] = useState(false);
   const [open, setOpen] = useState<Panel | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
@@ -60,6 +62,8 @@ export default function ProfilePage() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (location.hash === "#backup") setOpen("backup");
+    else if (location.hash === "#weight") setOpen("weight");
+    else if (location.hash === "#water") setOpen("water");
   }, []);
   const p = fillProfile(goals.profile) ?? EMPTY_PROFILE;
   const plan = usesWeightGoal(p.reason) && !reasonProblem(p) ? weightPlan(p) : null;
@@ -116,7 +120,11 @@ export default function ProfilePage() {
           <button
             type="button"
             className="glass grid w-full grid-cols-[1fr_1px_1fr] py-4 text-center active:scale-[0.99]"
-            onClick={() => toggle("target")}
+            onClick={() => {
+              toggle("target");
+              // the target card now lives in the "Daily goals" group below: bring it into view
+              setTimeout(() => document.querySelector('[data-testid="row-target"]')?.scrollIntoView({ block: "center", behavior: "smooth" }), 50);
+            }}
             aria-expanded={open === "target"}
             data-testid="profile-stats"
           >
@@ -130,16 +138,68 @@ export default function ProfilePage() {
               <span className="block text-[12px] text-muted">{goalKg != null ? tr("กก. เป้าหมาย", "kg goal") : tr("กก. ตอนนี้", "kg now")}</span>
             </span>
           </button>
-          {open === "target" && <TargetCard goals={goals} onSaved={() => flash(tr("บันทึกเป้าแล้ว", "Target saved"))} />}
 
-          <section className="glass px-5 py-1" data-testid="profile-list">
-            <ListRow first label={tr("ข้อมูลร่างกาย", "About me")} on={open === "body"} onClick={() => toggle("body")} testId="row-body">
-              <InfoDetails p={p} targetKcal={goals.targetKcal} onEdit={() => setEditing(true)} />
-            </ListRow>
-            <ListRow label={tr("น้ำหนัก", "Weight")} on={open === "weight"} onClick={() => toggle("weight")} testId="row-weight">
-              <WeightCard />
+          {/* Batch 2: the settings are grouped under four plain headings. Every row, card and saved value is the same as before. */}
+          <GroupHeading>{tr("เป้าหมายรายวัน", "Daily goals")}</GroupHeading>
+          <section className="glass px-5 py-1" data-testid="profile-group-goals">
+            <ListRow
+              first
+              label={tr("แคลอรี่ และสัดส่วนสารอาหาร", "Calories & macros")}
+              hint={`${fmtKcal(goals.targetKcal)} kcal`}
+              on={open === "target"}
+              onClick={() => toggle("target")}
+              testId="row-target"
+            >
+              <TargetCard goals={goals} onSaved={() => flash(tr("บันทึกเป้าแล้ว", "Target saved"))} />
             </ListRow>
             <ListRow
+              label={tr("น้ำดื่มต่อวัน", "Water")}
+              hint={`${waterGoal(goals.waterGoal)} ${tr("แก้ว", "glasses")}`}
+              on={open === "water"}
+              onClick={() => toggle("water")}
+              testId="row-water"
+            >
+              <WaterGoalCard />
+            </ListRow>
+          </section>
+
+          <GroupHeading>{tr("ร่างกายของฉัน", "My body")}</GroupHeading>
+          <section className="glass px-5 py-1" data-testid="profile-group-body">
+            <ListRow
+              first
+              label={tr("น้ำหนัก", "Weight")}
+              hint={latestWeight != null ? `${kg(latestWeight)} ${tr("กก.", "kg")}` : tr("ยังไม่ได้บันทึก", "Not logged yet")}
+              on={open === "weight"}
+              onClick={() => toggle("weight")}
+              testId="row-weight"
+            >
+              <WeightCard />
+            </ListRow>
+            <ListRow label={tr("ข้อมูลร่างกาย", "About me")} on={open === "body"} onClick={() => toggle("body")} testId="row-body">
+              <InfoDetails p={p} targetKcal={goals.targetKcal} onEdit={() => setEditing(true)} />
+            </ListRow>
+          </section>
+
+          <GroupHeading>{tr("ข้อมูลและแอป", "Data & app")}</GroupHeading>
+          <section className="glass px-5 py-1" data-testid="profile-group-data">
+            <ListRow first label={tr("สำรองข้อมูล", "Backup")} on={open === "backup"} onClick={() => toggle("backup")} testId="row-backup">
+              <BackupCard />
+            </ListRow>
+            <ListRow
+              label="ภาษา / Language"
+              hint={lang === "en" ? "English" : "ไทย"}
+              on={open === "lang"}
+              onClick={() => toggle("lang")}
+              testId="row-lang"
+            >
+              <LangToggle />
+            </ListRow>
+          </section>
+
+          <GroupHeading>{tr("ขั้นสูง", "Advanced")}</GroupHeading>
+          <section className="glass px-5 py-1" data-testid="profile-group-advanced">
+            <ListRow
+              first
               label={tr("เผื่อแคลอรี่", "Calorie buffer")}
               hint={cleanBufferPct(goals.calorieBuffer) === 0 ? BUFFER_TEXT.none[lang] : `+${cleanBufferPct(goals.calorieBuffer)}%`}
               on={open === "buffer"}
@@ -153,18 +213,6 @@ export default function ProfilePage() {
                 <AvoidCard />
               </ListRow>
             )}
-            <ListRow
-              label="ภาษา / Language"
-              hint={lang === "en" ? "English" : "ไทย"}
-              on={open === "lang"}
-              onClick={() => toggle("lang")}
-              testId="row-lang"
-            >
-              <LangToggle />
-            </ListRow>
-            <ListRow label={tr("สำรองข้อมูล", "Backup")} on={open === "backup"} onClick={() => toggle("backup")} testId="row-backup">
-              <BackupCard />
-            </ListRow>
             <ListRow label={tr("วิธีคำนวณ", "How it is worked out")} on={open === "method"} onClick={() => toggle("method")} testId="row-method">
               <Method />
             </ListRow>
@@ -206,6 +254,28 @@ function ListRow({
         </span>
       </button>
       {on && <div className="calm-open pb-4">{children}</div>}
+    </div>
+  );
+}
+
+function GroupHeading({ children }: { children: React.ReactNode }) {
+  return <h2 className="px-3 pt-2 text-[13px] font-medium text-muted">{children}</h2>;
+}
+
+/** Same field and same limits as the water card on Today (goals.waterGoal); this is just a second, easier place to change it. */
+function WaterGoalCard() {
+  const { goals, setGoals } = useStore();
+  const { tr } = useLang();
+  const goal = waterGoal(goals.waterGoal);
+  const change = (n: number) => setGoals({ ...goals, waterGoal: clampGoal(n) });
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-2xl bg-white/55 px-3 py-2" data-testid="profile-water-goal">
+      <span className="text-[15px]">{tr("เป้าต่อวัน", "Daily goal")}</span>
+      <div className="flex items-center gap-2">
+        <button className="hit44 relative h-9 w-9 rounded-full bg-white/80 text-[18px] disabled:opacity-30" onClick={() => change(goal - 1)} disabled={goal <= WATER_GOAL_MIN} aria-label={tr("ลดเป้า", "Lower goal")}>−</button>
+        <span className="num w-[84px] text-center text-[16px] font-semibold" data-testid="profile-water-value">{goal} {tr("แก้ว", "glasses")}</span>
+        <button className="hit44 relative h-9 w-9 rounded-full bg-white/80 text-[18px] disabled:opacity-30" onClick={() => change(goal + 1)} disabled={goal >= WATER_GOAL_MAX} aria-label={tr("เพิ่มเป้า", "Raise goal")}>+</button>
+      </div>
     </div>
   );
 }

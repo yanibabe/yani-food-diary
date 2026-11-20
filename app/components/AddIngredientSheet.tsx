@@ -555,7 +555,7 @@ export function IngredientSearch({
 
       <div className="flex flex-wrap items-center justify-between gap-x-3">
         <button type="button" className="min-h-[44px] text-[15px] font-medium text-olive-dark" onClick={() => onCreateCustom(q)} data-testid="ai-create-custom">
-          {tr("+ สร้างวัตถุดิบเอง", "+ Add custom ingredient")}
+          {tr("+ สร้างวัตถุดิบเอง", "+ Create my own ingredient")}
         </button>
       </div>
 
@@ -621,7 +621,7 @@ function ManageFold({
       <div className="space-y-4 pb-3">
         <div className="space-y-2">
           <p className="text-[13px] font-medium">{tr("วัตถุดิบของฉัน", "My ingredients")}</p>
-          {custom.length === 0 && <p className="text-[13px] text-muted">{tr("ยังไม่มี — สร้างวัตถุดิบเองแล้วกด “บันทึกไว้ใช้ครั้งหน้า”", "None yet — add your own and tap “Save for future use”")}</p>}
+          {custom.length === 0 && <p className="text-[13px] text-muted">{tr("ยังไม่มี — สร้างวัตถุดิบเองแล้วกด “บันทึกเป็นวัตถุดิบของฉัน”", "None yet — add your own and tap “Save to My ingredients”")}</p>}
           <CustomIngredientList custom={custom} onCustom={onCustom} onForgetCustom={onForgetCustom} />
         </div>
 
