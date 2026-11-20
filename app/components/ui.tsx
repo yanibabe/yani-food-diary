@@ -107,7 +107,7 @@ export function WaitPopup({ text, note }: { text: string | null; note?: string }
 
 /** The 3 macro tiles. With showSplit (Today), each tile also shows its share of the calories (always 100% together). */
 /** ranges (Today only): carbs/fat show their good range ("ช่วง 180–260 g") instead of one target, and the bar fills to the range top. */
-export function MacroCards({ m, targets, showSplit, ranges }: { m: Macros; targets?: { protein: number; carbs: number; fat: number }; showSplit?: boolean; ranges?: { carbs: [number, number]; fat: [number, number] } }) {
+export function MacroCards({ m, targets, showSplit, ranges, compact }: { m: Macros; targets?: { protein: number; carbs: number; fat: number }; showSplit?: boolean; ranges?: { carbs: [number, number]; fat: [number, number] }; compact?: boolean }) {
   const { tr } = useLang();
   const split = showSplit ? macroSplit(m) : null;
   const rng = (k: "protein" | "carbs" | "fat") => (k === "protein" ? undefined : ranges?.[k]);
@@ -117,14 +117,14 @@ export function MacroCards({ m, targets, showSplit, ranges }: { m: Macros; targe
     { key: "fat", label: tr("ไขมัน", "Fat"), value: m.fat, target: targets?.fat, dot: "bg-fat-dot" },
   ] as const;
   return (
-    <div className="grid grid-cols-3 gap-2.5">
+    <div className={`grid grid-cols-3 ${compact ? "gap-2" : "gap-2.5"}`}>
       {cards.map((c) => (
-        <div key={c.key} className="rounded-[20px] border border-white/90 bg-white/55 px-3 py-3 text-center" data-testid={`macro-${c.key}`}>
+        <div key={c.key} className={`rounded-[20px] border border-white/90 bg-white/55 text-center ${compact ? "px-2 py-2.5" : "px-3 py-3"}`} data-testid={`macro-${c.key}`}>
           <div className="flex items-center justify-center gap-1.5 text-[13px] text-muted">
             <span className={`h-2 w-2 rounded-full ${c.dot}`} aria-hidden />
             {c.label}
           </div>
-          <div className="num mt-1 text-[28px] leading-none">
+          <div className={`num mt-1 leading-none ${compact ? "text-[26px]" : "text-[28px]"}`}>
             {fmtG(c.value)}
             <span className="ml-0.5 text-[13px] text-muted">g</span>
           </div>

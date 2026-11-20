@@ -52,21 +52,21 @@ function AddIcon({ name }: { name: string }) {
   );
 }
 
-function Ring({ eaten, target }: { eaten: number; target: number }) {
+function Ring({ eaten, target, size = 210, stroke = 5 }: { eaten: number; target: number; size?: number; stroke?: number }) {
   const r = 86;
   const c = 2 * Math.PI * r;
   const p = Math.min(1, eaten / Math.max(1, target));
   const over = eaten > target;
   return (
-    <svg viewBox="0 0 200 200" className="h-[210px] w-[210px]" aria-hidden>
-      <circle cx="100" cy="100" r={r} fill="none" stroke="rgba(43,39,36,0.08)" strokeWidth="5" />
+    <svg viewBox="0 0 200 200" width={size} height={size} aria-hidden>
+      <circle cx="100" cy="100" r={r} fill="none" stroke="rgba(43,39,36,0.08)" strokeWidth={stroke} />
       {p > 0 && <circle
         cx="100"
         cy="100"
         r={r}
         fill="none"
         stroke={over ? "var(--over)" : "var(--ink)"}
-        strokeWidth="5"
+        strokeWidth={stroke}
         strokeLinecap="round"
         strokeDasharray={`${c * p} ${c}`}
         transform="rotate(-90 100 100)"
@@ -247,7 +247,8 @@ function TodayInner() {
   }, [added]);
 
   return (
-    <main className="page space-y-5">
+    <main className="page space-y-4">
+      {/* space-y-4: the gap between sections equals the 16 px side margin (was 20), so Add food and the cards sit higher */}
       <header data-testid="home-header">
         <div className="flex items-center justify-between">
           <span className="text-[21px] font-light tracking-[0.14em]" data-testid="app-name">
@@ -292,35 +293,46 @@ function TodayInner() {
 
       {ready && date === today && <BackupReminder entries={entries} />}
 
-      <section className="card flex flex-col items-center px-5 pb-5 pt-6">
-        <div className="relative">
-          <Ring eaten={ready ? total.kcal : 0} target={target} />
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="num text-[58px] leading-none" data-testid="eaten-kcal">
-              {ready ? fmtKcal(total.kcal) : "–"}
-            </span>
-            <span className="mt-1 text-[15px] text-muted">
-              {tr("จาก", "of")} <span className="num text-ink" data-testid="target-kcal">{fmtKcal(target)}</span> kcal
-            </span>
+      {/* Phase 2B step 3: the same numbers, tighter. Ring (eaten) on the left; remaining + target beside it.
+          The "what can I eat" pill sits right under, the three macro tiles (value, target/range, share %) and the tip follow. */}
+      <section className="card px-4 pb-4 pt-4" data-testid="summary-card">
+        <div className="flex items-center gap-4">
+          <div className="relative shrink-0">
+            <Ring eaten={ready ? total.kcal : 0} target={target} size={128} stroke={7} />
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className="text-[12px] leading-none text-muted">{tr("กินแล้ว", "Eaten")}</span>
+              <span className="num mt-1 text-[32px] leading-none" data-testid="eaten-kcal">
+                {ready ? fmtKcal(total.kcal) : "–"}
+              </span>
+              <span className="mt-1 text-[12px] leading-none text-muted">kcal</span>
+            </div>
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className={`text-[14px] ${left < 0 ? "text-warn-ink" : "text-muted"}`}>
+              {left >= 0 ? tr("เหลืออีก", "Left") : tr("เกินเป้า", "Over target")}
+            </div>
+            <div className={`flex flex-wrap items-baseline gap-x-1.5 ${left < 0 ? "text-warn-ink" : ""}`} data-testid="left-kcal">
+              <span className="num text-[38px] leading-tight">{fmtKcal(Math.abs(left))}</span>
+              <span className="text-[14px] text-muted">kcal</span>
+            </div>
+            <div className="mt-0.5 text-[14px] text-muted">
+              {tr("เป้า", "Target")} <span className="num text-ink" data-testid="target-kcal">{fmtKcal(target)}</span> kcal
+            </div>
           </div>
         </div>
-        <p className={`mt-2 text-[16px] ${left < 0 ? "text-warn-ink" : "text-muted"}`}>
-          {left >= 0
-            ? tr(`เหลืออีก ${fmtKcal(left)} kcal`, `${fmtKcal(left)} kcal left`)
-            : tr(`เกินเป้า ${fmtKcal(-left)} kcal`, `${fmtKcal(-left)} kcal over target`)}
-        </p>
         {ready && date === today && (
           <Link
             href="/add/suggest"
-            className="mt-2 inline-flex min-h-[44px] items-center gap-1.5 rounded-full border border-white/90 bg-white/60 px-4 text-[15px] active:scale-[0.98]"
+            className="mt-3 flex min-h-[44px] w-full items-center justify-center gap-1.5 rounded-full border border-white/90 bg-white/60 px-4 text-[15px] active:scale-[0.98]"
             data-testid="suggest-button"
           >
             {tr("เหลือเท่านี้ กินอะไรดี", "What can I eat with what's left?")}
+            <Icon name="caret-right" className="h-4 w-4 text-muted" />
           </Link>
         )}
-        <div className="mt-4 w-full">
+        <div className="mt-3 w-full">
           {/* Round 75: back to the simple tiles (the jars felt cluttered); carbs/fat quietly show their good range. */}
-          <MacroCards m={total} targets={mTargets} showSplit ranges={{ carbs: dailyJarConfig(target, mTargets.protein).c.range!, fat: dailyJarConfig(target, mTargets.protein).f.range! }} />
+          <MacroCards compact m={total} targets={mTargets} showSplit ranges={{ carbs: dailyJarConfig(target, mTargets.protein).c.range!, fat: dailyJarConfig(target, mTargets.protein).f.range! }} />
         </div>
         {ready && (
           <div className="mt-2.5 w-full">
@@ -341,9 +353,9 @@ function TodayInner() {
           target={target}
           onPickDay={go}
           share={
-            dayEntries.length > 0 || weekHasMeals ? (
+            dayEntries.length > 0 || weekHasMeals ? (ctl) => (
               <ShareDayButton
-                tile
+                controlled={ctl}
                 dayHasMeals={dayEntries.length > 0}
                 entries={entries}
                 date={date}
@@ -358,30 +370,37 @@ function TodayInner() {
         />
       )}
 
-      {SLOTS.map((slot, i) => {
-        const list = dayEntries.filter((e) => e.slot === slot);
-        const kcal = sumMacros(list.flatMap((e) => e.items.map(pickMacros))).kcal;
-        return (
-          <section key={slot} className="card p-4" data-testid={`slot-${slot}`}>
-            <div className="mb-1 flex items-baseline justify-between px-1">
-              <h2 className="flex items-center gap-2 text-[18px] font-medium">
-                <span className="h-2.5 w-2.5 rounded-full" style={{ background: SLOT_COLORS[i % SLOT_COLORS.length] }} aria-hidden />
-                {SLOT_LABEL[slot][lang]}
-              </h2>
-              <span className="num text-[15px] text-muted">{fmtKcal(kcal)} kcal</span>
+      {/* Phase 2B step 2: the four meals sit in ONE glass card (same order, same names, same totals).
+          A meal with nothing in it is one slim, labelled row. Entries keep tap-to-open and swipe-to-delete. */}
+      {/* mb-24: room to scroll the last meal above the floating Ask-AI button, so it never covers a kcal number */}
+      <section className="card mb-24 overflow-hidden" data-testid="meals-card">
+        {SLOTS.map((slot, i) => {
+          const list = dayEntries.filter((e) => e.slot === slot);
+          const kcal = sumMacros(list.flatMap((e) => e.items.map(pickMacros))).kcal;
+          return (
+            <div key={slot} className={i > 0 ? "border-t border-line" : ""} data-testid={`slot-${slot}`}>
+              <div className={`flex items-center justify-between gap-3 px-4 ${list.length === 0 ? "min-h-[52px]" : "pb-0.5 pt-3.5"}`}>
+                <h2 className="flex items-center gap-2 text-[18px] font-medium">
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: SLOT_COLORS[i % SLOT_COLORS.length] }} aria-hidden />
+                  {SLOT_LABEL[slot][lang]}
+                </h2>
+                {list.length === 0 ? (
+                  <span className="text-[14px] text-muted">{tr("ยังไม่มีรายการ", "Nothing yet")}</span>
+                ) : (
+                  <span className="num text-[15px] text-muted">{fmtKcal(kcal)} kcal</span>
+                )}
+              </div>
+              {list.length > 0 && (
+                <ul className="divide-y divide-line px-3 pb-1">
+                  {list.map((e) => (
+                    <EntryRow key={e.id} e={e} onDelete={() => removeEntry(e)} />
+                  ))}
+                </ul>
+              )}
             </div>
-            {list.length === 0 ? (
-              <p className="px-1 py-2 text-[15px] text-muted">{tr("ยังไม่มีรายการ", "Nothing yet")}</p>
-            ) : (
-              <ul className="divide-y divide-line">
-                {list.map((e) => (
-                  <EntryRow key={e.id} e={e} onDelete={() => removeEntry(e)} />
-                ))}
-              </ul>
-            )}
-          </section>
-        );
-      })}
+          );
+        })}
+      </section>
 
       {removed && (
         <div
@@ -646,20 +665,21 @@ function EntryRow({ e, onDelete }: { e: Entry; onDelete: () => void }) {
   const q = (k: "protein" | "carbs" | "fat") => (gap.includes(k) ? "?" : "");
   return (
     <SwipeRow onDelete={onDelete} label={`${tr("ลบ", "Delete")} ${dn(e.title, e.alt)}`}>
-      <Link href={`/entry/${e.id}`} className="flex items-center gap-3 px-1 py-3" data-testid="entry-row">
+      <Link href={`/entry/${e.id}`} className="flex items-center gap-3 px-1 py-2.5" data-testid="entry-row">
         <MealThumb
           title={e.title}
-          className="h-14 w-14 shrink-0 rounded-2xl"
+          className="h-12 w-12 shrink-0 rounded-2xl"
           fallback={
-            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/70 text-muted" aria-hidden>
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/70 text-muted" aria-hidden>
               <SourceIcon e={e} />
             </span>
           }
         />
         <div className="min-w-0 flex-1">
-          <div className="truncate font-medium">{dn(e.title, e.alt)}</div>
-          <div className="truncate text-[14px] text-muted">
-            P {Math.round(m.protein)}{q("protein")} · C {Math.round(m.carbs)}{q("carbs")} · F {Math.round(m.fat)}{q("fat")} g
+          <div className="break-words font-medium leading-snug">{dn(e.title, e.alt)}</div>
+          <div className="text-[14px] leading-snug text-muted">
+            {/* each group stays whole when the line wraps on a narrow phone ("F 30 g" never splits) */}
+            <span className="whitespace-nowrap">P {Math.round(m.protein)}{q("protein")}</span> · <span className="whitespace-nowrap">C {Math.round(m.carbs)}{q("carbs")}</span> · <span className="whitespace-nowrap">F {Math.round(m.fat)}{q("fat")} g</span>
           </div>
         </div>
         <div className="num text-[20px]" data-approx={approx ? "yes" : "no"}>

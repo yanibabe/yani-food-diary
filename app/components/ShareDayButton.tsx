@@ -182,7 +182,10 @@ export function ShareDayButton({
   weightKg = null,
   tile = false,
   dayHasMeals = true,
+  controlled,
 }: {
+  /** Phase 2B step 4: opened from the weekly summary instead of its own button. range = which tab to start on; null = closed. */
+  controlled?: { range: "day" | "week" | null; onClose: () => void };
   /** Round 76: false = this day has no meals yet, so only the week card can be shared. */
   dayHasMeals?: boolean;
   /** Round 71: the weight she logged on this day, if any. */
@@ -197,13 +200,25 @@ export function ShareDayButton({
   water: { glasses: number; goal: number };
 }) {
   const { tr, lang, dn } = useLang();
-  const [open, setOpen] = useState(false);
+  const [openOwn, setOpen] = useState(false);
+  const open = controlled ? controlled.range !== null : openOwn;
   // Round 74: "day" (the picture of this day) or "week" (the weekly card for her trainer).
   const [range, setRange] = useState<"day" | "week">("day");
   const [pic, setPic] = useState<{ blob: Blob; url: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const mt = macroTargets;
   const wt = water;
+  // Opened from outside: start on the asked tab with a clean state (adjusted while rendering, like NumberField does).
+  const askedRange = controlled?.range ?? null;
+  const [seenAsk, setSeenAsk] = useState<"day" | "week" | null>(null);
+  if (askedRange !== seenAsk) {
+    setSeenAsk(askedRange);
+    if (askedRange) {
+      setPic(null);
+      setError(null);
+      setRange(askedRange === "day" && !dayHasMeals ? "week" : askedRange);
+    }
+  }
 
   useEffect(() => {
     if (!open) return;
@@ -254,7 +269,7 @@ export function ShareDayButton({
 
   return (
     <>
-      <button
+      {!controlled && <button
         className={
           tile
             ? "flex min-h-[84px] w-full flex-col items-center justify-center gap-1.5 rounded-[22px] border border-white/90 bg-white/60 px-2 text-[15px] active:scale-[0.98]"
@@ -274,8 +289,8 @@ export function ShareDayButton({
           : tile
             ? tr("แชร์วันนี้", "Share day")
             : tr("แชร์สรุปวันนี้", "Share this day")}
-      </button>
-      <Sheet open={open} onClose={() => setOpen(false)} title={range === "week" ? tr("สรุปสัปดาห์นี้", "This week") : tr("สรุปวันนี้", "This day")}>
+      </button>}
+      <Sheet open={open} onClose={() => (controlled ? controlled.onClose() : setOpen(false))} title={range === "week" ? tr("สรุปสัปดาห์นี้", "This week") : tr("สรุปวันนี้", "This day")}>
         <div className="space-y-3 pb-4" data-testid="share-day-sheet">
           <div className="flex gap-1 rounded-full bg-white/60 p-1" role="tablist" data-testid="share-range">
             {(["day", "week"] as const).map((r) => (

@@ -19,7 +19,7 @@ test("the big water card and the week chart are not on the page body any more", 
   assert.equal(src.includes("<WeekKcalChart"), false);
 });
 
-test("Share day is a tile in that row (one ShareDayButton, before the meals)", () => {
+test("the share dialog is drawn from the tile row (Phase 2B step 4: opened from the week sheet; still one ShareDayButton, before the meals)", () => {
   assert.equal(src.split("<ShareDayButton").length - 1, 1);
   assert.ok(at("<ShareDayButton") < at("{SLOTS.map("));
   assert.ok(at("<ShareDayButton") > at("<HomeTiles"));
