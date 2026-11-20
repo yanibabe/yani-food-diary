@@ -15,7 +15,7 @@ test("sheet shows at most 3 recent meals", () => {
   assert.equal(SHEET_RECENT_COUNT, 3);
   assert.match(page, /recent\.slice\(0, SHEET_RECENT_COUNT\)/);
   assert.match(page, /data-testid="recent-meals"/);
-  assert.match(page, /data-testid="recent-meal-item"/);
+  assert.match(page, /mealRow\(e, "recent-meal-item"\)/);
 });
 
 test("repeatSlot: today uses the meal slot at open, other days keep the original slot", () => {

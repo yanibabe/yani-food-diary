@@ -17,9 +17,11 @@ import { useReportOverlay } from "./lib/overlayFlag";
 import { beginNav, endNav, IDLE_NAV, isPending, NAV_GIVE_UP_MS, type NavState } from "./lib/navGuard";
 import { IngredientSearch } from "./components/AddIngredientSheet";
 import type { Ingredient } from "./lib/types";
+import { searchLoggedMeals, searchMyRecipes, visibleRows } from "./lib/unifiedSearch";
+import { totalsForRecipe } from "./lib/recipe";
 import { copyMeal, recentMeals, REPEAT_LOCK_MS, repeatSlot, searchMeals, SHEET_RECENT_COUNT } from "./lib/repeat";
 import { macroTargets, proteinTargetG } from "./lib/energy";
-import { fmtKcal, pickMacros, sumMacros } from "./lib/nutrition";
+import { fmtAmount, fmtKcal, pickMacros, sumMacros } from "./lib/nutrition";
 import { isEstimated, joinMissing } from "./lib/provenance";
 import { useLang } from "./lib/lang";
 import { useStore } from "./lib/store";
@@ -76,7 +78,7 @@ function Ring({ eaten, target, size = 210, stroke = 5 }: { eaten: number; target
 }
 
 function TodayInner() {
-  const { ready, entries, goals, saveError, upsertEntry, deleteEntry, waterLogs, bodyLogs } = useStore();
+  const { ready, entries, recipes, goals, saveError, upsertEntry, deleteEntry, waterLogs, bodyLogs } = useStore();
   const search = useSearchParams();
   const router = useRouter();
   const today = thaiDateKey();
@@ -107,6 +109,15 @@ function TodayInner() {
   const found = useMemo(() => searchMeals(recent, againQuery), [recent, againQuery]);
   const recentTop = useMemo(() => recent.slice(0, SHEET_RECENT_COUNT), [recent]);
   const typed = cleanPrefill(addText);
+  // Phase 2C-2: the typed words also search her earlier meals and her recipes (three groups, never merged).
+  const loggedHits = useMemo(() => (typed ? searchLoggedMeals(recent, typed) : []), [recent, typed]);
+  const recipeHits = useMemo(() => (typed ? searchMyRecipes(recipes, typed) : []), [recipes, typed]);
+  // "Show more" belongs to the words it was tapped for: new words fold it back.
+  const [moreFor, setMoreFor] = useState<{ words: string; logged: boolean; recipes: boolean }>({ words: "", logged: false, recipes: false });
+  const more = moreFor.words === typed ? moreFor : { words: typed, logged: false, recipes: false };
+  const loggedRows = visibleRows(loggedHits, more.logged);
+  const recipeRows = visibleRows(recipeHits, more.recipes);
+  const multiGroup = loggedHits.length > 0 || recipeHits.length > 0;
   const dateParam = date === today ? null : date;
   // Round 49: leaving the sheet never closes it first (that flashed Today). The sheet stays up with a small
   // "Opening…" until the next page replaces this one. One trip at a time.
@@ -217,6 +228,44 @@ function TodayInner() {
     upsertEntry(copy);
     setAdded(copy);
     setAddOpen(false);
+  };
+  // One "log it again" row (Phase 2C-1 recent list, and Phase 2C-2 search results): the same copy, the same label of where it saves.
+  const mealRow = (e: Entry, testId: string) => {
+    const slot = repeatSlot(e, date, today, slotAtOpen);
+    const where = date === today ? SLOT_LABEL[slot][lang] : `${shortDayLabel(date, today, lang)} · ${SLOT_LABEL[slot][lang]}`;
+    return (
+      <li key={e.id}>
+        <button
+          className="flex min-h-[64px] w-full items-center gap-3 py-2 text-left active:opacity-60"
+          onClick={() => eatAgain(e)}
+          aria-label={`${tr("เพิ่ม", "Add")} ${dn(e.title, e.alt)} ${tr("ใน", "to")} ${where}`}
+          data-testid={testId}
+        >
+          <MealThumb
+            title={e.title}
+            className="h-11 w-11 shrink-0 rounded-xl"
+            fallback={
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/80 text-muted" aria-hidden>
+                <SourceIcon e={e} small />
+              </span>
+            }
+          />
+          <span className="min-w-0 flex-1">
+            <span className="block break-words text-[16px] font-medium leading-snug">{dn(e.title, e.alt)}</span>
+            <span className="block text-[13px] text-muted">
+              {shortDayLabel(e.date, today, lang)} · <span className="num">{fmtKcal(sumMacros(e.items.map(pickMacros)).kcal)}</span> kcal
+            </span>
+            <span className="flex items-center gap-1.5 text-[13px] text-muted" data-testid="recent-meal-where">
+              <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: SLOT_COLORS[SLOTS.indexOf(slot) % SLOT_COLORS.length] }} aria-hidden />
+              {tr("บันทึกเป็น", "Saves to")} {where}
+            </span>
+          </span>
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ink text-[20px] font-light leading-none text-paper" aria-hidden>
+            +
+          </span>
+        </button>
+      </li>
+    );
   };
   // Swipe-to-delete with Undo: the photo is only deleted after the undo window closes.
   const [removed, setRemoved] = useState<Entry | null>(null);
@@ -558,13 +607,69 @@ function TodayInner() {
         ) : (
         <div className="pb-3" data-testid="add-sheet-search-first">
           {typed ? (
+            <div className="space-y-4" data-testid="unified-search">
+              {loggedHits.length > 0 && (
+                <section data-testid="group-logged" aria-label={tr("เคยบันทึกไว้", "Previously logged")}>
+                  <h3 className="mb-1 px-1 text-[14px] font-medium text-muted">{tr("เคยบันทึกไว้", "Previously logged")}</h3>
+                  <ul className="divide-y divide-line rounded-[22px] border border-white/90 bg-white/55 px-3">{loggedRows.shown.map((e) => mealRow(e, "logged-hit"))}</ul>
+                  {loggedRows.hidden > 0 && (
+                    <button className="min-h-[44px] px-1 text-[14px] text-muted underline decoration-ink/20 underline-offset-4" onClick={() => setMoreFor({ ...more, logged: true })} data-testid="group-logged-more">
+                      {tr(`ดูอีก ${loggedRows.hidden} รายการ`, `Show ${loggedRows.hidden} more`)}
+                    </button>
+                  )}
+                </section>
+              )}
+              {recipeHits.length > 0 && (
+                <section data-testid="group-recipes" aria-label={tr("สูตรของฉัน", "My recipes")}>
+                  <h3 className="mb-1 px-1 text-[14px] font-medium text-muted">{tr("สูตรของฉัน", "My recipes")}</h3>
+                  <ul className="divide-y divide-line rounded-[22px] border border-white/90 bg-white/55 px-3">
+                    {recipeRows.shown.map((r) => {
+                      const t = totalsForRecipe(r, lang);
+                      return (
+                        <li key={r.id}>
+                          <Link
+                            href={`/recipes/${r.id}${q}`}
+                            onClick={tap(`recipe-${r.id}`, `/recipes/${r.id}${q}`)}
+                            className="flex min-h-[64px] w-full items-center gap-3 py-2 text-left active:opacity-60"
+                            data-testid="recipe-hit"
+                          >
+                            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/80 text-muted" aria-hidden>
+                              <Icon name="book-open" className="h-5 w-5" />
+                            </span>
+                            <span className="min-w-0 flex-1">
+                              <span className="block break-words text-[16px] font-medium leading-snug">{dn(r.name, r.alt)}</span>
+                              <span className="block text-[13px] text-muted">
+                                {fmtAmount(r.servings)} {tr("เสิร์ฟ", "servings")}
+                                {t.complete && (
+                                  <>
+                                    {" · "}
+                                    <span className="num">{fmtKcal(t.perServing.kcal)}</span> kcal {tr("ต่อเสิร์ฟ", "per serving")}
+                                  </>
+                                )}
+                              </span>
+                              <span className="block text-[13px] text-muted">{tr("เลือกจำนวนเสิร์ฟในหน้าสูตร", "Pick servings on the recipe")}</span>
+                            </span>
+                            <Icon name="caret-right" className="h-5 w-5 shrink-0 text-muted" />
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  {recipeRows.hidden > 0 && (
+                    <button className="min-h-[44px] px-1 text-[14px] text-muted underline decoration-ink/20 underline-offset-4" onClick={() => setMoreFor({ ...more, recipes: true })} data-testid="group-recipes-more">
+                      {tr(`ดูอีก ${recipeRows.hidden} สูตร`, `Show ${recipeRows.hidden} more`)}
+                    </button>
+                  )}
+                </section>
+              )}
             <IngredientSearch
               food
               compact
               query={typed}
+              heading={multiGroup ? <h3 className="px-1 text-[14px] font-medium text-muted" data-testid="group-ingredients">{tr("วัตถุดิบและอาหารทั่วไป", "Ingredients & foods")}</h3> : undefined}
               onAdd={(ing: Ingredient) => openLayer({ kind: "review", ing })}
               onCreateCustom={(name) => leave("create", () => router.push(buildAddUrlWith("search", dateParam, name, { create: true })))}
-              topSlot={
+              belowSlot={
                 showWholeDishRow(typed) ? (
                   <Link
                     href={buildAddUrlWith("text", dateParam, typed, { auto: true })}
@@ -572,18 +677,19 @@ function TodayInner() {
                       ev.preventDefault();
                       openLayer({ kind: "ai", text: typed });
                     }}
-                    className="flex min-h-[52px] w-full items-center gap-2.5 rounded-2xl border border-ink/20 bg-white/80 px-4 py-2 text-left text-[15px] active:scale-[0.99]"
+                    className="flex min-h-[52px] w-full items-center gap-2.5 rounded-2xl border border-dashed border-ink/25 bg-white/50 px-4 py-2 text-left text-[15px] active:scale-[0.99]"
                     data-testid="ai-whole-dish-pinned"
                   >
                     <Icon name="sparkle" className="h-5 w-5 shrink-0" />
                     <span className="min-w-0 flex-1 break-words">
-                      {tr("ให้ AI ประมาณแคลอรี", "Let AI estimate")} “{typed}”
+                      {tr("ไม่เจอที่ตรง? ให้ AI ประมาณแคลอรี", "Not here? Let AI estimate")} “{typed}”
                     </span>
                     <Icon name="caret-right" className="h-4 w-4 shrink-0 text-muted" />
                   </Link>
                 ) : null
               }
             />
+            </div>
           ) : (
           <>
           <div className="grid grid-cols-2 gap-3">
@@ -620,43 +726,7 @@ function TodayInner() {
                 </button>
               </div>
               <ul className="divide-y divide-line rounded-[22px] border border-white/90 bg-white/55 px-3">
-                {recentTop.map((e) => {
-                  const slot = repeatSlot(e, date, today, slotAtOpen);
-                  const where = date === today ? SLOT_LABEL[slot][lang] : `${shortDayLabel(date, today, lang)} · ${SLOT_LABEL[slot][lang]}`;
-                  return (
-                    <li key={e.id}>
-                      <button
-                        className="flex min-h-[64px] w-full items-center gap-3 py-2 text-left active:opacity-60"
-                        onClick={() => eatAgain(e)}
-                        aria-label={`${tr("เพิ่ม", "Add")} ${dn(e.title, e.alt)} ${tr("ใน", "to")} ${where}`}
-                        data-testid="recent-meal-item"
-                      >
-                        <MealThumb
-                          title={e.title}
-                          className="h-11 w-11 shrink-0 rounded-xl"
-                          fallback={
-                            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/80 text-muted" aria-hidden>
-                              <SourceIcon e={e} small />
-                            </span>
-                          }
-                        />
-                        <span className="min-w-0 flex-1">
-                          <span className="block break-words text-[16px] font-medium leading-snug">{dn(e.title, e.alt)}</span>
-                          <span className="block text-[13px] text-muted">
-                            {shortDayLabel(e.date, today, lang)} · <span className="num">{fmtKcal(sumMacros(e.items.map(pickMacros)).kcal)}</span> kcal
-                          </span>
-                          <span className="flex items-center gap-1.5 text-[13px] text-muted" data-testid="recent-meal-where">
-                            <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: SLOT_COLORS[SLOTS.indexOf(slot) % SLOT_COLORS.length] }} aria-hidden />
-                            {tr("บันทึกเป็น", "Saves to")} {where}
-                          </span>
-                        </span>
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ink text-[20px] font-light leading-none text-paper" aria-hidden>
-                          +
-                        </span>
-                      </button>
-                    </li>
-                  );
-                })}
+                {recentTop.map((e) => mealRow(e, "recent-meal-item"))}
               </ul>
             </div>
           )}

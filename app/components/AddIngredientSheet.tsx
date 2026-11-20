@@ -149,6 +149,8 @@ export function IngredientSearch({
   footer,
   query: controlledQuery,
   topSlot,
+  belowSlot,
+  heading,
   compact = false,
 }: {
   onClose?: () => void;
@@ -163,6 +165,10 @@ export function IngredientSearch({
   query?: string;
   /** Round 47: one pinned row right under the box (the "let AI calculate" row). While it is there, the small "AI estimate" row stays hidden: one AI button at a time. */
   topSlot?: ReactNode;
+  /** Phase 2C-2: one row AFTER the matches (the "let AI estimate" row), so AI is never above food that already exists. Like topSlot, it replaces the small AI row. */
+  belowSlot?: ReactNode;
+  /** Phase 2C-2: a group heading above the ingredient results (shown when other groups are on screen too). */
+  heading?: ReactNode;
   /** Round 47: in the Add food sheet — no "Manage" fold (that lives on the recipes page). */
   compact?: boolean;
 }) {
@@ -239,7 +245,7 @@ export function IngredientSearch({
   const otherOpen = showOther === qKey;
   const shown = otherOpen ? rows : split.main;
   const hasUsdaRow = shown.some((r) => r.kind === "usda");
-  const offerAi = !topSlot && q.length >= 2 && !usdaLoading && !aiHere?.row && showAiRow(q, rows);
+  const offerAi = !topSlot && !belowSlot && q.length >= 2 && !usdaLoading && !aiHere?.row && showAiRow(q, rows);
 
   function pick(s: Suggestion) {
     if (sel?.id === s.id) return;
@@ -350,6 +356,8 @@ export function IngredientSearch({
         />
       </div>
       )}
+
+      {heading}
 
       {topSlot}
 
@@ -507,9 +515,15 @@ export function IngredientSearch({
           </p>
         )}
         {usdaHere && (usdaHere.status === "error" || usdaHere.status === "busy") && <p data-testid="ai-usda-down">{tr("ค้น USDA ไม่ได้ตอนนี้ — แสดงเฉพาะที่มีในเครื่อง", "USDA isn't answering right now — showing only what is on this phone")}</p>}
-        {noMatch && <p data-testid="ai-nomatch">{tr("ไม่พบ — ลองคำอื่น หรือสร้างวัตถุดิบเอง", "Nothing found — try other words, or add your own")}</p>}
+        {noMatch && (
+          <p data-testid="ai-nomatch">
+            {heading ? tr("ไม่พบวัตถุดิบที่ตรงกัน", "No matching ingredients") : tr("ไม่พบ — ลองคำอื่น หรือสร้างวัตถุดิบเอง", "Nothing found — try other words, or add your own")}
+          </p>
+        )}
         {aiHere?.msg && <p className="text-warn-ink" data-testid="ai-msg">{aiHere.msg}</p>}
       </div>
+
+      {belowSlot}
 
       {offerAi && (
         <button type="button" className="flex min-h-[44px] w-full items-center gap-2 rounded-2xl border border-dashed border-ink/25 px-3 text-left text-[14px] text-olive-dark" onClick={() => void estimate()} disabled={aiHere?.busy} data-testid="ai-ask">
