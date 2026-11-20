@@ -8,6 +8,7 @@ import { upsertLog, type BodyLog } from "./body.ts";
 import { setGlasses, type WaterLog } from "./water.ts";
 import { upgradeSlot } from "./date.ts";
 import { carryPic, drawInBackground, relinkLostPics } from "./mealPicClient.ts";
+import { requestPersistentStorage } from "./persistStorage.ts";
 import { recipePictureItems } from "./mealPics.ts";
 import { mapEntries, mapRecipes, resolveAlt, type Lookup } from "./names.ts";
 import { applyTitleFix, type TitleFix } from "./mealTitles.ts";
@@ -93,6 +94,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     setBodyLogs(read(KEY.body, []));
     setWaterLogs(read(KEY.water, []));
     relinkLostPics(upgraded); // Round 83: once, give renamed meals their AI pictures back
+    void requestPersistentStorage(); // Phase 1: a polite request that the browser keeps her data (may be refused)
     setReady(true);
   }, []);
 

@@ -19,7 +19,7 @@ export type IngredientResult =
     }
   | {
       ok: false;
-      reason: "need-weight-per-unit" | "need-density" | "ambiguous" | "no-data";
+      reason: "need-weight-per-unit" | "need-density" | "ambiguous" | "no-data" | "need-amount";
       message: string;
       /** For "ambiguous": the reference foods she can pick from. */
       options?: RefFood[];
@@ -54,6 +54,14 @@ export function ingredientMacros(ing: Ingredient, lang: Lang = "th"): Ingredient
   const gpu = ing.gramsPerUnit && ing.gramsPerUnit > 0 ? ing.gramsPerUnit : null;
   const unitWord = isCountUnit ? def[lang] : t("ชิ้น", "piece");
   const name = ing.name.trim();
+  // Phase 1: an ingredient with no amount is NOT "0 kcal, complete": it is unfinished, and the recipe says so.
+  // (A fully empty card, no name and no label, keeps its old behaviour.) Nothing is stored or changed.
+  if (!(ing.amount > 0) && (name || ing.label))
+    return {
+      ok: false,
+      reason: "need-amount",
+      message: t("ยังไม่ได้ใส่ปริมาณ — ใส่ปริมาณเพื่อให้รวมแคลอรีได้ถูกต้อง", "No amount yet — add the amount so the calories add up correctly"),
+    };
   const ai = ing.aiRef && ing.aiRef.name === name ? ing.aiRef : null;
   const picked = ing.refPick && ing.refPick.name === name ? refByKey(ing.refPick.key) : null;
   const match = picked || ai ? null : matchRef(name);

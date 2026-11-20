@@ -2,7 +2,7 @@
 // Form pieces shared by first-run setup (/welcome) and the Profile page.
 
 import { NumberField } from "./ui";
-import { BMI_LABEL, BMI_NOTE, bmiInfo, DAILY_LABEL, DURATION_UNIT, EXERCISE_LABEL, REASON_LABEL, usesWeightGoal, validateProfile, type BmiLevel, type WeightPlan } from "../lib/energy";
+import { BMI_LABEL, BMI_NOTE, bmiInfo, DAILY_LABEL, DURATION_UNIT, EXERCISE_LABEL, REASON_LABEL, estimateEnergy, paceAtTarget, safeFloor, usesWeightGoal, validateProfile, type BmiLevel, type EnergyResult, type WeightPlan } from "../lib/energy";
 import { shiftDateKey, thaiDateKey, thaiDateLabel } from "../lib/date";
 import { pickAll, trFor, type Lang } from "../lib/i18n";
 import { useLang } from "../lib/lang";
@@ -208,7 +208,39 @@ export function ReasonFields({ p, set, plan }: { p: Profile; set: SetP; plan: We
   );
 }
 
-export function PlanSummary({ p, plan, onUseSafe }: { p: Profile; plan: WeightPlan; onUseSafe: (months: number) => void }) {
+/**
+ * Phase 1: when the safe minimum raised the suggestion, say so plainly (what the plan needed, what is used,
+ * where the 1,200 / 1,500 comes from, and that it is general information, not medical advice).
+ */
+export function FloorNote({ result }: { result: EnergyResult | null }) {
+  const { tr } = useLang();
+  if (!result?.ok || !result.floorApplied) return null;
+  return (
+    <p className="rounded-2xl bg-warn px-4 py-3 text-[14px] text-warn-ink" role="note" data-testid="floor-note">
+      {tr(
+        `แผนที่ตั้งไว้ต้องกินประมาณ ${Math.round(result.rawTarget).toLocaleString("en-US")} kcal/วัน ซึ่งต่ำกว่าขั้นต่ำที่นิยมใช้ (${result.floor.toLocaleString("en-US")} kcal สำหรับผู้ใหญ่ที่ไม่มีแพทย์ดูแล) แอปจึงปรับเป็น ${result.suggested.toLocaleString("en-US")} kcal แทน น้ำหนักจะลดช้ากว่าที่ตั้งเวลาไว้ ค่านี้เป็นข้อมูลทั่วไป ไม่ใช่คำแนะนำทางการแพทย์ ถ้ามีโรคประจำตัวควรปรึกษาแพทย์`,
+        `Your plan would need about ${Math.round(result.rawTarget).toLocaleString("en-US")} kcal/day, which is below the usual minimum (${result.floor.toLocaleString("en-US")} kcal for adults without a doctor's supervision). So the app raised it to ${result.suggested.toLocaleString("en-US")} kcal. Your weight will change more slowly than the time you set. This is general information, not medical advice — if you have a health condition, please ask a doctor.`,
+      )}
+    </p>
+  );
+}
+
+/** Phase 1: a gentle warning (never a block) when a target typed by hand is below the usual minimum. */
+export function LowTargetNote({ value, sex }: { value: number | null; sex?: Sex }) {
+  const { tr } = useLang();
+  const floor = safeFloor(sex);
+  if (value == null || value < 500 || value >= floor) return null;
+  return (
+    <p className="mt-1 text-[13px] text-warn-ink" role="note" data-testid="low-target-note">
+      {tr(
+        `ต่ำกว่าขั้นต่ำที่นิยมใช้ (${floor.toLocaleString("en-US")} kcal/วัน สำหรับผู้ใหญ่ที่ไม่มีแพทย์ดูแล · NIH/NHLBI 1998) ใช้ได้ถ้าคุณตั้งใจ แต่ควรปรึกษาแพทย์หรือนักโภชนาการ ค่านี้เป็นข้อมูลทั่วไป ไม่ใช่คำแนะนำทางการแพทย์`,
+        `Below the usual minimum (${floor.toLocaleString("en-US")} kcal/day for adults without a doctor's supervision · NIH/NHLBI 1998). You can still use it if you mean to, but please talk to a doctor or dietitian. This is general information, not medical advice.`,
+      )}
+    </p>
+  );
+}
+
+export function PlanSummary({ p, plan, onUseSafe, targetKcal }: { p: Profile; plan: WeightPlan; onUseSafe: (months: number) => void; targetKcal?: number }) {
   const { tr, lang } = useLang();
   const today = thaiDateKey();
   if (plan.direction === "keep") {
@@ -221,7 +253,16 @@ export function PlanSummary({ p, plan, onUseSafe }: { p: Profile; plan: WeightPl
   const verb = plan.direction === "lose" ? tr("ลด", "Lose") : tr("เพิ่ม", "Gain");
   const kgU = tr("กก.", "kg");
   const kgWk = tr("กก./สัปดาห์", "kg/week");
-  const reachDays = plan.tooFast ? plan.safeWeeks * 7 : plan.days;
+  const plannedDays = plan.tooFast ? plan.safeWeeks * 7 : plan.days;
+  // Phase 1: the date must follow the calories she will really eat (after the safe minimum, or her own
+  // number), not only the planned pace. Small differences (rounding to 10 kcal) keep the planned date.
+  const est = estimateEnergy(p, lang);
+  const used = targetKcal ?? (est.ok ? est.suggested : null);
+  const pace = est.ok && used != null ? paceAtTarget(est.maintenance, used, plan) : null;
+  const differs = pace != null && plan.usedKgPerWeek > 0 && Math.abs(pace.kgPerWeek - plan.usedKgPerWeek) / plan.usedKgPerWeek > 0.05;
+  const shownKgWk = differs ? pace!.kgPerWeek : plan.usedKgPerWeek;
+  const noMove = differs && pace!.days == null;
+  const reachDays = differs && pace!.days != null ? pace!.days : plannedDays;
   return (
     <div className="space-y-2" data-testid="plan-summary">
       <div className="rounded-2xl bg-paper px-4 py-3 text-[15px]">
@@ -230,9 +271,21 @@ export function PlanSummary({ p, plan, onUseSafe }: { p: Profile; plan: WeightPl
           {DURATION_UNIT[p.durationUnit][lang]}
         </div>
         <div className="text-muted">
-          ≈ {kg(plan.usedKgPerWeek)} {kgWk} · {tr("ถึงเป้าประมาณ", "reach your goal around")} {thaiDateLabel(shiftDateKey(today, Math.round(reachDays)), lang)}
+          ≈ {kg(shownKgWk)} {kgWk} ·{" "}
+          {noMove
+            ? tr("ด้วยเป้านี้น้ำหนักไม่น่าจะเปลี่ยนไปทางเป้าหมาย", "with this target your weight is not expected to move toward the goal")
+            : <>{tr("ถึงเป้าประมาณ", "reach your goal around")} {thaiDateLabel(shiftDateKey(today, Math.round(reachDays)), lang)}</>}
         </div>
+        {differs && used != null && (
+          <div className="mt-1 text-[13px] text-muted" data-testid="plan-effective-note">
+            {tr(
+              `คิดจากเป้า ${Math.round(used).toLocaleString("en-US")} kcal/วัน ที่ใช้จริง (ไม่ใช่เวลาที่ตั้งไว้)`,
+              `Worked out from the ${Math.round(used).toLocaleString("en-US")} kcal/day target actually used (not the time you set)`,
+            )}
+          </div>
+        )}
       </div>
+      {est.ok && est.floorApplied && targetKcal == null && <FloorNote result={est} />}
       {plan.tooFast && (
         <div className="space-y-2 rounded-2xl bg-warn px-4 py-3 text-[15px] text-warn-ink" role="alert">
           <p>
@@ -271,10 +324,12 @@ export function BigTarget({
   value,
   onChange,
   caption,
+  sex,
 }: {
   value: number | null;
   onChange: (n: number | null) => void;
   caption: string;
+  sex?: Sex;
 }) {
   const { tr } = useLang();
   return (
@@ -293,6 +348,7 @@ export function BigTarget({
       {value != null && (value < 500 || value > 6000) && (
         <p className="mt-1 text-[13px] text-warn-ink">{tr("ใส่ค่าระหว่าง 500–6,000 kcal", "Enter a number from 500 to 6,000 kcal")}</p>
       )}
+      <LowTargetNote value={value} sex={sex} />
     </div>
   );
 }

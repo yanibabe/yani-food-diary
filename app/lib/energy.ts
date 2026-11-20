@@ -192,6 +192,24 @@ export function weightPlan(p: Profile): WeightPlan {
   return { direction, changeKg, days, wantedKgPerWeek, safeMaxKgPerWeek, usedKgPerWeek, tooFast, safeWeeks, safeMonths, dailyDelta, targetBmi };
 }
 
+/** The usual minimum for adults without a doctor: 1,200 kcal (female) / 1,500 kcal (male) — NIH/NHLBI 1998 (see top of file). */
+export function safeFloor(sex: "female" | "male" | undefined): number {
+  return sex === "male" ? 1500 : 1200;
+}
+
+/**
+ * Phase 1: the real pace of a weight plan when eating `targetKcal` a day (the target actually used: the
+ * suggestion after the safe minimum, or her own number). days = null when the target does not move her
+ * weight toward the goal at all. Returns null for "keep my weight".
+ */
+export function paceAtTarget(maintenance: number, targetKcal: number, plan: WeightPlan): { kgPerWeek: number; days: number | null } | null {
+  if (plan.direction === "keep") return null;
+  const perDay = plan.direction === "lose" ? maintenance - targetKcal : targetKcal - maintenance;
+  if (!(perDay > 0)) return { kgPerWeek: 0, days: null };
+  const kgPerDay = perDay / KCAL_PER_KG;
+  return { kgPerWeek: kgPerDay * 7, days: plan.changeKg / kgPerDay };
+}
+
 export type EnergyResult =
   | {
       ok: true;
@@ -201,6 +219,8 @@ export type EnergyResult =
       suggested: number;
       floor: number;
       floorApplied: boolean;
+      /** Phase 1: the target BEFORE the safe minimum was applied (what the plan alone would need). */
+      rawTarget: number;
       plan: WeightPlan;
       /** Protein target (g/day) for "build muscle", otherwise null. */
       proteinG: number | null;
@@ -263,7 +283,7 @@ export function estimateEnergy(p: Profile, lang: Lang = "th"): EnergyResult {
   const plan = weightPlan(usesWeightGoal(p.reason) ? p : { ...p, targetWeightKg: p.weightKg });
   const muscle = p.reason === "muscle";
   const surplus = muscle ? maintenance * MUSCLE_SURPLUS : 0;
-  const floor = p.sex === "male" ? 1500 : 1200;
+  const floor = safeFloor(p.sex);
   const raw = maintenance + plan.dailyDelta + surplus;
   const floorApplied = raw < floor;
   const suggested = Math.round(Math.max(raw, floor) / 10) * 10;
@@ -296,7 +316,7 @@ export function estimateEnergy(p: Profile, lang: Lang = "th"): EnergyResult {
   if (p.reason === "lose" && proteinTargetG(p, suggested) != null)
     steps.push(t(`โปรตีน ${LOSE_PROTEIN_G_PER_KG} g × ${p.weightKg} กก. ≈ ${proteinTargetG(p, suggested)} g/วัน`, `Protein ${LOSE_PROTEIN_G_PER_KG} g × ${p.weightKg} kg ≈ ${proteinTargetG(p, suggested)} g/day`));
   if (floorApplied) steps.push(t(`ปรับขึ้นเป็นขั้นต่ำ ${floor} kcal/วัน เพื่อความปลอดภัย`, `Raised to the safe minimum of ${floor} kcal/day`));
-  return { ok: true, bmr, level, maintenance: Math.round(maintenance), suggested, floor, floorApplied, plan, proteinG: proteinTargetG(p, suggested), steps };
+  return { ok: true, bmr, level, maintenance: Math.round(maintenance), suggested, floor, floorApplied, rawTarget: Math.round(raw), plan, proteinG: proteinTargetG(p, suggested), steps };
 }
 
 /**

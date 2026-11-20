@@ -13,6 +13,7 @@ import { WeightCard } from "../components/WeightCard";
 import {
   ActivityFields,
   BigTarget,
+  FloorNote,
   BodyFields,
   NameField,
   PlanSummary,
@@ -133,7 +134,7 @@ export default function ProfilePage() {
 
           <section className="glass px-5 py-1" data-testid="profile-list">
             <ListRow first label={tr("ข้อมูลร่างกาย", "About me")} on={open === "body"} onClick={() => toggle("body")} testId="row-body">
-              <InfoDetails p={p} onEdit={() => setEditing(true)} />
+              <InfoDetails p={p} targetKcal={goals.targetKcal} onEdit={() => setEditing(true)} />
             </ListRow>
             <ListRow label={tr("น้ำหนัก", "Weight")} on={open === "weight"} onClick={() => toggle("weight")} testId="row-weight">
               <WeightCard />
@@ -225,6 +226,7 @@ function TargetCard({ goals, onSaved }: { goals: Goals; onSaved: () => void }) {
   return (
     <section className="card space-y-3 p-5" data-testid="target-card">
       <BigTarget
+        sex={goals.profile?.sex}
         value={value}
         onChange={setValue}
         caption={goals.targetSource === "manual" ? tr("เป้าต่อวัน (ตั้งเอง)", "Daily target (set by me)") : tr("เป้าต่อวัน", "Daily target")}
@@ -324,7 +326,7 @@ function Row({ k, v }: { k: string; v: React.ReactNode }) {
   );
 }
 
-function InfoDetails({ p, onEdit }: { p: Profile; onEdit: () => void }) {
+function InfoDetails({ p, targetKcal, onEdit }: { p: Profile; targetKcal?: number; onEdit: () => void }) {
   const { tr, lang } = useLang();
   const level = activityLevel(p.daily, p.exercise);
   const plan = usesWeightGoal(p.reason) && !reasonProblem(p) ? weightPlan(p) : null;
@@ -347,7 +349,7 @@ function InfoDetails({ p, onEdit }: { p: Profile; onEdit: () => void }) {
       </div>
       {plan && plan.direction !== "keep" && (
         <div className="mt-3">
-          <PlanSummary p={p} plan={plan} onUseSafe={() => onEdit()} />
+          <PlanSummary p={p} plan={plan} targetKcal={targetKcal} onUseSafe={() => onEdit()} />
         </div>
       )}
       <button className="btn-soft mt-3 w-full" onClick={onEdit}>{tr("แก้ข้อมูล", "Edit")}</button>
@@ -413,6 +415,7 @@ function EditProfile({ goals, start, onDone }: { goals: Goals; start: Profile; o
               <br />
               <span className="text-[14px] text-muted">{tr("ตอนนี้ใช้", "Now using")} {fmtKcal(goals.targetKcal)} kcal</span>
             </p>
+            <FloorNote result={result} />
             <button className="btn-primary w-full" onClick={() => save(true)}>
               {tr(`บันทึก และใช้ ${fmtKcal(result.suggested)} kcal`, `Save and use ${fmtKcal(result.suggested)} kcal`)}
             </button>

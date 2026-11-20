@@ -8,7 +8,7 @@ import { addCustom, type CustomIngredient, type CustomInput } from "./customIngr
 import { buildIngredient, suggestedUnits, suggestionFromPick } from "./ingredientSearch.ts";
 import { ingredientMacros } from "./recipe.ts";
 import { ingredientToItem } from "./searchFood.ts";
-import { UNITS, type FoodItem, type MacroKey } from "./types.ts";
+import { UNITS, type FoodItem, type Ingredient, type MacroKey, type Macros } from "./types.ts";
 
 /** "g" / "ml" words she may type as the unit. */
 const GRAM_RE = /^(g|กรัม|ก\.|gram|grams)$/i;
@@ -24,22 +24,36 @@ export function itemBasis(item: Pick<FoodItem, "unit">): "g" | "ml" | "unit" {
  * The item's numbers are for "amount unit". Grams / ml → numbers per 100 g / 100 ml. Any other unit → numbers per ONE unit.
  * null = nothing to save yet (no amount). Numbers she left unknown stay null.
  */
-export function customInputFromItem(item: FoodItem): CustomInput | null {
+export function customInputFromItem(item: FoodItem, exact?: Macros): CustomInput | null {
   if (!(item.amount > 0)) return null;
   const basis = itemBasis(item);
   const k = basis === "unit" ? 1 / item.amount : 100 / item.amount;
   const missing = new Set<MacroKey>(item.missing ?? []);
-  const scale = (key: MacroKey) => (missing.has(key) ? null : item[key] * k);
+  // Phase 1: `exact` = the unrounded numbers for this amount. An item's own numbers are rounded (whole kcal,
+  // 0.1 g) for display, and dividing a rounded number by a small amount magnifies the rounding.
+  const val = (key: "kcal" | MacroKey) => exact?.[key] ?? item[key];
+  const scale = (key: MacroKey) => (missing.has(key) ? null : val(key) * k);
   return {
     name: item.name,
     ...(item.alt ? { alt: item.alt } : {}),
     basis: basis === "unit" ? "perUnit" : "per100",
     per: basis === "ml" ? "ml" : "g",
-    kcal: item.kcal * k,
+    kcal: val("kcal") * k,
     protein: scale("protein"),
     carbs: scale("carbs"),
     fat: scale("fat"),
   };
+}
+
+/**
+ * A food picked in the search sheet → what to save as "my ingredient". Same as customInputFromItem, but the
+ * per-100 g numbers come from the unrounded math, not from the rounded meal item. null = numbers not known yet.
+ */
+export function customInputFromIngredient(ing: Ingredient, lang: Lang = "th"): CustomInput | null {
+  const res = ingredientMacros(ing, lang);
+  if (!res.ok) return null;
+  const item = ingredientToItem(ing, "save", lang, 0);
+  return item ? customInputFromItem(item, res.macros) : null;
 }
 
 const keyOf = (name: string) => name.replace(/\s+/g, " ").trim().toLowerCase();

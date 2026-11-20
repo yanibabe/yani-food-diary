@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import {
   ActivityFields,
   BigTarget,
+  FloorNote,
   BodyFields,
   NameField,
   ReasonFields,
@@ -120,7 +121,9 @@ export default function WelcomePage() {
             {result && !result.ok && (
               <p className="rounded-2xl bg-warn px-4 py-3 text-[15px] text-warn-ink" role="alert">{result.message}</p>
             )}
+            <FloorNote result={own == null ? result : null} />
             <BigTarget
+              sex={p.sex}
               value={target}
               onChange={setOwn}
               caption={result?.ok && own == null ? tr("เป้าที่แนะนำ", "Suggested target") : tr("เป้าของฉัน", "My target")}

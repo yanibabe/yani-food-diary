@@ -1,8 +1,8 @@
 "use client";
 import { OffAttribution } from "./OffAttribution";
 import { aiFetch } from "../lib/aiFetch";
-import { useMemo, useRef, useState } from "react";
-import { blankItem, changeAmount, cleanBox, cleanNumber, energyCheck, fmtAmount, fmtKcal, newId, pickMacros, sumMacros } from "../lib/nutrition";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { blankItem, editAmount, cleanBox, cleanNumber, energyCheck, fmtAmount, fmtKcal, newId, pickMacros, sumMacros } from "../lib/nutrition";
 import { BUFFER_TEXT, LEGACY_MARGIN_PCT, bufferSummary, cleanBufferPct, dropBuffer, forEnergyCheck, hasLegacyMargin, isBuffered, originalKcal, pctLabel, startBuffer } from "../lib/calorieBuffer";
 import { aiDairy, dairyItems, isDairy, warnDairy } from "../lib/dairy";
 import { useLang } from "../lib/lang";
@@ -79,6 +79,11 @@ export function ItemEditor({
   onDone: () => void;
 }) {
   const set = (patch: Partial<FoodItem>) => onChange({ ...item, ...patch });
+  // Phase 1: the last version of this item with a real amount, so typing "0.5" (via "0") keeps its calories.
+  const baseRef = useRef<FoodItem | null>(null);
+  useEffect(() => {
+    if (item.amount > 0) baseRef.current = item;
+  }, [item]);
   // Round 39: typing a number = her own number now. A nutrient she types is no longer unknown.
   const setNumber = (k: "kcal" | MacroKey, n: number | null) => {
     const missing = (item.missing ?? []).filter((x) => x !== k);
@@ -141,7 +146,7 @@ export function ItemEditor({
           <NumberField
             id="it-amount"
             value={item.amount}
-            onChange={(n) => n != null && onChange(changeAmount(item, n))}
+            onChange={(n) => n != null && onChange(editAmount(item, baseRef.current, n))}
           />
         </div>
         <div>

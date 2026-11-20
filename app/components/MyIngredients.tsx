@@ -8,7 +8,7 @@ import { basisLabel, filterMine, sortMine } from "../lib/myIngredients";
 import { IngredientEditForm } from "./IngredientEditForm";
 import { CreateIngredientForm } from "./CreateIngredientForm";
 import { AddIngredientSheet } from "./AddIngredientSheet";
-import { customInputFromItem, findSameName } from "../lib/saveCustomFromItem";
+import { customInputFromIngredient, findSameName } from "../lib/saveCustomFromItem";
 import { ingredientToItem } from "../lib/searchFood";
 import { newId } from "../lib/nutrition";
 import type { Ingredient } from "../lib/types";
@@ -59,7 +59,7 @@ export function MyIngredients({ query, searching, onSearching, onQueryClear }: {
       setNote(tr("ยังไม่มีตัวเลขของวัตถุดิบนี้ ลองเลือกตัวอื่น หรือสร้างเอง", "No numbers for this one yet. Try another, or create your own."));
       return;
     }
-    const base = customInputFromItem(item);
+    const base = customInputFromIngredient(ing, lang);
     if (!base) {
       setNote(tr("ยังไม่มีตัวเลขของวัตถุดิบนี้ ลองเลือกตัวอื่น หรือสร้างเอง", "No numbers for this one yet. Try another, or create your own."));
       return;

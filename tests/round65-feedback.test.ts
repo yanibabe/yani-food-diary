@@ -27,7 +27,7 @@ test("the camera is torn down completely when the scanner closes", () => {
 
 test("My ingredients opens the same ingredient search as the recipes and saves the pick", () => {
   const src = read("../app/components/MyIngredients.tsx");
-  assert.ok(src.includes("<AddIngredientSheet") && src.includes("customInputFromItem") && src.includes("ingredientToItem") && src.includes("gramsPerUnit: ing.gramsPerUnit"));
+  assert.ok(src.includes("<AddIngredientSheet") && src.includes("customInputFromIngredient") && src.includes("ingredientToItem") && src.includes("gramsPerUnit: ing.gramsPerUnit"));
   assert.ok(src.includes("initialName={creating"), "the typed words carry over to the create-my-own form");
 });
 

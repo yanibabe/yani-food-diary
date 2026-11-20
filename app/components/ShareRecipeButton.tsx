@@ -10,6 +10,7 @@ import { MAX_COVER_BYTES, shareText, toSharePayload } from "../lib/shareRecipe";
 import { useStore } from "../lib/store";
 import type { Recipe } from "../lib/types";
 import { Icon } from "./Icon";
+import { Sheet } from "./ui";
 
 /** Size in bytes of the picture inside a "data:…;base64," text. */
 function dataUrlBytes(d: string): number {
@@ -35,6 +36,10 @@ export function ShareRecipeButton({ recipe }: { recipe: Recipe }) {
   const [toast, setToast] = useState<string | null>(null);
   // The phone only allows the share sheet right after a tap. If the upload took too long, the link waits here for one more tap.
   const [pending, setPending] = useState<string | null>(null);
+  // Phase 1: nothing is uploaded until she has seen what becomes viewable and said yes.
+  const [confirming, setConfirming] = useState(false);
+  const [withCover, setWithCover] = useState(true);
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
   const uploaded = useRef<{ key: number; url: string } | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const name = recipe.name;
@@ -42,6 +47,19 @@ export function ShareRecipeButton({ recipe }: { recipe: Recipe }) {
   useEffect(() => () => {
     if (timer.current) clearTimeout(timer.current);
   }, []);
+
+  // The cover that WOULD be uploaded, shown in the confirmation (same choice as onShare makes).
+  useEffect(() => {
+    if (!confirming) return;
+    let live = true;
+    (async () => {
+      const src = picSrc ?? (recipe.coverPhotoId ? await getPhoto(recipe.coverPhotoId).catch(() => null) : null);
+      if (live) setCoverPreview(src ?? null);
+    })();
+    return () => {
+      live = false;
+    };
+  }, [confirming, picSrc, recipe.coverPhotoId]);
 
   function say(msg: string) {
     setToast(msg);
@@ -69,7 +87,18 @@ export function ShareRecipeButton({ recipe }: { recipe: Recipe }) {
     }
   }
 
-  async function onShare() {
+  /** Tap on the share button: ask first, unless this exact version is already online (then nothing new is uploaded). */
+  function onTap() {
+    if (busy) return;
+    const already = uploaded.current?.key === recipe.updatedAt;
+    if (already) void onShare(true);
+    else {
+      setWithCover(true);
+      setConfirming(true);
+    }
+  }
+
+  async function onShare(includeCover: boolean) {
     if (busy) return;
     setError(null);
     setBusy(true);
@@ -77,8 +106,11 @@ export function ShareRecipeButton({ recipe }: { recipe: Recipe }) {
       let url = uploaded.current?.key === recipe.updatedAt ? uploaded.current.url : null;
       if (!url) {
         // The cover: the picture shown at the top (AI picture or her own photo), else her cover photo.
-        let src: string | null = picSrc ?? null;
-        if (!src && recipe.coverPhotoId) src = await getPhoto(recipe.coverPhotoId);
+        let src: string | null = null;
+        if (includeCover) {
+          src = picSrc ?? null;
+          if (!src && recipe.coverPhotoId) src = await getPhoto(recipe.coverPhotoId);
+        }
         const cover = src ? await coverForShare(src).catch(() => null) : null;
         const from = goals.profile?.name?.trim() || "เพื่อน";
         const res = await fetch("/api/share/recipe", {
@@ -115,7 +147,7 @@ export function ShareRecipeButton({ recipe }: { recipe: Recipe }) {
       <button
         type="button"
         className="grid h-11 w-11 place-items-center rounded-full bg-paper/95 shadow disabled:opacity-60"
-        onClick={onShare}
+        onClick={onTap}
         disabled={busy}
         aria-label={tr("ส่งสูตรให้เพื่อน", "Send this recipe")}
         aria-busy={busy}
@@ -123,6 +155,51 @@ export function ShareRecipeButton({ recipe }: { recipe: Recipe }) {
       >
         {busy ? <span className="h-5 w-5 animate-spin rounded-full border-2 border-olive-soft border-t-ink" aria-hidden /> : <Icon name="export" className="h-5 w-5" />}
       </button>
+
+      <Sheet open={confirming} onClose={() => setConfirming(false)} title={tr("ส่งสูตรนี้ให้เพื่อน?", "Send this recipe?")}>
+        <div className="space-y-4 text-[15px]" lang={lang} data-testid="share-confirm">
+          <div>
+            <p className="font-semibold">{tr("สิ่งที่จะอัปโหลดและเปิดดูได้", "What will be uploaded and viewable")}</p>
+            <ul className="mt-1 list-disc space-y-1 pl-5 text-ink/90">
+              <li>{tr(`ชื่อสูตร “${name}”`, `The recipe name “${name}”`)}</li>
+              <li>{tr("วัตถุดิบ ปริมาณ และค่าสารอาหาร", "Ingredients, amounts and nutrition numbers")}</li>
+              <li>{tr("ขั้นตอน จำนวนเสิร์ฟ หมวด และน้ำหนักหลังปรุง (ถ้ามี)", "Steps, servings, category and cooked weight (if any)")}</li>
+              <li>{tr(`ชื่อของคุณ “${goals.profile?.name?.trim() || "เพื่อน"}” ว่าใครส่งมา`, `Your name “${goals.profile?.name?.trim() || "เพื่อน"}” as the sender`)}</li>
+            </ul>
+          </div>
+          {(coverPreview || recipe.coverPhotoId || picSrc) && (
+            <label className="flex min-h-[56px] items-center gap-3 rounded-2xl bg-cream px-4 py-2">
+              <input type="checkbox" className="h-5 w-5 accent-[var(--olive)]" checked={withCover} onChange={(e) => setWithCover(e.target.checked)} data-testid="share-with-cover" />
+              <span className="flex-1">{tr("ส่งรูปปกไปด้วย", "Include the cover picture")}</span>
+              {coverPreview && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={coverPreview} alt="" className="h-14 w-14 rounded-xl object-cover" />
+              )}
+            </label>
+          )}
+          <p>
+            <span className="font-semibold">{tr("ไม่ได้ส่ง: ", "Not sent: ")}</span>
+            {tr("มื้ออาหาร เป้าหมาย น้ำหนัก และรูปอื่นๆ ของคุณ", "your meals, goals, weight and other photos")}
+          </p>
+          <p className="rounded-2xl bg-warn px-4 py-3 text-warn-ink" role="note">
+            {tr(
+              "ใครมีลิงก์ก็เปิดดูได้ ลิงก์ไม่หมดอายุ และตอนนี้ในแอปยังลบลิงก์ที่ส่งไปแล้วไม่ได้ ส่งต่อเฉพาะคนที่ไว้ใจ",
+              "Anyone who has the link can open it. The link does not expire, and the app cannot delete a link once it is sent. Only share it with people you trust.",
+            )}
+          </p>
+          <button
+            className="btn-primary w-full"
+            data-testid="share-confirm-send"
+            onClick={() => {
+              setConfirming(false);
+              void onShare(withCover);
+            }}
+          >
+            {tr("อัปโหลดและส่งลิงก์", "Upload and send the link")}
+          </button>
+          <button className="btn-soft w-full" onClick={() => setConfirming(false)}>{tr("ยกเลิก (ยังไม่อัปโหลดอะไร)", "Cancel (nothing is uploaded)")}</button>
+        </div>
+      </Sheet>
 
       {(error || pending || toast) && (
         <div className="fixed inset-x-4 bottom-[calc(24px+env(safe-area-inset-bottom))] z-40 mx-auto flex max-w-[440px] flex-col gap-2" lang={lang}>

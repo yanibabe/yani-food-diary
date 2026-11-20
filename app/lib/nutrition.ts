@@ -44,6 +44,20 @@ export function changeAmount(item: FoodItem, newAmount: number): FoodItem {
   return { ...item, amount: newAmount };
 }
 
+/**
+ * Phase 1: typing an amount like "0.5" passes through "0" first. Scaling by 0 wipes the numbers, and from
+ * amount 0 there is nothing left to scale back from. `base` is the last version of the item that had a
+ * real amount (the editor remembers it). When the item sits at amount 0 with its numbers still all 0
+ * (nothing typed by her), the new amount scales from `base`, so "0" → "0." → "0.5" ends with the right
+ * calories. If she typed her own numbers meanwhile, those are kept (no scaling from base).
+ */
+export function editAmount(item: FoodItem, base: FoodItem | null | undefined, newAmount: number): FoodItem {
+  if (!(newAmount >= 0)) return item;
+  const wiped = item.amount === 0 && item.kcal === 0 && item.protein === 0 && item.carbs === 0 && item.fat === 0;
+  if (wiped && newAmount > 0 && base && base.id === item.id && base.amount > 0) return changeAmount(base, newAmount);
+  return changeAmount(item, newAmount);
+}
+
 export function round(n: number, digits = 0): number {
   const p = 10 ** digits;
   return Math.round(n * p) / p;

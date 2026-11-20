@@ -56,6 +56,55 @@ export function restoreAction(part: BackupPart, value: string | null): "set" | "
   return KEEP_IF_ABSENT.includes(part) ? "keep" : "remove";
 }
 
+export type RestoreStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;
+
+/**
+ * Phase 1: write a backup's saved parts into the phone's storage ALL-OR-NOTHING. Before, the keys were written
+ * one by one; if the phone ran out of room half-way, she was left with a mix of old and restored data.
+ * Now the old text of every key is remembered first, and if any write fails every key is put back as it was.
+ * (Photos are added separately before this and are never deleted, so a failed restore loses nothing.)
+ */
+export function applyBackupData(
+  storage: RestoreStorage,
+  data: Record<BackupPart, string | null>,
+): { ok: true; written: number } | { ok: false; error: string; rolledBack: boolean } {
+  const plan: { key: string; value: string | null }[] = [];
+  for (const [part, key] of Object.entries(BACKUP_KEYS) as [BackupPart, string][]) {
+    const v = data[part];
+    const what = restoreAction(part, v);
+    if (what === "keep") continue;
+    plan.push({ key, value: what === "remove" || v == null ? null : v });
+  }
+  const before = new Map<string, string | null>();
+  try {
+    for (const { key } of plan) before.set(key, storage.getItem(key));
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e), rolledBack: true }; // nothing written yet
+  }
+  const done: string[] = [];
+  try {
+    for (const { key, value } of plan) {
+      if (value == null) storage.removeItem(key);
+      else storage.setItem(key, value);
+      done.push(key);
+    }
+    return { ok: true, written: done.length };
+  } catch (e) {
+    let rolledBack = true;
+    // The key that failed may be half-written too, so it is restored as well.
+    for (const { key } of plan.slice(0, done.length + 1).reverse()) {
+      try {
+        const old = before.get(key) ?? null;
+        if (old == null) storage.removeItem(key);
+        else storage.setItem(key, old);
+      } catch {
+        rolledBack = false;
+      }
+    }
+    return { ok: false, error: e instanceof Error ? e.message : String(e), rolledBack };
+  }
+}
+
 /** File name like "snapcal-backup-2026-11-13.json". */
 export function backupFileName(dateKey: string): string {
   return `snapcal-backup-${dateKey}.json`;

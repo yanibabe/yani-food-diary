@@ -7,11 +7,11 @@ import { useEffect, useRef, useState } from "react";
 import {
   BACKUP_KEYS,
   LAST_BACKUP_KEY,
+  applyBackupData,
   backupCounts,
   backupFileName,
   makeBackup,
   parseBackup,
-  restoreAction,
   type Backup,
   type BackupPart,
 } from "../lib/backup";
@@ -127,16 +127,16 @@ export function BackupCard({ restoreOnly = false }: { restoreOnly?: boolean }) {
   async function restore(b: Backup) {
     setBusy("restore");
     try {
+      // Photos are only ADDED (never deleted), so doing them first can not lose anything.
       await putPhotos(b.photos);
-      for (const [k, key] of Object.entries(BACKUP_KEYS) as [
-        BackupPart,
-        string,
-      ][]) {
-        const v = b.data[k];
-        const what = restoreAction(k, v);
-        if (what === "keep") continue; // old backup: keep her saved custom ingredients / usual picks
-        if (what === "remove" || v == null) localStorage.removeItem(key);
-        else localStorage.setItem(key, v);
+      // Phase 1: all-or-nothing. If the phone can not hold everything, her current data is put back untouched.
+      const r = applyBackupData(localStorage, b.data);
+      if (!r.ok) {
+        throw new Error(
+          r.rolledBack
+            ? tr(`${r.error} — ข้อมูลเดิมในเครื่องยังอยู่ครบ ไม่มีอะไรถูกเปลี่ยน`, `${r.error} — your current data is untouched, nothing was changed`)
+            : tr(`${r.error} — ย้อนข้อมูลเดิมไม่สำเร็จทั้งหมด อย่าปิดแอป และบันทึกไฟล์สำรองทันที`, `${r.error} — could not put everything back. Do not close the app, and save a backup now`),
+        );
       }
       // Start the app again so every screen reads the restored data.
       window.location.replace(new URL("/", window.location.href));
@@ -213,7 +213,13 @@ export function BackupCard({ restoreOnly = false }: { restoreOnly?: boolean }) {
             {tr(
               "ข้อมูลที่อยู่ในเครื่องตอนนี้จะถูกแทนที่ด้วยไฟล์นี้ทั้งหมด",
               "Everything on this phone now will be replaced by this backup.",
-            )}
+            )}{" "}
+            <span className="font-normal">
+              {tr(
+                "ถ้ายังไม่ได้สำรองข้อมูลตอนนี้ ให้กดยกเลิก แล้วบันทึกไฟล์สำรองก่อน",
+                "If you have not saved a backup of what is on this phone now, cancel and save one first.",
+              )}
+            </span>
           </p>
           <button
             className="btn-primary w-full"
