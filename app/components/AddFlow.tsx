@@ -447,8 +447,8 @@ export function AddFlow({ mode, date, dateParam, prefill, auto = false, fromShee
           {ai && !aiReady && (
             <div className="rounded-2xl bg-warn px-4 py-3 text-[15px] text-warn-ink">
               {tr(
-                "ยังไม่ได้ตั้งค่า AI (OpenRouter) บนเซิร์ฟเวอร์ จึงวิเคราะห์ด้วย AI ไม่ได้ตอนนี้ — กรอกเองได้เลย",
-                "The AI (OpenRouter) is not set up on the server, so it can't check food right now — you can enter it yourself",
+                "ยังไม่ได้ตั้งค่า AI (OpenRouter) บนเซิร์ฟเวอร์ จึงให้ AI ประมาณแคลอรีไม่ได้ตอนนี้ — กรอกเองได้เลย",
+                "The AI (OpenRouter) is not set up on the server, so it can't estimate calories right now — you can enter it yourself",
               )}
             </div>
           )}

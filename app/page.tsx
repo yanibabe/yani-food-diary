@@ -17,7 +17,7 @@ import { useReportOverlay } from "./lib/overlayFlag";
 import { beginNav, endNav, IDLE_NAV, isPending, NAV_GIVE_UP_MS, type NavState } from "./lib/navGuard";
 import { IngredientSearch } from "./components/AddIngredientSheet";
 import type { Ingredient } from "./lib/types";
-import { searchLoggedMeals, searchMyRecipes, visibleRows } from "./lib/unifiedSearch";
+import { mealRank, recipeRank, searchLoggedMeals, searchMyRecipes, topGroupFirst, visibleRows } from "./lib/unifiedSearch";
 import { totalsForRecipe } from "./lib/recipe";
 import { copyMeal, recentMeals, REPEAT_LOCK_MS, repeatSlot, searchMeals, SHEET_RECENT_COUNT } from "./lib/repeat";
 import { macroTargets, proteinTargetG } from "./lib/energy";
@@ -118,6 +118,7 @@ function TodayInner() {
   const loggedRows = visibleRows(loggedHits, more.logged);
   const recipeRows = visibleRows(recipeHits, more.recipes);
   const multiGroup = loggedHits.length > 0 || recipeHits.length > 0;
+  const firstGroup = topGroupFirst(loggedHits[0] ? mealRank(loggedHits[0], typed) : null, recipeHits[0] ? recipeRank(recipeHits[0], typed) : null);
   const dateParam = date === today ? null : date;
   // Round 49: leaving the sheet never closes it first (that flashed Today). The sheet stays up with a small
   // "Opening…" until the next page replaces this one. One trip at a time.
@@ -607,9 +608,9 @@ function TodayInner() {
         ) : (
         <div className="pb-3" data-testid="add-sheet-search-first">
           {typed ? (
-            <div className="space-y-4" data-testid="unified-search">
+            <div className="flex flex-col gap-4" data-testid="unified-search" data-first={firstGroup}>
               {loggedHits.length > 0 && (
-                <section data-testid="group-logged" aria-label={tr("เคยบันทึกไว้", "Previously logged")}>
+                <section className={firstGroup === "logged" ? "order-1" : "order-2"} data-testid="group-logged" aria-label={tr("เคยบันทึกไว้", "Previously logged")}>
                   <h3 className="mb-1 px-1 text-[14px] font-medium text-muted">{tr("เคยบันทึกไว้", "Previously logged")}</h3>
                   <ul className="divide-y divide-line rounded-[22px] border border-white/90 bg-white/55 px-3">{loggedRows.shown.map((e) => mealRow(e, "logged-hit"))}</ul>
                   {loggedRows.hidden > 0 && (
@@ -620,7 +621,7 @@ function TodayInner() {
                 </section>
               )}
               {recipeHits.length > 0 && (
-                <section data-testid="group-recipes" aria-label={tr("สูตรของฉัน", "My recipes")}>
+                <section className={firstGroup === "recipes" ? "order-1" : "order-2"} data-testid="group-recipes" aria-label={tr("สูตรของฉัน", "My recipes")}>
                   <h3 className="mb-1 px-1 text-[14px] font-medium text-muted">{tr("สูตรของฉัน", "My recipes")}</h3>
                   <ul className="divide-y divide-line rounded-[22px] border border-white/90 bg-white/55 px-3">
                     {recipeRows.shown.map((r) => {
@@ -662,6 +663,7 @@ function TodayInner() {
                   )}
                 </section>
               )}
+            <div className="order-3">
             <IngredientSearch
               food
               compact
@@ -689,6 +691,7 @@ function TodayInner() {
                 ) : null
               }
             />
+            </div>
             </div>
           ) : (
           <>

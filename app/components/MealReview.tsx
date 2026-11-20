@@ -1,4 +1,5 @@
 "use client";
+import { Icon } from "./Icon";
 import { OffAttribution } from "./OffAttribution";
 import { aiFetch } from "../lib/aiFetch";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -98,6 +99,7 @@ export function ItemEditor({
   const usdaReady = useUsdaReady();
   const [showUsda, setShowUsda] = useState(false);
   const [beforeUsda, setBeforeUsda] = useState<FoodItem | null>(null);
+  const [nutOpen, setNutOpen] = useState(() => !!item.missing?.length);
   const unitIsGrams = /^(g|กรัม|ก\.|gram|grams|ml|มล\.?|มิลลิลิตร)$/i.test(item.unit.trim());
   return (
     <div className="space-y-4 pb-2">
@@ -157,23 +159,41 @@ export function ItemEditor({
       <p className="-mt-2 text-[13px] text-muted">
         {tr("เปลี่ยนปริมาณแล้วแคลอรีและสารอาหารจะปรับตามสัดส่วนให้เอง", "Change the amount and the calories and nutrients change to match")}
       </p>
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="label" htmlFor="it-kcal">{tr("แคลอรี (kcal)", "Calories (kcal)")}</label>
-          <NumberField id="it-kcal" value={item.kcal} onChange={(n) => setNumber("kcal", n)} />
-        </div>
-        <div>
-          <label className="label" htmlFor="it-p">{tr("โปรตีน (g)", "Protein (g)")}</label>
-          <NumberField id="it-p" value={shown("protein")} onChange={(n) => setNumber("protein", n)} placeholder={tr("ไม่ทราบ", "Unknown")} />
-        </div>
-        <div>
-          <label className="label" htmlFor="it-c">{tr("คาร์บ (g)", "Carbs (g)")}</label>
-          <NumberField id="it-c" value={shown("carbs")} onChange={(n) => setNumber("carbs", n)} placeholder={tr("ไม่ทราบ", "Unknown")} />
-        </div>
-        <div>
-          <label className="label" htmlFor="it-f">{tr("ไขมัน (g)", "Fat (g)")}</label>
-          <NumberField id="it-f" value={shown("fat")} onChange={(n) => setNumber("fat", n)} placeholder={tr("ไม่ทราบ", "Unknown")} />
-        </div>
+      <div>
+        <label className="label" htmlFor="it-kcal">{tr("แคลอรี (kcal)", "Calories (kcal)")}</label>
+        <NumberField id="it-kcal" value={item.kcal} onChange={(n) => setNumber("kcal", n)} />
+      </div>
+      {/* Batch 1: protein / carbs / fat fold away. They open by themselves when a value is unknown, so incomplete data is never hidden. */}
+      <div>
+        <button
+          type="button"
+          className="flex min-h-[44px] w-full items-center justify-between gap-2 rounded-2xl bg-cream px-4 text-left text-[14px]"
+          onClick={() => setNutOpen((o) => !o)}
+          aria-expanded={nutOpen}
+          data-testid="item-nutrients-toggle"
+        >
+          <span className="font-medium">{tr("โปรตีน คาร์บ ไขมัน", "Protein, carbs, fat")}</span>
+          <span className="flex items-center gap-1.5 text-muted">
+            <span className="num">{(["protein", "carbs", "fat"] as const).map((k) => (shown(k) == null ? "?" : fmtAmount(shown(k) as number))).join(" · ")} g</span>
+            <Icon name="caret-down" className={`h-4 w-4 transition-transform ${nutOpen ? "rotate-180" : ""}`} />
+          </span>
+        </button>
+        {nutOpen && (
+          <div className="mt-3 grid grid-cols-2 gap-3" data-testid="item-nutrients">
+            <div>
+              <label className="label" htmlFor="it-p">{tr("โปรตีน (g)", "Protein (g)")}</label>
+              <NumberField id="it-p" value={shown("protein")} onChange={(n) => setNumber("protein", n)} placeholder={tr("ไม่ทราบ", "Unknown")} />
+            </div>
+            <div>
+              <label className="label" htmlFor="it-c">{tr("คาร์บ (g)", "Carbs (g)")}</label>
+              <NumberField id="it-c" value={shown("carbs")} onChange={(n) => setNumber("carbs", n)} placeholder={tr("ไม่ทราบ", "Unknown")} />
+            </div>
+            <div>
+              <label className="label" htmlFor="it-f">{tr("ไขมัน (g)", "Fat (g)")}</label>
+              <NumberField id="it-f" value={shown("fat")} onChange={(n) => setNumber("fat", n)} placeholder={tr("ไม่ทราบ", "Unknown")} />
+            </div>
+          </div>
+        )}
       </div>
       {isBuffered(item) && (
         <p className="-mt-2 text-[13px] text-muted" data-testid="item-buffer-note">
@@ -199,9 +219,9 @@ export function ItemEditor({
       )}
       {item.note && <p className="rounded-2xl bg-warn px-4 py-3 text-[14px] text-warn-ink">{item.note}</p>}
       {extra}
-      <div className="flex gap-3 pt-1">
-        <button className="btn-soft flex-1 !border-danger !text-danger" onClick={onDelete}>{tr("ลบรายการนี้", "Delete this item")}</button>
-        <button className="btn-primary flex-1" onClick={onDone}>{tr("เสร็จ", "Done")}</button>
+      <div className="space-y-1 pt-1">
+        <button className="btn-primary w-full" onClick={onDone} data-testid="item-done">{tr("เสร็จ", "Done")}</button>
+        <button className="min-h-[44px] w-full text-[15px] font-medium text-danger" onClick={onDelete} data-testid="item-delete">{tr("ลบรายการนี้", "Delete this item")}</button>
       </div>
     </div>
   );
@@ -256,6 +276,10 @@ export function MealReview({
   const [chat, setChat] = useState<ChatMsg[]>(firstQuestion ? [{ role: "assistant", text: firstQuestion }] : []);
   const [msg, setMsg] = useState("");
   const [sending, setSending] = useState(false);
+  // Batch 1: "Tell the AI more" and "Save as" start folded. The AI box is open from the start when the AI asked a question.
+  const [aiOpen, setAiOpen] = useState(!!firstQuestion);
+  const aiMoreOpen = aiOpen || sending;
+  const [slotOpen, setSlotOpen] = useState(false);
   const [flash, setFlash] = useState<string[]>([]);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const chatEnd = useRef<HTMLDivElement>(null);
@@ -535,8 +559,21 @@ export function MealReview({
         <button className="btn-soft mt-2 w-full" onClick={addManual}>+ {tr("เพิ่มรายการเอง", "Add an item myself")}</button>
       </section>
 
-      <section className="card p-4">
-        <h3 className="mb-1 px-1 text-[18px] font-semibold">{tr("อธิบายเพิ่ม", "Tell the AI more")}</h3>
+      <section className="card p-4" data-testid="ai-more-section">
+        {/* Batch 1: folded until she wants it (or until a chat is going), so the plate and the Save button come first. */}
+        <button
+          type="button"
+          className="flex min-h-[44px] w-full items-center gap-2 px-1 text-left"
+          onClick={() => setAiOpen((o) => !o)}
+          aria-expanded={aiMoreOpen}
+          data-testid="ai-more-toggle"
+        >
+          <Icon name="sparkle" className="h-5 w-5 shrink-0" />
+          <span className="flex-1 text-[18px] font-semibold">{tr("อธิบายเพิ่ม", "Tell the AI more")}</span>
+          <Icon name="caret-down" className={`h-4 w-4 shrink-0 text-muted transition-transform ${aiMoreOpen ? "rotate-180" : ""}`} />
+        </button>
+        {aiMoreOpen && (
+        <div className="mt-1">
         <p className="mb-3 px-1 text-[14px] text-muted">
           {tr("เช่น “ไก่กินครึ่งชิ้น แต่ผักกินหมด” หรือ “ผัดน้ำมัน 1 ช้อนโต๊ะ”", "e.g. “I ate half the chicken but all the vegetables” or “fried with 1 tbsp oil”")}
         </p>
@@ -578,15 +615,26 @@ export function MealReview({
         ) : (
           <p className="rounded-2xl bg-cream px-4 py-3 text-[14px] text-muted">{chatDisabledReason ?? tr("AI ยังไม่พร้อม — แตะรายการเพื่อแก้เองได้", "The AI isn't ready — tap an item to edit it yourself")}</p>
         )}
+        </div>
+        )}
       </section>
 
-      <section className="card space-y-2 p-4">
-        <span className="label px-1">{tr("บันทึกเป็นมื้อ", "Save as")}</span>
+      <section className="card space-y-2 p-4" data-testid="slot-section">
+        <div className="flex min-h-[44px] items-center justify-between gap-2 px-1">
+          <span className="min-w-0">
+            <span className="label !mb-0">{tr("บันทึกเป็นมื้อ", "Save as")}</span>{" "}
+            <span className="font-semibold" data-testid="slot-current">{SLOT_LABEL[slot][lang]}</span>
+          </span>
+          <button type="button" className="min-h-[44px] shrink-0 rounded-full px-3 text-[14px] font-medium text-olive-dark" onClick={() => setSlotOpen((o) => !o)} aria-expanded={slotOpen} data-testid="slot-toggle">
+            {slotOpen ? tr("เสร็จ", "Done") : tr("เปลี่ยน", "Change")}
+          </button>
+        </div>
+        {slotOpen && (
         <div className="grid grid-cols-2 gap-2">
           {SLOTS.map((s) => (
             <button
               key={s}
-              onClick={() => setSlot(s)}
+              onClick={() => { setSlot(s); setSlotOpen(false); }}
               className={`min-h-[48px] rounded-2xl font-medium ${slot === s ? "bg-olive text-white" : "bg-cream text-ink"}`}
               aria-pressed={slot === s}
             >
@@ -594,9 +642,11 @@ export function MealReview({
             </button>
           ))}
         </div>
+        )}
       </section>
 
-      <div className="flex gap-3">
+      {/* Batch 1: Save stays on screen (sticky) so the main action is always one tap away, however long the review is. */}
+      <div className="sticky bottom-0 z-10 -mx-2 flex gap-3 rounded-t-[22px] bg-paper/80 px-2 pb-[max(12px,env(safe-area-inset-bottom))] pt-3 backdrop-blur-md" data-testid="review-actions">
         <button className="btn-soft flex-1" onClick={onCancel}>{tr("ยกเลิก", "Cancel")}</button>
         <button
           className="btn-primary flex-[2]"

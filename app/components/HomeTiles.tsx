@@ -6,6 +6,7 @@
 
 import { useState, type ReactNode } from "react";
 import { useLang } from "../lib/lang";
+import { useBackClose } from "../lib/useBackClose";
 import { useStore } from "../lib/store";
 import { fmtKcal } from "../lib/nutrition";
 import { calorieWeek } from "../lib/week";
@@ -41,6 +42,12 @@ export function HomeTiles({
   const { waterLogs, setWater, goals } = useStore();
   const [panel, setPanel] = useState<"water" | "week" | null>(null);
   const [shareRange, setShareRange] = useState<"day" | "week" | null>(null);
+  // One history step covers all three sheets (water, week, share), so Back closes whichever is open.
+  // Week -> share swaps sheets without the combined "open" flag ever going false, so no extra step is added.
+  useBackClose(panel !== null || shareRange !== null, () => {
+    setPanel(null);
+    setShareRange(null);
+  });
   const glasses = glassesOn(waterLogs, date);
   const goal = waterGoal(goals.waterGoal);
   const week = calorieWeek(entries, date, today, target);

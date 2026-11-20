@@ -3,11 +3,12 @@
 // Every source (her own foods, usual picks, reference foods, USDA, AI) sits behind the one box.
 // Nothing is picked for her. Missing numbers are shown as "?", never 0. Her own numbers are never "verified".
 
+import { quickAmounts } from "../lib/quantityHints";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { aiFetch } from "../lib/aiFetch";
 import { useLang } from "../lib/lang";
-import { fmtG, fmtKcal } from "../lib/nutrition";
+import { fmtAmount, fmtG, fmtKcal } from "../lib/nutrition";
 import { normalizeName, STATE_LABEL, stateInName } from "../lib/foodRef";
 import { ingredientMacros } from "../lib/recipe";
 import { PASSCODE_HEADER, PASSCODE_KEY, passcodeHeaderValue } from "../lib/passcode";
@@ -385,6 +386,16 @@ export function IngredientSearch({
                         {tr("ประมาณโดย AI — ไม่ใช่ค่าที่ตรวจสอบแล้ว แก้ได้ในการ์ดวัตถุดิบ", "Estimated by the AI — not verified. You can fix it on the ingredient card.")}
                       </p>
                     )}
+                    {/* Batch 1: the usual units as pills, the usual amounts as one tap. The dropdown below still has every unit. */}
+                    {units.length > 1 && (
+                      <div className="flex flex-wrap gap-2" role="group" aria-label={tr("หน่วยที่แนะนำ", "Suggested units")} data-testid="ai-unit-pills">
+                        {units.slice(0, 4).map((u) => (
+                          <button key={u} type="button" className={`min-h-[44px] rounded-full px-4 text-[14px] ${unit === u ? "bg-olive text-white" : "border border-ink/20 bg-white/80"}`} aria-pressed={unit === u} onClick={() => setUnit(u)}>
+                            {UNITS[u][lang]}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                     <div className="grid grid-cols-[1fr_auto] gap-2">
                       <NumberField value={amount} onChange={setAmount} placeholder={tr("ปริมาณ", "Amount")} aria-label={tr("ปริมาณ", "Amount")} data-testid="ai-amount" autoFocus />
                       <select className="field !w-auto max-w-[150px]" value={unit} onChange={(e) => setUnit(e.target.value as IngredientUnit)} aria-label={tr("หน่วย", "Unit")} data-testid="ai-unit">
@@ -404,6 +415,14 @@ export function IngredientSearch({
                           ) : null;
                         })}
                       </select>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2" role="group" aria-label={tr("ปริมาณที่ใช้บ่อย", "Usual amounts")} data-testid="ai-amount-chips">
+                      {quickAmounts(unit).map((n) => (
+                        <button key={n} type="button" className={`num min-h-[44px] min-w-[52px] rounded-full px-3 text-[14px] ${amount === n ? "bg-olive text-white" : "border border-ink/20 bg-white/80"}`} aria-pressed={amount === n} onClick={() => setAmount(n)}>
+                          {fmtAmount(n)}
+                        </button>
+                      ))}
                     </div>
 
                     {askGpu && (

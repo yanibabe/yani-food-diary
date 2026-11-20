@@ -77,3 +77,11 @@ export function visibleRows<T>(rows: T[], expanded: boolean, preview = GROUP_PRE
   if (expanded || rows.length <= preview) return { shown: rows, hidden: 0 };
   return { shown: rows.slice(0, preview), hidden: rows.length - preview };
 }
+
+/** Which of the two "yours" groups comes first. Her recipes go first only when their best match is clearly better
+ *  (e.g. an exact recipe name while the meals only contain the words). Otherwise meals first. Ingredients always come last. */
+export function topGroupFirst(loggedBest: MatchRank | null, recipeBest: MatchRank | null): "logged" | "recipes" {
+  if (loggedBest === null) return "recipes";
+  if (recipeBest === null) return "logged";
+  return recipeBest < loggedBest ? "recipes" : "logged";
+}

@@ -309,3 +309,10 @@ select {
 @media (prefers-reduced-motion: reduce) {
   .pic-shimmer { animation: none; }
 }
+
+/* Batch 1: the review screen has a sticky Save bar at the bottom. When a field is scrolled into view (keyboard open),
+   leave room for the bar so the field is never hidden under it. */
+.add-layer,
+html {
+  scroll-padding-bottom: 104px;
+}
