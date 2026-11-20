@@ -8,6 +8,7 @@ import { HomeTiles } from "./components/HomeTiles";
 import { ShareDayButton } from "./components/ShareDayButton";
 import { guessSlot, shiftDateKey, shortDayLabel, thaiDateKey, thaiDateLabel } from "./lib/date";
 import { buildAddUrlWith, cleanPrefill, showWholeDishRow } from "./lib/addSheet";
+import { useAddSheetHistory } from "./lib/useAddSheetHistory";
 import { closeAddLayerAction, layerAfterPop, layerHistoryState, layerMode, openAddLayer, type AddLayer } from "./lib/addLayer";
 import { AddFlow } from "./components/AddFlow";
 import { dailyJarConfig } from "./lib/dailyJars";
@@ -143,11 +144,14 @@ function TodayInner() {
     const r = beginNav(nav, key);
     if (!r.go) return;
     setNav(r.state);
-    try {
-      go();
-    } catch {
-      setNav(endNav());
-    }
+    const run = () => {
+      try {
+        go();
+      } catch {
+        setNav(endNav());
+      }
+    };
+    sheetHistory.runAfterStep(run); // removes the sheet's history step first, then navigates
   };
   const tap = (key: string, href: string) => (ev: React.MouseEvent) => {
     ev.preventDefault();
@@ -171,10 +175,20 @@ function TodayInner() {
   const [layer, setLayer] = useState<AddLayer>(null);
   const layerRef = useRef<AddLayer>(null);
   const scrollYRef = useRef(0);
+  // Batch 3: the Add food sheet owns one history step so Back closes it (rules: lib/addSheetHistory.ts).
+  const sheetHistory = useAddSheetHistory({
+    layerOpen: () => layerRef.current !== null,
+    closeLayerState: () => {
+      layerRef.current = layerAfterPop();
+      setLayer(layerRef.current);
+    },
+    setSheetOpen: setAddOpen,
+  });
   const openLayer = (next: NonNullable<AddLayer>) => {
     const r = openAddLayer(layerRef.current, next);
     if (!r.layer || layerRef.current !== null) return; // blank text, or a layer is already up (double tap)
     layerRef.current = r.layer; // closes the door on a second tap in the same frame
+    sheetHistory.layerOpening(); // Back / Cancel returns to the sheet; Save (below) clears this
     scrollYRef.current = window.scrollY;
     (document.activeElement as HTMLElement | null)?.blur?.();
     if (r.push) {
@@ -193,16 +207,10 @@ function TodayInner() {
   };
   useEffect(() => {
     if (layer === null) return;
-    const onPop = () => {
-      layerRef.current = layerAfterPop();
-      setLayer(layerRef.current);
-    };
-    window.addEventListener("popstate", onPop);
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden"; // Today stays still under the layer
     const y = scrollYRef.current;
     return () => {
-      window.removeEventListener("popstate", onPop);
       document.body.style.overflow = prevOverflow;
       if (window.scrollY !== y) window.scrollTo(0, y); // Today is where she left it
     };
@@ -215,6 +223,7 @@ function TodayInner() {
     setSlotAtOpen(guessSlot());
     setNav(endNav());
     setAddOpen(true);
+    sheetHistory.pushStep();
   };
 
   // "Eat again": copy the meal to the day on screen. Today → the meal slot for when the sheet was opened; past day → its old slot.
@@ -228,7 +237,7 @@ function TodayInner() {
     const copy = copyMeal(e, date, repeatSlot(e, date, today, slotAtOpen));
     upsertEntry(copy);
     setAdded(copy);
-    setAddOpen(false);
+    sheetHistory.closeSheet();
   };
   // One "log it again" row (Phase 2C-1 recent list, and Phase 2C-2 search results): the same copy, the same label of where it saves.
   const mealRow = (e: Entry, testId: string) => {
@@ -504,7 +513,7 @@ function TodayInner() {
       <Sheet
         open={addOpen}
         keyboardSafe
-        onClose={() => setAddOpen(false)}
+        onClose={sheetHistory.closeSheet}
         title={tr("เพิ่มอาหาร", "Add food")}
         header={
           againView ? undefined : (
@@ -778,7 +787,10 @@ function TodayInner() {
             handoff={layer.kind === "review" ? layer.ing : null}
             onBack={closeLayer}
             onCancel={closeLayer}
-            onSaved={closeLayer}
+            onSaved={() => {
+              sheetHistory.layerSaved(); // saved: back to Today, not to the sheet
+              closeLayer();
+            }}
           />
         </div>
       )}
