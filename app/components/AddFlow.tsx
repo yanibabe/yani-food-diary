@@ -334,7 +334,7 @@ export function AddFlow({ mode, date, dateParam, prefill, auto = false, fromShee
     mode === "photo"
       ? tr("ถ่ายรูปอาหาร", "Food photo")
       : mode === "text"
-        ? tr("พิมพ์ให้ AI ช่วย", "Type it, AI helps")
+        ? tr("พิมพ์แล้วให้ AI ประมาณแคลอรี", "Type it, let AI estimate")
         : mode === "barcode"
           ? tr("บาร์โค้ด", "Barcode")
           : mode === "search"
@@ -367,7 +367,7 @@ export function AddFlow({ mode, date, dateParam, prefill, auto = false, fromShee
             typed.length >= 2 ? (
               <p className="px-1 text-[13px]">
                 <Link href={buildAddUrl("text", dateParam, typed)} className="inline-flex min-h-[44px] items-center text-olive-dark underline-offset-2" data-testid="ai-whole-dish">
-                  {tr("ให้ AI ดูทั้งจาน", "Let AI look at the whole dish")}
+                  {tr("ให้ AI ประมาณแคลอรีทั้งจาน", "Let AI estimate the whole dish")}
                 </Link>
               </p>
             ) : null
@@ -429,7 +429,7 @@ export function AddFlow({ mode, date, dateParam, prefill, auto = false, fromShee
 
           <div className="card p-4">
             <label className="label" htmlFor="note">
-              {mode === "photo" ? tr("อธิบายเพิ่มก่อนวิเคราะห์ (ไม่บังคับ)", "Add a note before checking (optional)") : tr("กินอะไรไปบ้าง", "What did you eat?")}
+              {mode === "photo" ? tr("อธิบายเพิ่มก่อนให้ AI ประมาณ (ไม่บังคับ)", "Add a note before AI estimates (optional)") : tr("กินอะไรไปบ้าง", "What did you eat?")}
             </label>
             <textarea
               id="note"
@@ -454,7 +454,7 @@ export function AddFlow({ mode, date, dateParam, prefill, auto = false, fromShee
           )}
           {error && (
             <div className="rounded-2xl bg-[#f6e1dc] px-4 py-3 text-[15px] text-danger" role="alert" data-testid="ai-error">
-              {tr("วิเคราะห์ไม่สำเร็จ", "Couldn't check it")}: {error}
+              {tr("AI ประมาณไม่สำเร็จ", "Couldn't estimate it")}: {error}
             </div>
           )}
 
@@ -463,15 +463,15 @@ export function AddFlow({ mode, date, dateParam, prefill, auto = false, fromShee
             onClick={analyze}
             disabled={mode === "photo" ? photos.length === 0 : !note.trim()}
           >
-            {tr("วิเคราะห์", "Check with AI")}
+            {tr("ให้ AI ประมาณแคลอรี", "Let AI estimate")}
           </button>
           <button className="btn-soft w-full" onClick={goManual}>
             {tr("กรอกเองแทน", "Enter it myself instead")}
           </button>
           <p className="text-center text-[13px] text-muted">
             {mode === "photo"
-              ? tr("รูปจะถูกส่งไปวิเคราะห์เมื่อกด “วิเคราะห์” เท่านั้น", "The photo is only sent when you tap “Check with AI”")
-              : tr("ข้อความจะถูกส่งไปวิเคราะห์เมื่อกด “วิเคราะห์” เท่านั้น", "Your text is only sent when you tap “Check with AI”")}
+              ? tr("รูปจะถูกส่งไปให้ AI เมื่อกด “ให้ AI ประมาณแคลอรี” เท่านั้น", "The photo is only sent when you tap “Let AI estimate”")
+              : tr("ข้อความจะถูกส่งไปให้ AI เมื่อกด “ให้ AI ประมาณแคลอรี” เท่านั้น", "Your text is only sent when you tap “Let AI estimate”")}
           </p>
         </div>
       )}
@@ -481,7 +481,7 @@ export function AddFlow({ mode, date, dateParam, prefill, auto = false, fromShee
           step === "loading"
             ? mode === "photo"
               ? tr("กำลังอ่านรูปอาหาร…", "Reading your food photo…")
-              : tr("กำลังวิเคราะห์อาหาร…", "Checking your food…")
+              : tr("AI กำลังประมาณแคลอรี…", "AI is estimating…")
             : null
         }
         note={tr("อย่าปิดหน้านี้หรือสลับไปแอปอื่นนะ", "Please keep this page open and don't switch apps.")}

@@ -514,7 +514,7 @@ export function IngredientSearch({
       {offerAi && (
         <button type="button" className="flex min-h-[44px] w-full items-center gap-2 rounded-2xl border border-dashed border-ink/25 px-3 text-left text-[14px] text-olive-dark" onClick={() => void estimate()} disabled={aiHere?.busy} data-testid="ai-ask">
           <Icon name="sparkle" className="h-4 w-4 shrink-0" />
-          <span>{aiHere?.busy ? tr("AI กำลังประมาณค่า…", "The AI is estimating…") : tr("ไม่เจอ? ให้ AI ประมาณค่า (เป็นค่าประมาณ)", "Not found? Let the AI estimate (an estimate)")}</span>
+          <span>{aiHere?.busy ? tr("AI กำลังประมาณค่า…", "The AI is estimating…") : tr("ไม่เจอ? ให้ AI ประมาณแคลอรี (เป็นค่าประมาณ)", "Not found? Let AI estimate (it is an estimate)")}</span>
         </button>
       )}
 

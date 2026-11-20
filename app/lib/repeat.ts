@@ -53,6 +53,20 @@ export function copyMeal(e: Entry, date: string, slot: MealSlot, now = Date.now(
   };
 }
 
+/** How many recent meals the Add food sheet shows directly (Phase 2C-1). */
+export const SHEET_RECENT_COUNT = 3;
+
+/**
+ * Which meal a repeated food is saved under. Viewing today: the meal slot for the moment the sheet was opened
+ * (so what the row says is what gets saved). Viewing another day: the slot the food had before.
+ */
+export function repeatSlot(e: Pick<Entry, "slot">, viewedDate: string, today: string, slotAtOpen: MealSlot): MealSlot {
+  return viewedDate === today ? slotAtOpen : e.slot;
+}
+
+/** Accidental double taps: after one repeat, further taps are ignored for this long (ms). */
+export const REPEAT_LOCK_MS = 900;
+
 /** A photo may be shared by copies: only delete it when no other meal uses it. */
 export function photoStillUsed(entries: Entry[], photoId: string, exceptId: string): boolean {
   return entries.some((e) => e.id !== exceptId && entryPhotoIds(e).includes(photoId));

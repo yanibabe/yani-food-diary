@@ -17,14 +17,14 @@ import { useReportOverlay } from "./lib/overlayFlag";
 import { beginNav, endNav, IDLE_NAV, isPending, NAV_GIVE_UP_MS, type NavState } from "./lib/navGuard";
 import { IngredientSearch } from "./components/AddIngredientSheet";
 import type { Ingredient } from "./lib/types";
-import { copyMeal, recentMeals, searchMeals } from "./lib/repeat";
+import { copyMeal, recentMeals, REPEAT_LOCK_MS, repeatSlot, searchMeals, SHEET_RECENT_COUNT } from "./lib/repeat";
 import { macroTargets, proteinTargetG } from "./lib/energy";
 import { fmtKcal, pickMacros, sumMacros } from "./lib/nutrition";
 import { isEstimated, joinMissing } from "./lib/provenance";
 import { useLang } from "./lib/lang";
 import { useStore } from "./lib/store";
 import { glassesOn, waterGoal } from "./lib/water";
-import { SLOT_LABEL, SLOTS, type Entry } from "./lib/types";
+import { SLOT_LABEL, SLOTS, type Entry, type MealSlot } from "./lib/types";
 import { Icon, type IconName } from "./components/Icon";
 import { MealThumb } from "./components/MealPicture";
 import { SwipeRow } from "./components/SwipeRow";
@@ -86,6 +86,9 @@ function TodayInner() {
   const [againView, setAgainView] = useState(false);
   const [againQuery, setAgainQuery] = useState("");
   const [addText, setAddText] = useState("");
+  // Phase 2C-1: the meal slot a repeated food goes to is fixed when the sheet opens, so the row's label = what is saved.
+  const [slotAtOpen, setSlotAtOpen] = useState<MealSlot>("lunch");
+  const repeatLocked = useRef(false);
   const { tr, lang, dn } = useLang();
 
   const dayEntries = useMemo(() => entries.filter((e) => e.date === date).sort((a, b) => a.createdAt - b.createdAt), [entries, date]);
@@ -102,6 +105,7 @@ function TodayInner() {
   const q = date === today ? "" : `?date=${date}`;
   const recent = useMemo(() => recentMeals(entries), [entries]);
   const found = useMemo(() => searchMeals(recent, againQuery), [recent, againQuery]);
+  const recentTop = useMemo(() => recent.slice(0, SHEET_RECENT_COUNT), [recent]);
   const typed = cleanPrefill(addText);
   const dateParam = date === today ? null : date;
   // Round 49: leaving the sheet never closes it first (that flashed Today). The sheet stays up with a small
@@ -196,13 +200,20 @@ function TodayInner() {
     setAgainView(false);
     setAgainQuery("");
     setAddText("");
+    setSlotAtOpen(guessSlot());
     setNav(endNav());
     setAddOpen(true);
   };
 
-  // "Eat again": copy the meal to the day on screen. Today → meal slot from the time now; past day → its old slot.
+  // "Eat again": copy the meal to the day on screen. Today → the meal slot for when the sheet was opened; past day → its old slot.
+  // A second tap within a moment (a double tap) is ignored, so one meal is never saved twice by accident.
   const eatAgain = (e: Entry) => {
-    const copy = copyMeal(e, date, date === today ? guessSlot() : e.slot);
+    if (repeatLocked.current) return;
+    repeatLocked.current = true;
+    setTimeout(() => {
+      repeatLocked.current = false;
+    }, REPEAT_LOCK_MS);
+    const copy = copyMeal(e, date, repeatSlot(e, date, today, slotAtOpen));
     upsertEntry(copy);
     setAdded(copy);
     setAddOpen(false);
@@ -566,7 +577,7 @@ function TodayInner() {
                   >
                     <Icon name="sparkle" className="h-5 w-5 shrink-0" />
                     <span className="min-w-0 flex-1 break-words">
-                      {tr("ให้ AI คำนวณ", "Let AI calculate")} “{typed}”
+                      {tr("ให้ AI ประมาณแคลอรี", "Let AI estimate")} “{typed}”
                     </span>
                     <Icon name="caret-right" className="h-4 w-4 shrink-0 text-muted" />
                   </Link>
@@ -594,13 +605,64 @@ function TodayInner() {
               </Link>
             ))}
           </div>
-          <div className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-1 text-[14px] text-muted" data-testid="add-sheet-links">
-            {recent.length > 0 && (
-              <button className="min-h-[44px] min-w-[44px] px-2 underline-offset-2 active:opacity-60" onClick={() => setAgainView(true)} data-testid="eat-again-tile">
-                {tr("กินซ้ำ", "Eat again")}
-              </button>
-            )}
-            <Link href={`/recipes${q}`} onClick={tap("recipes", `/recipes${q}`)} className="flex min-h-[44px] items-center gap-1.5 underline-offset-2 active:opacity-60">
+          {recentTop.length > 0 && (
+            // Phase 2C-1: her last few meals, one tap to log again (same copy as the full "Eat again" list). Each row says where it will be saved.
+            <div className="mt-5" data-testid="recent-meals">
+              <div className="mb-1 flex items-center justify-between gap-2 px-1">
+                <h3 className="text-[16px] font-medium">{tr("กินซ้ำ", "Eat again")}</h3>
+                <button
+                  className="flex min-h-[44px] items-center gap-0.5 rounded-full px-2 text-[14px] text-muted underline-offset-2 active:opacity-60"
+                  onClick={() => setAgainView(true)}
+                  data-testid="eat-again-tile"
+                >
+                  {tr("ดูทั้งหมด", "See all")}
+                  <Icon name="caret-right" className="h-4 w-4" />
+                </button>
+              </div>
+              <ul className="divide-y divide-line rounded-[22px] border border-white/90 bg-white/55 px-3">
+                {recentTop.map((e) => {
+                  const slot = repeatSlot(e, date, today, slotAtOpen);
+                  const where = date === today ? SLOT_LABEL[slot][lang] : `${shortDayLabel(date, today, lang)} · ${SLOT_LABEL[slot][lang]}`;
+                  return (
+                    <li key={e.id}>
+                      <button
+                        className="flex min-h-[64px] w-full items-center gap-3 py-2 text-left active:opacity-60"
+                        onClick={() => eatAgain(e)}
+                        aria-label={`${tr("เพิ่ม", "Add")} ${dn(e.title, e.alt)} ${tr("ใน", "to")} ${where}`}
+                        data-testid="recent-meal-item"
+                      >
+                        <MealThumb
+                          title={e.title}
+                          className="h-11 w-11 shrink-0 rounded-xl"
+                          fallback={
+                            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/80 text-muted" aria-hidden>
+                              <SourceIcon e={e} small />
+                            </span>
+                          }
+                        />
+                        <span className="min-w-0 flex-1">
+                          <span className="block break-words text-[16px] font-medium leading-snug">{dn(e.title, e.alt)}</span>
+                          <span className="block text-[13px] text-muted">
+                            {shortDayLabel(e.date, today, lang)} · <span className="num">{fmtKcal(sumMacros(e.items.map(pickMacros)).kcal)}</span> kcal
+                          </span>
+                          <span className="flex items-center gap-1.5 text-[13px] text-muted" data-testid="recent-meal-where">
+                            <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: SLOT_COLORS[SLOTS.indexOf(slot) % SLOT_COLORS.length] }} aria-hidden />
+                            {tr("บันทึกเป็น", "Saves to")} {where}
+                          </span>
+                        </span>
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ink text-[20px] font-light leading-none text-paper" aria-hidden>
+                          +
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
+          <div className="mt-4 grid grid-cols-2 gap-3" data-testid="add-sheet-links">
+            <Link href={`/recipes${q}`} onClick={tap("recipes", `/recipes${q}`)} className="btn-soft gap-2" data-testid="add-sheet-recipes">
+              <Icon name="book-open" className="h-5 w-5" />
               {isPending(nav, "recipes") ? <>{spin} {opening}</> : tr("สูตรของฉัน", "My recipes")}
             </Link>
             <Link
@@ -609,8 +671,10 @@ function TodayInner() {
                 ev.preventDefault();
                 openLayer({ kind: "manual" });
               }}
-              className="flex min-h-[44px] items-center gap-1.5 underline-offset-2 active:opacity-60"
+              className="btn-soft gap-2"
+              data-testid="add-sheet-manual"
             >
+              <Icon name="pencil-simple" className="h-5 w-5" />
               {tr("กรอกเอง", "Enter it myself")}
             </Link>
           </div>

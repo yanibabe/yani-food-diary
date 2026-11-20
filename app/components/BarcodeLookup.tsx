@@ -351,7 +351,7 @@ export function BarcodeLookup({
           {onUsePhotoAi && (
             <button className="btn-primary w-full" onClick={() => onUsePhotoAi(cleanBarcode(code))} data-testid="barcode-use-photo-ai">
               <Icon name="camera" className="mr-1.5 inline-block h-5 w-5 align-[-4px]" />
-              {tr("ถ่ายรูปให้ AI ประมาณ", "Take a photo for the AI")}
+              {tr("ถ่ายรูปอาหารให้ AI ประมาณแคลอรี", "Take a photo, let AI estimate")}
             </button>
           )}
           <button className="btn-soft w-full" onClick={onManual} data-testid="barcode-not-found-manual">
@@ -503,7 +503,7 @@ export function BarcodeLookup({
           {onUsePhotoAi && (
             <button className="btn-primary w-full" onClick={() => onUsePhotoAi(cleanBarcode(code))} data-testid="offer-photo-ai">
               <Icon name="camera" className="mr-1.5 inline-block h-5 w-5 align-[-4px]" />
-              {tr("ถ่ายรูปอาหารให้ AI ประเมิน", "Take a photo, AI estimates it")}
+              {tr("ถ่ายรูปอาหารให้ AI ประมาณแคลอรี", "Take a photo, let AI estimate")}
             </button>
           )}
           <button className="btn-soft w-full" onClick={() => labelRootRef.current?.click()} data-testid="offer-label-photo">
