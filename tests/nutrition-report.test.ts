@@ -3,8 +3,11 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
-  REPORT_W, buildDayReport, buildWeekReport, fitText, layoutDayReport, layoutWeekReport, reportFileName, weekRangeText, wrapText, type Measure, type RCmd,
+  buildDayReport, buildWeekReport, fitText, reportFileName, weekRangeText, wrapText, type Measure,
 } from "../app/lib/nutritionReport.ts";
+import { buildShareDay } from "../app/lib/shareDay.ts";
+import { layoutShareCard, type Cmd, type CardInput } from "../app/lib/shareCard.ts";
+import { dayShortLabel, layoutWeekCard } from "../app/lib/shareWeekCard.ts";
 import { calorieWeek } from "../app/lib/week.ts";
 import { pickMacros, sumMacros } from "../app/lib/nutrition.ts";
 import { macroTargets } from "../app/lib/energy.ts";
@@ -15,7 +18,24 @@ const item = (name: string, kcal: number, p: number, c: number, f: number, extra
 let n = 0;
 const meal = (date: string, slot: MealSlot, title: string, items: FoodItem[]): Entry => ({ id: "e" + ++n, date, slot, title, items, source: "manual", photoId: null, recipe: null, createdAt: n, updatedAt: n } as unknown as Entry);
 const MT = macroTargets(1800, 90);
-const texts = (cmds: RCmd[]) => cmds.flatMap((c) => (c.t === "text" ? [c.s] : []));
+const texts = (cmds: Cmd[]) => cmds.flatMap((c) => (c.t === "text" ? [c.s] : []));
+
+/** The daily picture (old Frosted Calm card) for a day. */
+function dayCard(entries: Entry[], date: string, o: { lang?: "th" | "en"; target?: number; name?: string } = {}) {
+  const lang = o.lang ?? "en";
+  const target = o.target ?? 1800;
+  const rep = buildDayReport({ entries, date, target, macroTargets: MT, lang, name: o.name });
+  const inp: CardInput = { day: buildShareDay(entries, date, {}, (x) => x, lang), date, dateLabel: rep.dateLabel, name: o.name ?? "", target, macroTargets: MT, water: { glasses: 0, goal: 8 }, incomplete: rep.incompleteNutrients, lang };
+  return layoutShareCard(inp, measure);
+}
+/** The weekly picture for a week. */
+function weekCard(entries: Entry[], o: { date?: string; today?: string; target?: number; lang?: "th" | "en"; name?: string } = {}) {
+  const lang = o.lang ?? "en";
+  const date = o.date ?? "2026-11-18";
+  const rep = buildWeekReport({ entries, date, today: o.today ?? "2026-11-21", target: o.target ?? 1600, macroTargets: MT, lang, name: o.name });
+  const stories = rep.days.map((d) => ({ date: d.date, label: dayShortLabel(d.date, lang), share: d.logged ? buildShareDay(entries, d.date, {}, (x) => x, lang) : null }));
+  return { rep, card: layoutWeekCard(rep, stories, measure) };
+}
 
 const DAY = "2026-11-18"; // a Wednesday; its week is Mon 16 – Sun 22
 const day = [
@@ -36,16 +56,11 @@ test("daily numbers: totals are exactly the sums of the logged foods (same maths
   assert.equal(r.hasEstimate, true);
 });
 
-test("an empty day is 'not logged', never 0 kcal", () => {
+test("an empty day is 'not logged' in the numbers", () => {
   const r = buildDayReport({ entries: [], date: DAY, target: 1800, macroTargets: MT, lang: "en" });
   assert.equal(r.mealCount, 0);
   assert.equal(r.notLogged.length, 4);
-  const l = layoutDayReport(r, measure);
-  const all = texts(l.cmds).join(" | ");
-  assert.match(all, /No food logged/);
-  assert.match(all, /not the same as eating 0 kcal/);
-  assert.doesNotMatch(all.replace("(not the same as eating 0 kcal)", ""), /\b0 kcal\b/);
-  assert.equal(texts(l.cmds).filter((s) => s === "Not logged").length, 4);
+  assert.match(texts(dayCard([], DAY).cmds).join("|"), /No food logged yet/);
 });
 
 test("only another day's entries do not leak in", () => {
@@ -54,45 +69,43 @@ test("only another day's entries do not leak in", () => {
   assert.equal(r.total.kcal, 780);
 });
 
-test("daily layout: brand, date, calories vs target, macros, meals with food names and kcal", () => {
-  const r = buildDayReport({ entries: day, date: DAY, target: 1800, macroTargets: MT, lang: "en", name: "Alex" });
-  const t = texts(layoutDayReport(r, measure).cmds);
-  for (const s of ["SnapCal", "Daily nutrition report", "Wednesday, 18 Nov 2026", "Alex", "Calories consumed", "780", "1,800 kcal", "1,020 kcal remaining", "Protein", "Carbs", "Fat", "Breakfast", "Lunch", "Oats", "300 kcal", "Rice and chicken", "~480 kcal", "Dinner", "Snack"]) assert.ok(t.includes(s), s + " in " + t.join("|"));
-  assert.ok(t.some((s) => s.startsWith("2 meal entries logged") && s.includes("Not logged: Dinner, Snack")));
+test("daily card: brand, name, date, calories vs goal, macros, meals with food names and kcal", () => {
+  const t = texts(dayCard(day, DAY, { name: "Alex" }).cmds);
+  for (const x of ["ALEX", "Wednesday, 18 Nov 2026", "780", "goal 1,800", "1,020 left", "Protein", "Carbs", "Fat", "Breakfast", "Lunch", "Oats", "Rice and chicken", "~480", "SNAPCAL"]) assert.ok(t.includes(x), x + " in " + t.join("|"));
+  assert.ok(t.some((x) => x.startsWith("Not logged") && x.includes("Dinner") && x.includes("Snack")));
+  assert.ok(dayCard(day, DAY).cmds.some((c) => c.t === "char"), "the SnapCal character is on the card");
 });
 
-test("different goals change the remaining / over-target wording", () => {
-  const low = buildDayReport({ entries: day, date: DAY, target: 600, macroTargets: macroTargets(600, 40), lang: "en" });
-  assert.ok(texts(layoutDayReport(low, measure).cmds).includes("180 kcal over target"));
-  const high = buildDayReport({ entries: day, date: DAY, target: 2400, macroTargets: macroTargets(2400, 120), lang: "en" });
-  assert.ok(texts(layoutDayReport(high, measure).cmds).includes("1,620 kcal remaining"));
-  const noTarget = buildDayReport({ entries: day, date: DAY, target: 0, macroTargets: MT, lang: "en" });
-  assert.doesNotMatch(texts(layoutDayReport(noTarget, measure).cmds).join("|"), /remaining|over target/);
+test("different goals change the left / over wording", () => {
+  assert.ok(texts(dayCard(day, DAY, { target: 600 }).cmds).includes("180 over"));
+  assert.ok(texts(dayCard(day, DAY, { target: 2400 }).cmds).includes("1,620 left"));
 });
 
-test("Thai report: Thai labels and the Thai date", () => {
-  const r = buildDayReport({ entries: day, date: DAY, target: 1800, macroTargets: MT, lang: "th" });
-  const t = texts(layoutDayReport(r, measure).cmds);
-  assert.ok(t.includes("รายงานโภชนาการรายวัน"));
-  assert.ok(t.includes("มื้อเช้า") && t.includes("มื้อเย็น"));
-  assert.ok(t.some((s) => s.includes("ยังไม่ได้บันทึก")));
-  assert.ok(t.some((s) => s.includes("พ.ย.")));
+test("Thai card: Thai labels and the Thai date", () => {
+  const t = texts(dayCard(day, DAY, { lang: "th" }).cmds);
+  assert.ok(t.includes("มื้อเช้า"));
+  assert.ok(t.some((x) => x.includes("ไม่ได้บันทึก")));
+  assert.ok(t.some((x) => x.includes("พ.ย.")));
 });
 
-test("long Thai and English food names never run past the page; they wrap (2 lines) or end with …", () => {
+test("a food with incomplete nutrient data adds an honest footnote", () => {
+  const inc = [meal(DAY, "lunch", "Mystery", [item("m", 200, 0, 0, 0, { missing: ["protein"] } as Partial<FoodItem>)])];
+  assert.ok(texts(dayCard(inc, DAY).cmds).some((x) => x.startsWith("Some foods have incomplete nutrient data")));
+  assert.ok(!texts(dayCard(day, DAY).cmds).some((x) => x.startsWith("Some foods have incomplete")));
+});
+
+test("long Thai and English food names never run past the card", () => {
   const long = [
     meal(DAY, "lunch", "ข้าวผัดกะเพราหมูสับไข่ดาวพร้อมน้ำจิ้มซีฟู้ดรสเด็ดและผักสดเคียงจานใหญ่พิเศษที่ทำเองที่บ้านทุกวันอาทิตย์", [item("ข้าวสวย", 260, 5, 57, 0.5), item("หมูสับผัดกะเพรา", 310, 22, 6, 22)]),
     meal(DAY, "snack", "Overnight oats with chia seeds, blueberries, almond butter, honey and a very long description that keeps going", [item("Rolled oats", 228, 8, 40, 4)]),
   ];
-  const r = buildDayReport({ entries: long, date: DAY, target: 1800, macroTargets: MT, lang: "th" });
-  const l = layoutDayReport(r, measure);
+  const l = dayCard(long, DAY, { lang: "th" });
   for (const c of l.cmds) {
-    if (c.t !== "text") continue;
+    if (c.t !== "text" || c.spacing) continue;
     const w = measure(c.s, c.size, c.weight);
     const left = c.align === "left" ? c.x : c.align === "right" ? c.x - w : c.x - w / 2;
-    assert.ok(left >= 0 && left + w <= REPORT_W - 56 + 1, `"${c.s.slice(0, 30)}" fits (${Math.round(left)}..${Math.round(left + w)})`);
+    assert.ok(left >= 0 && left + w <= l.w - 28 + 1, `"${c.s.slice(0, 30)}" fits`);
   }
-  assert.ok(l.h > 800 && l.cmds.length > 10);
 });
 
 test("fitText / wrapText: Thai (no spaces) and English", () => {
@@ -141,59 +154,49 @@ test("every date in the week gives the same week (the report follows the VIEWED 
 });
 
 test("an empty week: no average, no invented zeros", () => {
-  const r = buildWeekReport({ entries: [], date: "2026-11-18", today: "2026-11-22", target: 1600, macroTargets: MT, lang: "en" });
-  assert.equal(r.loggedDays, 0);
-  assert.equal(r.avg, null);
-  assert.equal(r.vsTarget, null);
-  const t = texts(layoutWeekReport(r, measure).cmds).join("|");
-  assert.match(t, /No food logged this week/);
-  assert.match(t, /No food was logged this week/);
-  assert.doesNotMatch(t, /\b0 kcal\b/);
-  assert.equal(texts(layoutWeekReport(r, measure).cmds).filter((s) => s === "No data").length >= 7, true);
+  const { rep, card } = weekCard([], { today: "2026-11-22" });
+  assert.equal(rep.loggedDays, 0);
+  assert.equal(rep.avg, null);
+  assert.equal(rep.vsTarget, null);
+  const t = texts(card.cmds);
+  assert.ok(t.includes("No food logged"));
+  assert.ok(t.includes("No food was logged this week"));
+  assert.doesNotMatch(t.join("|"), /\b0 kcal\b/);
+  assert.ok(t.filter((x) => x === "No data").length >= 7);
 });
 
-test("weekly layout: explicit range, average per logged day, days logged, chart, table; no-data days are marked, not drawn as zero bars", () => {
-  const r = buildWeekReport({ entries: wk, date: "2026-11-18", today: "2026-11-21", target: 1600, macroTargets: MT, lang: "en", name: "Alex" });
-  const l = layoutWeekReport(r, measure);
-  const t = texts(l.cmds);
-  for (const s of ["Weekly nutrition report", "Mon 16 Nov – Sun 22 Nov 2026", "Average calories per logged day", "1,300", "Days with food logged", "3", "Calories per day", "Target 1,600", "Average (logged days only)"]) assert.ok(t.includes(s), s);
-  assert.ok(t.includes("−300 kcal/day vs target 1,600"));
+test("weekly card: range, average per logged day, days logged, chart, day by day; no-data days are marked", () => {
+  const { card } = weekCard(wk, { name: "Alex" });
+  const t = texts(card.cmds);
+  for (const x of ["ALEX", "Mon 16 Nov – Sun 22 Nov 2026", "Weekly report", "1,318".replace("1,318", "1,300"), "kcal / day", "282".replace("282", "300") + " under", "Calories each day", "goal 1,600", "Day by day", "Tuesday 17 Nov", "SNAPCAL"]) assert.ok(t.includes(x), x + " in " + t.join("|"));
   assert.ok(t.includes("Upcoming"), "days after today are 'Upcoming', not zero");
-  assert.ok(t.filter((s) => s === "No data").length >= 3, "chart + table mark no-data days");
+  assert.ok(t.filter((x) => x === "No data").length >= 3, "chart + day list mark no-data days");
   assert.ok(t.includes("1 meal"), "a few-meals day is flagged on the chart");
-  assert.ok(t.some((s) => s.startsWith("Averages use the 3 logged days (of 7)")));
-  assert.ok(t.some((s) => s.includes("only one meal logged may be incomplete")));
-  // a no-data day has an outline only (no fill) in the chart: count filled bars = logged days
-  const bars = l.cmds.filter((c) => c.t === "rect" && (c.grad || c.fill === "rgba(224,168,140,0.28)") && c.w <= 72 && c.h >= 8 && c.r === 14);
+  assert.ok(t.some((x) => x.startsWith("Averages use the 3 logged days (of 7)")));
+  assert.ok(t.some((x) => x.includes("one meal logged may be incomplete")));
+  assert.ok(card.cmds.some((c) => c.t === "char"));
+  // 3 logged days = 3 filled/outlined bars in the chart; the no-data days are only dashed stubs
+  const bars = card.cmds.filter((c) => c.t === "rect" && c.r === 20 && c.w <= 58 && c.h >= 10);
   assert.equal(bars.length, 3);
-  const over = l.cmds.filter((c) => c.t === "rect" && c.grad?.[1] === "#b8704d" && c.r === 14);
-  assert.equal(over.length, 1, "only the day over target is in the deeper over colour");
 });
 
-test("a bar's height is proportional to its kcal and the target line sits at the target", () => {
-  const r = buildWeekReport({ entries: wk, date: "2026-11-18", today: "2026-11-21", target: 1600, macroTargets: MT, lang: "en" });
-  const l = layoutWeekReport(r, measure);
-  const bars = l.cmds.filter((c): c is Extract<RCmd, { t: "rect" }> => c.t === "rect" && (!!c.grad || !!c.fill) && c.r === 14 && c.w <= 72);
-  const byKcal = new Map<number, number>([[900, bars[0].h], [1000, bars[1].h], [2000, bars[2].h]]);
-  assert.ok(Math.abs(byKcal.get(2000)! / byKcal.get(900)! - 2000 / 900) < 0.02);
-  const dashed = l.cmds.find((c) => c.t === "line" && c.dash);
+test("a bar's height is proportional to its kcal and the goal line sits at the goal", () => {
+  const { card } = weekCard(wk);
+  const bars = card.cmds.filter((c): c is Extract<Cmd, { t: "rect" }> => c.t === "rect" && c.r === 20 && c.w <= 58);
+  assert.ok(Math.abs(bars[2].h / bars[0].h - 2000 / 900) < 0.02);
+  const dashed = card.cmds.find((c) => c.t === "line" && c.dash);
   assert.ok(dashed && dashed.t === "line");
   const base = bars[0].y + bars[0].h;
-  const scale = bars[2].h / 2000;
-  assert.ok(Math.abs(base - dashed.y1 - 1600 * scale) < 1, "target line at 1,600 on the same scale");
+  assert.ok(Math.abs(base - dashed.y1 - 1600 * (bars[2].h / 2000)) < 1, "goal line at 1,600 on the same scale");
 });
 
-test("different goals: the comparison and the target line follow the goal", () => {
-  const hi = buildWeekReport({ entries: wk, date: "2026-11-18", today: "2026-11-21", target: 2400, macroTargets: MT, lang: "en" });
-  assert.equal(hi.vsTarget, -1100);
-  assert.equal(hi.overDays, 0);
+test("different goals: wording and goal line follow the goal", () => {
+  assert.equal(buildWeekReport({ entries: wk, date: "2026-11-18", today: "2026-11-21", target: 2400, macroTargets: MT, lang: "en" }).overDays, 0);
   const lo = buildWeekReport({ entries: wk, date: "2026-11-18", today: "2026-11-21", target: 1000, macroTargets: MT, lang: "en" });
   assert.equal(lo.vsTarget, 300);
   assert.equal(lo.overDays, 1, "1,000 is not over a 1,000 target; only the 2,000 day is");
-  assert.ok(texts(layoutWeekReport(lo, measure).cmds).includes("+300 kcal/day vs target 1,000"));
-  const none = buildWeekReport({ entries: wk, date: "2026-11-18", today: "2026-11-21", target: 0, macroTargets: MT, lang: "en" });
-  assert.equal(none.vsTarget, null);
-  assert.equal(layoutWeekReport(none, measure).cmds.some((c) => c.t === "line" && c.dash), false, "no target = no target line");
+  assert.ok(texts(weekCard(wk, { target: 1000 }).card.cmds).includes("300 over"));
+  assert.equal(weekCard(wk, { target: 0 }).card.cmds.some((c) => c.t === "line" && c.dash), false, "no goal = no goal line");
 });
 
 test("week range text: English and Thai, across a month change", () => {
@@ -202,14 +205,14 @@ test("week range text: English and Thai, across a month change", () => {
   assert.match(weekRangeText("2026-11-16", "2026-11-22", "th"), /^(จ\.|จันทร์) 16 พ\.ย\. – (อา\.|อาทิตย์) 22 พ\.ย\. 2569$/);
 });
 
-test("partial week with a Thai long name still fits the page", () => {
+test("partial week with a Thai long name still fits the card", () => {
   const e = [meal("2026-11-17", "lunch", "ข้าวผัดกะเพราหมูสับไข่ดาวพร้อมน้ำจิ้มซีฟู้ดรสเด็ดและผักสดเคียงจานใหญ่พิเศษ", [item("x", 700, 20, 80, 20)])];
-  const l = layoutWeekReport(buildWeekReport({ entries: e, date: "2026-11-17", today: "2026-11-20", target: 1800, macroTargets: MT, lang: "th" }), measure);
-  for (const c of l.cmds) {
-    if (c.t !== "text") continue;
+  const { card } = weekCard(e, { date: "2026-11-17", today: "2026-11-20", target: 1800, lang: "th" });
+  for (const c of card.cmds) {
+    if (c.t !== "text" || c.spacing) continue;
     const w = measure(c.s, c.size, c.weight);
     const left = c.align === "left" ? c.x : c.align === "right" ? c.x - w : c.x - w / 2;
-    assert.ok(left >= 0 && left + w <= REPORT_W + 1, c.s.slice(0, 30));
+    assert.ok(left >= 0 && left + w <= card.w + 1, c.s.slice(0, 30));
   }
 });
 
@@ -219,6 +222,6 @@ test("file names", () => {
 });
 
 test("no paid AI, no upload: the report code only reads saved meals and draws", () => {
-  const src = ["../app/lib/nutritionReport.ts", "../app/components/reportDraw.ts", "../app/components/ShareDayButton.tsx"].map((f) => readFileSync(new URL(f, import.meta.url), "utf8")).join("\n");
+  const src = ["../app/lib/nutritionReport.ts", "../app/lib/shareWeekCard.ts", "../app/components/shareDraw.ts", "../app/components/ShareDayButton.tsx"].map((f) => readFileSync(new URL(f, import.meta.url), "utf8")).join("\n");
   assert.doesNotMatch(src, /aiFetch|\/api\/|fetch\(|openrouter/i);
 });

@@ -48,8 +48,10 @@ test("the share dialog is one sheet opened from the tile (never nested)", () => 
 });
 
 test("ShareDayButton: daily + weekly reports for the VIEWED date, image export and native share kept", () => {
-  assert.match(share, /layoutWeekReport\(buildWeekReport\(\{ entries, date, today, target/);
-  assert.match(share, /layoutDayReport\(buildDayReport\(\{ entries, date, target/);
+  assert.match(share, /layoutWeekCard\(rep, stories, m\)/);
+  assert.match(share, /buildWeekReport\(\{ entries, date, today, target/);
+  assert.match(share, /layoutShareCard\(/);
+  assert.match(share, /buildDayReport\(\{ entries, date, target/);
   assert.match(share, /reportFileName\("day", date\)/);
   assert.match(share, /reportFileName\("week", start\)/);
   assert.match(share, /navigator\.canShare\?\.\(\{ files: \[file\] \}\)/);

@@ -19,7 +19,7 @@ export const CARD_COLORS = {
   glassEdge: "rgba(255,255,255,0.92)",
   tile: "rgba(255,255,255,0.75)",
   ink: "#2B2724",
-  muted: "#8F877D",
+  muted: "#7D756B",
   line: "rgba(43,39,36,0.09)",
   track: "rgba(43,39,36,0.12)",
   over: "#B0603A",
@@ -39,7 +39,9 @@ export const SLOT_DOT: Record<MealSlot, string> = {
 
 export type Align = "left" | "center" | "right";
 export type Cmd =
-  | { t: "rect"; x: number; y: number; w: number; h: number; r: number; fill: string; stroke?: string }
+  | { t: "rect"; x: number; y: number; w: number; h: number; r: number; fill: string; stroke?: string; dash?: number[] }
+  /** A thin line (the weekly goal line is dashed). */
+  | { t: "line"; x1: number; y1: number; x2: number; y2: number; color: string; w: number; dash?: number[] }
   | { t: "text"; x: number; y: number; s: string; size: number; weight: number; color: string; align: Align; spacing?: number }
   | { t: "dot"; x: number; y: number; r: number; fill?: string; stroke?: string }
   | { t: "bar"; x: number; y: number; w: number; part: number; color: string }
@@ -60,6 +62,8 @@ export type CardInput = {
   water: { glasses: number; goal: number };
   /** The weight logged that day, if any. */
   weightKg?: number | null;
+  /** Some food is missing protein / carbs / fat, so those totals may be too low (said in the footnote). */
+  incomplete?: boolean;
   lang: "th" | "en";
 };
 
@@ -282,10 +286,14 @@ export function layoutShareCard(inp: CardInput, measure: Measure): Card {
   const note = anyEst
     ? tr("~ = ค่าประมาณจากรูปหรือค่าทั่วไป อาจคลาดเคลื่อนได้เล็กน้อย", "~ = estimated from a photo or typical values, so it can be a little off")
     : tr("ตัวเลขจากที่บันทึกไว้ในแอป", "Numbers from what was logged in the app");
-  wrapText(measure, note, 24, 300, CW - 80, 2).forEach((t) => {
-    txt(t, CARD_W / 2, y, 24, 300, C.muted, "center");
-    y += 34;
-  });
+  const notes = [note];
+  if (inp.incomplete) notes.push(tr("อาหารบางรายการมีข้อมูลสารอาหารไม่ครบ โปรตีน/คาร์บ/ไขมันอาจต่ำกว่าจริง", "Some foods have incomplete nutrient data, so protein, carbs or fat may be understated"));
+  notes.forEach((n) =>
+    wrapText(measure, n, 24, 300, CW - 80, 2).forEach((t) => {
+      txt(t, CARD_W / 2, y, 24, 300, C.muted, "center");
+      y += 34;
+    }),
+  );
   y += 14;
   txt("SNAPCAL", CARD_W / 2, y, 22, 400, C.muted, "center", 8);
   y += PAD;

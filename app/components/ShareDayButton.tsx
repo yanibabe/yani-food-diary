@@ -6,14 +6,27 @@ import { useEffect, useState } from "react";
 import { Sheet } from "./ui";
 import { useLang } from "../lib/lang";
 import { shortDayLabel } from "../lib/date";
-import { buildDayReport, buildWeekReport, layoutDayReport, layoutWeekReport, reportFileName } from "../lib/nutritionReport";
+import { buildDayReport, buildWeekReport, reportFileName } from "../lib/nutritionReport";
+import { buildShareDay } from "../lib/shareDay";
+import { layoutShareCard } from "../lib/shareCard";
+import { dayShortLabel, layoutWeekCard } from "../lib/shareWeekCard";
+import { MEAL_PICS_KEY, parseMealPics } from "../lib/mealPics";
 import { weekRangeLabel } from "../lib/shareWeek";
 import { weekStart } from "../lib/body";
 import { shiftDateKey } from "../lib/date";
-import { makeReportPicture } from "./reportDraw";
+import { makeSharePicture } from "./shareDraw";
 import type { Entry } from "../lib/types";
 
 export type ShareRange = "day" | "week";
+
+/** The dish-name -> picture map (saved on the phone by the meal pictures). */
+function readPics() {
+  try {
+    return parseMealPics(localStorage.getItem(MEAL_PICS_KEY));
+  } catch {
+    return {};
+  }
+}
 
 export function ShareDayButton({
   entries,
@@ -64,10 +77,19 @@ export function ShareDayButton({
     if (!open) return;
     let url = "";
     let stop = false;
-    const make =
-      range === "week"
-        ? makeReportPicture((m) => layoutWeekReport(buildWeekReport({ entries, date, today, target, macroTargets: mt, lang, name }), m))
-        : makeReportPicture((m) => layoutDayReport(buildDayReport({ entries, date, target, macroTargets: mt, lang, name, show: dn, water: wt, weightKg }), m));
+    const pics = readPics();
+    const make = makeSharePicture((m) => {
+      if (range === "week") {
+        const rep = buildWeekReport({ entries, date, today, target, macroTargets: mt, lang, name });
+        const stories = rep.days.map((d) => ({ date: d.date, label: dayShortLabel(d.date, lang), share: d.logged ? buildShareDay(entries, d.date, pics, dn, lang) : null }));
+        return layoutWeekCard(rep, stories, m);
+      }
+      const rep = buildDayReport({ entries, date, target, macroTargets: mt, lang, name, show: dn, water: wt, weightKg });
+      return layoutShareCard(
+        { day: buildShareDay(entries, date, pics, dn, lang), date, dateLabel: rep.dateLabel, name, target, macroTargets: mt, water: wt, weightKg, incomplete: rep.incompleteNutrients, lang },
+        m,
+      );
+    });
     make
       .then((blob) => {
         if (stop) return;
