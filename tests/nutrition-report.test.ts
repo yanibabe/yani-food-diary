@@ -164,16 +164,16 @@ test("weekly layout: explicit range, average per logged day, days logged, chart,
   assert.ok(t.some((s) => s.startsWith("Averages use the 3 logged days (of 7)")));
   assert.ok(t.some((s) => s.includes("only one meal logged may be incomplete")));
   // a no-data day has an outline only (no fill) in the chart: count filled bars = logged days
-  const bars = l.cmds.filter((c) => c.t === "rect" && c.fill && (c.fill === "#3f4b5b" || c.fill === "#b4701f" || c.fill === "#c6ced8") && c.w <= 72 && c.h >= 8 && c.r === 8);
+  const bars = l.cmds.filter((c) => c.t === "rect" && (c.grad || c.fill === "rgba(224,168,140,0.28)") && c.w <= 72 && c.h >= 8 && c.r === 14);
   assert.equal(bars.length, 3);
-  const over = l.cmds.filter((c) => c.t === "rect" && c.fill === "#b4701f" && c.r === 8);
-  assert.equal(over.length, 1, "only the day over target is amber");
+  const over = l.cmds.filter((c) => c.t === "rect" && c.grad?.[1] === "#b8704d" && c.r === 14);
+  assert.equal(over.length, 1, "only the day over target is in the deeper over colour");
 });
 
 test("a bar's height is proportional to its kcal and the target line sits at the target", () => {
   const r = buildWeekReport({ entries: wk, date: "2026-11-18", today: "2026-11-21", target: 1600, macroTargets: MT, lang: "en" });
   const l = layoutWeekReport(r, measure);
-  const bars = l.cmds.filter((c): c is Extract<RCmd, { t: "rect" }> => c.t === "rect" && !!c.fill && c.r === 8 && c.w <= 72);
+  const bars = l.cmds.filter((c): c is Extract<RCmd, { t: "rect" }> => c.t === "rect" && (!!c.grad || !!c.fill) && c.r === 14 && c.w <= 72);
   const byKcal = new Map<number, number>([[900, bars[0].h], [1000, bars[1].h], [2000, bars[2].h]]);
   assert.ok(Math.abs(byKcal.get(2000)! / byKcal.get(900)! - 2000 / 900) < 0.02);
   const dashed = l.cmds.find((c) => c.t === "line" && c.dash);

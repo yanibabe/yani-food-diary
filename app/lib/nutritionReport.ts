@@ -22,7 +22,7 @@ import { SLOTS, SLOT_LABEL, type Entry, type MealSlot } from "./types.ts";
 
 export type Measure = (text: string, size: number, weight: number) => number;
 export type RCmd =
-  | { t: "rect"; x: number; y: number; w: number; h: number; r: number; fill?: string; stroke?: string; dash?: number[]; lw?: number }
+  | { t: "rect"; x: number; y: number; w: number; h: number; r: number; fill?: string; stroke?: string; dash?: number[]; lw?: number; grad?: [string, string]; shadow?: boolean }
   | { t: "text"; x: number; y: number; s: string; size: number; weight: number; color: string; align: "left" | "center" | "right" }
   | { t: "line"; x1: number; y1: number; x2: number; y2: number; color: string; w: number; dash?: number[] }
   | { t: "dot"; x: number; y: number; r: number; fill: string };
@@ -30,21 +30,38 @@ export type ReportLayout = { w: number; h: number; cmds: RCmd[] };
 
 export const REPORT_W = 1080;
 const PAD = 56;
+// Colours come from the app's own tokens (globals.css): calm beige page + soft clouds, frosted white glass,
+// peach protein / lilac carbs / sage fat. No separate design system for reports.
 export const RC = {
-  bg: "#f6f3ee",
-  card: "#ffffff",
-  border: "#e6e0d6",
+  bg: "#f4efe7", // --calm-bg
+  cloudPeach: "#f3d9c8", // same three clouds as .calm-backdrop
+  cloudLilac: "#e3e0f2",
+  cloudSage: "#e6eedd",
+  card: "rgba(255,255,255,0.66)", // frosted glass card
+  cardEdge: "rgba(255,255,255,0.95)",
+  shadow: "rgba(110,80,60,0.13)",
+  line: "rgba(43,39,36,0.08)", // --calm-line
   ink: "#2b2724",
-  muted: "#6b655e",
-  track: "#ece7df",
-  protein: "#c0624a",
-  carbs: "#6a62b0",
-  fat: "#4f8a58",
-  ok: "#3f7a4a",
-  over: "#b4701f",
-  bar: "#3f4b5b",
-  barLight: "#c6ced8",
-  noData: "#bdb6ab",
+  muted: "#66615a",
+  track: "rgba(43,39,36,0.07)",
+  // macro tints (tile fill / readable ink / bar+dot colour), as in the Today tiles
+  protein: "#e0a88c",
+  proteinInk: "#8e5339",
+  proteinTint: "#f7e6dc",
+  carbs: "#b3aad8",
+  carbsInk: "#5d5590",
+  carbsTint: "#e9e6f5",
+  fat: "#a3bd90",
+  fatInk: "#516946",
+  fatTint: "#e5ecdc",
+  ok: "#516946",
+  over: "#b8704d", // --over
+  barTop: "#eec2a8", // soft peach bars for kcal
+  barBottom: "#e0a88c",
+  barOverTop: "#d9976f",
+  barOverBottom: "#b8704d",
+  barLight: "rgba(224,168,140,0.28)",
+  noData: "#9a938a",
 };
 
 const L = (lang: Lang) => (th: string, en: string) => (lang === "en" ? en : th);
@@ -249,7 +266,7 @@ export function buildWeekReport(i: {
 
 class Canvasless {
   cmds: RCmd[] = [];
-  rect(x: number, y: number, w: number, h: number, r: number, fill?: string, stroke?: string, extra: { dash?: number[]; lw?: number } = {}) {
+  rect(x: number, y: number, w: number, h: number, r: number, fill?: string, stroke?: string, extra: { dash?: number[]; lw?: number; grad?: [string, string]; shadow?: boolean } = {}) {
     this.cmds.push({ t: "rect", x, y, w, h, r, fill, stroke, ...extra });
   }
   text(s: string, x: number, y: number, size: number, weight: number, color: string, align: "left" | "center" | "right" = "left") {
@@ -261,32 +278,49 @@ class Canvasless {
   dot(x: number, y: number, r: number, fill: string) {
     this.cmds.push({ t: "dot", x, y, r, fill });
   }
-  card(x: number, y: number, w: number, h: number) {
-    this.rect(x, y, w, h, 28, RC.card, RC.border);
+  /** Frosted glass card: soft white, white edge, gentle shadow. */
+  card(x: number, y: number, w: number, h: number, tint?: string) {
+    this.rect(x, y, w, h, 36, tint ?? RC.card, RC.cardEdge, { lw: 2, shadow: true });
+  }
+  /** Put a card BEHIND commands already drawn (from command index `at`), once its height is known. */
+  cardBehind(at: number, x: number, y: number, w: number, h: number) {
+    this.cmds.splice(at, 0, { t: "rect", x, y, w, h, r: 36, fill: RC.card, stroke: RC.cardEdge, lw: 2, shadow: true });
+  }
+  /** Rounded bar that fills left to right. */
+  bar(x: number, y: number, w: number, h: number, frac: number, c1: string, c2: string) {
+    this.rect(x, y, w, h, h / 2, RC.track);
+    const fw = w * Math.max(0, Math.min(1, frac));
+    if (fw > 0) this.rect(x, y, Math.max(h, fw), h, h / 2, undefined, undefined, { grad: [c1, c2] });
   }
 }
 
 function header(b: Canvasless, m: Measure, y: number, title: string, rightMain: string, rightSub: string): number {
-  b.text("SnapCal", PAD, y + 44, 44, 600, RC.ink);
-  b.text(title, PAD, y + 88, 26, 400, RC.muted);
+  b.dot(PAD + 9, y + 31, 9, RC.protein);
+  b.text("SnapCal", PAD + 28, y + 44, 44, 500, RC.ink);
+  b.text(title, PAD, y + 92, 26, 300, RC.muted);
   b.text(fitText(m, rightMain, 30, 500, 560), REPORT_W - PAD, y + 44, 30, 500, RC.ink, "right");
-  if (rightSub) b.text(fitText(m, rightSub, 24, 400, 560), REPORT_W - PAD, y + 88, 24, 400, RC.muted, "right");
-  b.line(PAD, y + 116, REPORT_W - PAD, y + 116, RC.border, 2);
-  return y + 148;
+  if (rightSub) b.text(fitText(m, rightSub, 24, 300, 560), REPORT_W - PAD, y + 92, 24, 400, RC.muted, "right");
+  return y + 132;
 }
 
-function macroCard(b: Canvasless, m: Measure, x: number, y: number, w: number, h: number, o: { label: string; color: string; grams: number; targetText: string; frac: number; right?: string; gramsText?: string }) {
-  b.card(x, y, w, h);
-  b.dot(x + 34, y + 44, 9, o.color);
-  b.text(o.label, x + 54, y + 53, 26, 500, RC.ink);
-  if (o.right) b.text(o.right, x + w - 30, y + 53, 24, 400, RC.muted, "right");
+type MacroKey = "protein" | "carbs" | "fat";
+const MACRO_STYLE: Record<MacroKey, { tint: string; ink: string; c1: string; c2: string }> = {
+  protein: { tint: RC.proteinTint, ink: RC.proteinInk, c1: "#ecbca2", c2: RC.protein },
+  carbs: { tint: RC.carbsTint, ink: RC.carbsInk, c1: "#c9c2e6", c2: RC.carbs },
+  fat: { tint: RC.fatTint, ink: RC.fatInk, c1: "#b9cfa9", c2: RC.fat },
+};
+
+function macroCard(b: Canvasless, m: Measure, x: number, y: number, w: number, h: number, o: { label: string; key: MacroKey; grams: number; targetText: string; frac: number; right?: string; gramsText?: string }) {
+  const st = MACRO_STYLE[o.key];
+  b.card(x, y, w, h, st.tint);
+  b.dot(x + 36, y + 46, 8, st.c2);
+  b.text(o.label, x + 56, y + 54, 26, 500, st.ink);
+  if (o.right) b.text(o.right, x + w - 30, y + 54, 24, 400, st.ink, "right");
   const g = o.gramsText ?? `${Math.round(o.grams)}`;
-  b.text(g, x + 34, y + 126, 60, 500, RC.ink);
-  b.text("g", x + 34 + m(g, 60, 500) + 8, y + 126, 28, 400, RC.muted);
+  b.text(g, x + 34, y + 126, 62, 300, RC.ink);
+  b.text("g", x + 34 + m(g, 62, 300) + 8, y + 126, 28, 400, RC.muted);
   b.text(o.targetText, x + 34, y + 160, 22, 400, RC.muted);
-  b.rect(x + 34, y + h - 34, w - 68, 10, 5, RC.track);
-  const fw = (w - 68) * Math.max(0, Math.min(1, o.frac));
-  if (fw > 0) b.rect(x + 34, y + h - 34, Math.max(10, fw), 10, 5, o.color);
+  b.bar(x + 34, y + h - 36, w - 68, 12, o.frac, st.c1, st.c2);
 }
 
 function notes(b: Canvasless, m: Measure, y: number, lines: string[]): number {
@@ -317,23 +351,20 @@ export function layoutDayReport(d: DayReport, m: Measure): ReportLayout {
   const kc = fmtKcal(d.total.kcal);
   const none = d.mealCount === 0;
   const bigText = none ? "–" : kc;
-  b.text(bigText, px, y + 156, 104, 500, RC.ink);
-  if (!none) b.text("kcal", px + m(bigText, 104, 500) + 14, y + 156, 32, 400, RC.muted);
-  else b.text(t("ยังไม่มีอาหารที่บันทึก", "No food logged"), px + m(bigText, 104, 500) + 24, y + 152, 28, 400, RC.muted);
+  b.text(bigText, px, y + 156, 110, 300, RC.ink);
+  if (!none) b.text("kcal", px + m(bigText, 110, 300) + 14, y + 156, 32, 400, RC.muted);
+  else b.text(t("ยังไม่มีอาหารที่บันทึก", "No food logged"), px + m(bigText, 110, 300) + 24, y + 152, 28, 400, RC.muted);
   const rx = REPORT_W - PAD - 36;
   if (d.target > 0) {
     b.text(t("เป้าหมาย", "Target"), rx, y + 58, 24, 400, RC.muted, "right");
-    b.text(`${fmtKcal(d.target)} kcal`, rx, y + 112, 48, 500, RC.ink, "right");
+    b.text(`${fmtKcal(d.target)} kcal`, rx, y + 112, 48, 300, RC.ink, "right");
     if (!none) {
       const diff = Math.round(d.target) - d.total.kcal;
       b.text(diff >= 0 ? t(`เหลืออีก ${fmtKcal(diff)} kcal`, `${fmtKcal(diff)} kcal remaining`) : t(`เกินเป้า ${fmtKcal(-diff)} kcal`, `${fmtKcal(-diff)} kcal over target`), rx, y + 156, 28, 500, diff >= 0 ? RC.ok : RC.over, "right");
     }
     const bw = inner - 72;
-    b.rect(px, y + 196, bw, 18, 9, RC.track);
-    if (!none) {
-      const frac = Math.max(0, Math.min(1, d.total.kcal / d.target));
-      if (frac > 0) b.rect(px, y + 196, Math.max(18, bw * frac), 18, 9, d.total.kcal > d.target ? RC.over : RC.bar);
-    }
+    const over = !none && d.total.kcal > d.target;
+    b.bar(px, y + 196, bw, 18, none ? 0 : d.total.kcal / d.target, over ? RC.barOverTop : RC.barTop, over ? RC.barOverBottom : RC.barBottom);
   }
   const mealsLine = none
     ? t("วันนี้ยังไม่มีมื้อที่บันทึก (ไม่ใช่การกิน 0 kcal)", "Nothing was logged for this day (not the same as eating 0 kcal)")
@@ -348,14 +379,14 @@ export function layoutDayReport(d: DayReport, m: Measure): ReportLayout {
   const mt = d.macroTargets;
   const split = d.split;
   const macros = [
-    { label: t("โปรตีน", "Protein"), color: RC.protein, g: d.total.protein, tg: mt.protein, pct: split?.protein },
-    { label: t("คาร์โบไฮเดรต", "Carbs"), color: RC.carbs, g: d.total.carbs, tg: mt.carbs, pct: split?.carbs },
-    { label: t("ไขมัน", "Fat"), color: RC.fat, g: d.total.fat, tg: mt.fat, pct: split?.fat },
+    { label: t("โปรตีน", "Protein"), key: "protein" as const, g: d.total.protein, tg: mt.protein, pct: split?.protein },
+    { label: t("คาร์โบไฮเดรต", "Carbs"), key: "carbs" as const, g: d.total.carbs, tg: mt.carbs, pct: split?.carbs },
+    { label: t("ไขมัน", "Fat"), key: "fat" as const, g: d.total.fat, tg: mt.fat, pct: split?.fat },
   ];
   macros.forEach((o, n) =>
     macroCard(b, m, PAD + n * (cw + gap), y, cw, 210, {
       label: o.label,
-      color: o.color,
+      key: o.key,
       grams: o.g,
       gramsText: none ? "–" : undefined,
       targetText: none ? t("ไม่มีข้อมูล", "No data") : o.tg > 0 ? t(`เป้า ${o.tg} g`, `of ${o.tg} g target`) : "",
@@ -369,38 +400,45 @@ export function layoutDayReport(d: DayReport, m: Measure): ReportLayout {
     y += 24;
   }
 
-  // Meal breakdown.
-  b.text(t("รายการอาหาร", "Meals"), PAD, y + 34, 32, 600, RC.ink);
-  b.line(PAD, y + 54, REPORT_W - PAD, y + 54, RC.border, 2);
-  y += 82;
+  // Meal breakdown (one soft glass card, drawn behind once its height is known).
+  const mealsAt = b.cmds.length;
+  const mealsTop = y;
+  const MX = PAD + 36;
+  const MR = REPORT_W - PAD - 36;
+  const minner = MR - MX;
+  b.text(t("รายการอาหาร", "Meals"), MX, y + 66, 32, 500, RC.ink);
+  y += 98;
   for (const s of d.slots) {
-    b.text(s.label, PAD, y + 28, 28, 600, s.logged ? RC.ink : RC.muted);
-    b.text(s.logged ? `${fmtKcal(s.kcal)} kcal` : t("ยังไม่ได้บันทึก", "Not logged"), REPORT_W - PAD, y + 28, 28, s.logged ? 600 : 400, s.logged ? RC.ink : RC.noData, "right");
+    b.text(s.label, MX, y + 28, 28, 500, s.logged ? RC.ink : RC.muted);
+    b.text(s.logged ? `${fmtKcal(s.kcal)} kcal` : t("ยังไม่ได้บันทึก", "Not logged"), MR, y + 28, 28, s.logged ? 500 : 300, s.logged ? RC.ink : RC.noData, "right");
     y += 46;
     for (const meal of s.meals) {
       const kcalText = `${meal.est ? "~" : ""}${fmtKcal(meal.kcal)} kcal`;
       const kw = m(kcalText, 28, 500);
-      const lines = wrapText(m, meal.title || t("อาหาร", "Meal"), 28, 500, inner - kw - 52, 2);
-      lines.forEach((line, k) => b.text(line, PAD + 18, y + 28 + k * 36, 28, 500, RC.ink));
-      b.text(kcalText, REPORT_W - PAD, y + 28, 28, 500, RC.ink, "right");
+      const lines = wrapText(m, meal.title || t("อาหาร", "Meal"), 28, 500, minner - kw - 52, 2);
+      lines.forEach((line, k) => b.text(line, MX + 18, y + 28 + k * 36, 28, 500, RC.ink));
+      b.text(kcalText, MR, y + 28, 28, 500, RC.ink, "right");
       y += 40 + (lines.length - 1) * 36;
       if (meal.detail) {
-        b.text(fitText(m, meal.detail, 22, 400, inner - 40), PAD + 18, y + 22, 22, 400, RC.muted);
+        b.text(fitText(m, meal.detail, 22, 400, minner - 40), MX + 18, y + 22, 22, 400, RC.muted);
         y += 32;
       }
       y += 8;
     }
     y += 10;
-    b.line(PAD, y, REPORT_W - PAD, y, RC.border, 1);
+    b.line(MX, y, MR, y, RC.line, 1);
     y += 22;
   }
+
+  b.cardBehind(mealsAt, PAD, mealsTop, inner, y - mealsTop);
+  y += 24;
 
   // Extras only when really logged.
   const extras: string[] = [];
   if (d.water) extras.push(t(`น้ำ ${d.water.glasses}/${d.water.goal} แก้ว`, `Water ${d.water.glasses}/${d.water.goal} glasses`));
   if (d.weightKg != null) extras.push(t(`น้ำหนัก ${fmtAmount(d.weightKg)} กก.`, `Weight ${fmtAmount(d.weightKg)} kg`));
   if (extras.length) {
-    b.text(extras.join("   ·   "), PAD, y + 28, 26, 500, RC.ink);
+    b.text(extras.join("   ·   "), PAD, y + 28, 26, 400, RC.ink);
     y += 56;
   }
 
@@ -434,19 +472,19 @@ export function layoutWeekReport(w: WeekReport, m: Measure): ReportLayout {
   b.card(PAD, y, aw, SH);
   b.text(t("แคลอรีเฉลี่ยต่อวันที่บันทึก", "Average calories per logged day"), PAD + 34, y + 56, 24, 400, RC.muted);
   const avgText = w.avg ? fmtKcal(w.avg.kcal) : "–";
-  b.text(avgText, PAD + 34, y + 156, 100, 500, RC.ink);
-  if (w.avg) b.text("kcal", PAD + 34 + m(avgText, 100, 500) + 14, y + 156, 30, 400, RC.muted);
+  b.text(avgText, PAD + 34, y + 156, 104, 300, RC.ink);
+  if (w.avg) b.text("kcal", PAD + 34 + m(avgText, 104, 300) + 14, y + 156, 30, 400, RC.muted);
   if (w.avg && w.vsTarget != null) {
     const v = w.vsTarget;
-    b.text(v === 0 ? t(`ตรงเป้า ${fmtKcal(w.target)} kcal`, `On target (${fmtKcal(w.target)} kcal)`) : t(`${v > 0 ? "+" : "−"}${fmtKcal(Math.abs(v))} kcal/วัน เทียบเป้า ${fmtKcal(w.target)}`, `${v > 0 ? "+" : "−"}${fmtKcal(Math.abs(v))} kcal/day vs target ${fmtKcal(w.target)}`), PAD + 34, y + 206, 26, 500, v > 0 ? RC.over : RC.muted);
+    b.text(v === 0 ? t(`ตรงเป้า ${fmtKcal(w.target)} kcal`, `On target (${fmtKcal(w.target)} kcal)`) : t(`${v > 0 ? "+" : "−"}${fmtKcal(Math.abs(v))} kcal/วัน เทียบเป้า ${fmtKcal(w.target)}`, `${v > 0 ? "+" : "−"}${fmtKcal(Math.abs(v))} kcal/day vs target ${fmtKcal(w.target)}`), PAD + 34, y + 206, 26, 500, v > 0 ? RC.over : RC.ok);
   } else if (!w.avg) b.text(t("สัปดาห์นี้ยังไม่มีอาหารที่บันทึก", "No food logged this week"), PAD + 34, y + 206, 26, 400, RC.muted);
   else if (w.target > 0) b.text(t(`เป้าหมาย ${fmtKcal(w.target)} kcal`, `Target ${fmtKcal(w.target)} kcal`), PAD + 34, y + 206, 26, 400, RC.muted);
   const x2 = PAD + aw + gap;
   b.card(x2, y, bw2, SH);
   b.text(t("วันที่มีบันทึกอาหาร", "Days with food logged"), x2 + 30, y + 56, 24, 400, RC.muted);
   const dl = `${w.loggedDays}`;
-  b.text(dl, x2 + 30, y + 156, 100, 500, RC.ink);
-  b.text("/ 7", x2 + 30 + m(dl, 100, 500) + 12, y + 156, 40, 400, RC.muted);
+  b.text(dl, x2 + 30, y + 156, 104, 300, RC.ink);
+  b.text("/ 7", x2 + 30 + m(dl, 104, 300) + 12, y + 156, 40, 400, RC.muted);
   for (const [n, line] of wrapText(m, t("วันที่ไม่มีบันทึกไม่ถูกนับเป็น 0", "Days without entries are not counted as 0"), 20, 400, bw2 - 60, 2).entries()) b.text(line, x2 + 30, y + 196 + n * 26, 20, 400, RC.muted);
   y += SH + 24;
 
@@ -454,14 +492,14 @@ export function layoutWeekReport(w: WeekReport, m: Measure): ReportLayout {
   const cw = (inner - 2 * gap) / 3;
   const mt = w.macroTargets;
   const rows = [
-    { label: t("โปรตีน", "Protein"), color: RC.protein, g: w.avg?.protein ?? 0, tg: mt.protein },
-    { label: t("คาร์โบไฮเดรต", "Carbs"), color: RC.carbs, g: w.avg?.carbs ?? 0, tg: mt.carbs },
-    { label: t("ไขมัน", "Fat"), color: RC.fat, g: w.avg?.fat ?? 0, tg: mt.fat },
+    { label: t("โปรตีน", "Protein"), key: "protein" as const, g: w.avg?.protein ?? 0, tg: mt.protein },
+    { label: t("คาร์โบไฮเดรต", "Carbs"), key: "carbs" as const, g: w.avg?.carbs ?? 0, tg: mt.carbs },
+    { label: t("ไขมัน", "Fat"), key: "fat" as const, g: w.avg?.fat ?? 0, tg: mt.fat },
   ];
   rows.forEach((o, n) =>
     macroCard(b, m, PAD + n * (cw + gap), y, cw, 210, {
       label: o.label,
-      color: o.color,
+      key: o.key,
       grams: o.g,
       gramsText: w.avg ? undefined : "–",
       targetText: !w.avg ? t("ไม่มีข้อมูล", "No data") : o.tg > 0 ? t(`เฉลี่ย/วัน · เป้า ${o.tg} g`, `avg/day · target ${o.tg} g`) : t("เฉลี่ยต่อวัน", "avg per day"),
@@ -471,9 +509,9 @@ export function layoutWeekReport(w: WeekReport, m: Measure): ReportLayout {
   y += 210 + 24;
 
   // Calories per day chart.
-  const CH = 520;
+  const CH = 560;
   b.card(PAD, y, inner, CH);
-  b.text(t("แคลอรีรายวัน", "Calories per day"), PAD + 34, y + 54, 30, 600, RC.ink);
+  b.text(t("แคลอรีรายวัน", "Calories per day"), PAD + 34, y + 54, 30, 500, RC.ink);
   const cx0 = PAD + 36;
   const cwid = inner - 72;
   const col = cwid / 7;
@@ -482,10 +520,10 @@ export function layoutWeekReport(w: WeekReport, m: Measure): ReportLayout {
   const plotH = base - top;
   const maxK = Math.max(1000, ...w.days.map((d) => d.kcal), w.target || 0);
   const scale = plotH / (maxK * 1.12);
-  b.line(cx0, base, cx0 + cwid, base, RC.border, 2);
+  b.line(cx0, base, cx0 + cwid, base, RC.line, 2);
   if (w.target > 0) {
     const ty = base - w.target * scale;
-    b.line(cx0, ty, cx0 + cwid, ty, RC.muted, 2, [10, 8]);
+    b.line(cx0, ty, cx0 + cwid, ty, "rgba(142,83,57,0.45)", 2, [10, 9]);
     b.text(t(`เป้า ${fmtKcal(w.target)}`, `Target ${fmtKcal(w.target)}`), cx0 + cwid, ty - 10, 20, 500, RC.muted, "right");
   }
   w.days.forEach((d, n) => {
@@ -496,25 +534,26 @@ export function layoutWeekReport(w: WeekReport, m: Measure): ReportLayout {
       b.text(d.future ? t("ยังไม่ถึง", "Upcoming") : t("ไม่มีข้อมูล", "No data"), cxm, base - 26, 18, 400, RC.noData, "center");
     } else {
       const h = Math.max(8, d.kcal * scale);
-      const fill = d.few ? RC.barLight : d.over ? RC.over : RC.bar;
-      b.rect(cxm - bwid / 2, base - h, bwid, h, 8, fill, d.few ? RC.bar : undefined, d.few ? { dash: [8, 6], lw: 2 } : {});
-      b.text(fmtKcal(d.kcal), cxm, base - h - 12, 22, 600, RC.ink, "center");
+      const bx = cxm - bwid / 2;
+      if (d.few) b.rect(bx, base - h, bwid, h, 14, RC.barLight, RC.barBottom, { dash: [8, 6], lw: 2 });
+      else b.rect(bx, base - h, bwid, h, 14, undefined, undefined, { grad: d.over ? [RC.barOverTop, RC.barOverBottom] : [RC.barTop, RC.barBottom] });
+      b.text(fmtKcal(d.kcal), cxm, base - h - 12, 22, 500, RC.ink, "center");
     }
     b.text(WD[w.lang][n], cxm, base + 34, 22, 500, d.logged ? RC.ink : RC.muted, "center");
     b.text(String(Number(d.date.slice(8, 10))), cxm, base + 62, 22, 400, RC.muted, "center");
     if (d.logged && d.few) b.text(t("1 มื้อ", "1 meal"), cxm, base + 88, 18, 500, RC.over, "center");
   });
   // Legend (only what is on the chart).
-  const legend: { c: string; label: string; kind: "solid" | "few" | "none" }[] = [{ c: RC.bar, label: t("วันที่บันทึก", "Logged day"), kind: "solid" }];
-  if (w.overDays) legend.push({ c: RC.over, label: t("เกินเป้า", "Over target"), kind: "solid" });
+  const legend: { c: string; label: string; kind: "solid" | "few" | "none" }[] = [{ c: RC.barBottom, label: t("วันที่บันทึก", "Logged day"), kind: "solid" }];
+  if (w.overDays) legend.push({ c: RC.barOverBottom, label: t("เกินเป้า", "Over target"), kind: "solid" });
   if (w.fewDays) legend.push({ c: RC.barLight, label: t("บันทึกน้อย อาจไม่ครบ", "Few meals logged, may be incomplete"), kind: "few" });
   if (w.days.some((d) => !d.logged)) legend.push({ c: RC.noData, label: t("ไม่มีข้อมูล", "No data"), kind: "none" });
   let lx = cx0;
   const ly = y + CH - 34;
   for (const it of legend) {
-    if (it.kind === "none") b.rect(lx, ly - 14, 22, 14, 3, undefined, RC.noData, { dash: [5, 4], lw: 2 });
-    else if (it.kind === "few") b.rect(lx, ly - 18, 22, 18, 3, it.c, RC.bar, { dash: [6, 4], lw: 2 });
-    else b.rect(lx, ly - 18, 22, 18, 3, it.c);
+    if (it.kind === "none") b.rect(lx, ly - 14, 22, 14, 5, undefined, RC.noData, { dash: [5, 4], lw: 2 });
+    else if (it.kind === "few") b.rect(lx, ly - 18, 22, 18, 6, it.c, RC.barBottom, { dash: [6, 4], lw: 2 });
+    else b.rect(lx, ly - 18, 22, 18, 6, it.c);
     b.text(it.label, lx + 32, ly - 1, 20, 400, RC.muted);
     lx += 32 + m(it.label, 20, 400) + 30;
   }
@@ -522,7 +561,7 @@ export function layoutWeekReport(w: WeekReport, m: Measure): ReportLayout {
 
   // Table: one row per day, "–" for nothing logged.
   const TR = 56;
-  const TH = 64 + 7 * TR + 70;
+  const TH = 64 + 7 * TR + 90;
   b.card(PAD, y, inner, TH);
   const ix = PAD + 36;
   const colR = { meals: ix + 470, kcal: ix + 626, p: ix + 726, c: ix + 810, f: ix + inner - 72 };
@@ -532,7 +571,7 @@ export function layoutWeekReport(w: WeekReport, m: Measure): ReportLayout {
   b.text(t("โปรตีน", "P"), colR.p, y + 42, 20, 500, RC.muted, "right");
   b.text(t("คาร์บ", "C"), colR.c, y + 42, 20, 500, RC.muted, "right");
   b.text(t("ไขมัน", "F"), colR.f, y + 42, 20, 500, RC.muted, "right");
-  b.line(ix, y + 56, PAD + inner - 36, y + 56, RC.border, 1);
+  b.line(ix, y + 56, PAD + inner - 36, y + 56, RC.line, 1);
   const f = (d: string) => {
     const [yy, mm, dd] = d.split("-").map(Number);
     return new Intl.DateTimeFormat(w.lang === "en" ? "en-GB" : "th-TH", { timeZone: "UTC", weekday: "short", day: "numeric", month: "short" }).format(new Date(Date.UTC(yy, mm - 1, dd, 12)));
@@ -542,7 +581,7 @@ export function layoutWeekReport(w: WeekReport, m: Measure): ReportLayout {
     b.text(f(d.date), ix, ry, 24, d.logged ? 500 : 400, d.logged ? RC.ink : RC.muted);
     if (d.logged) {
       b.text(String(d.mealSlots), colR.meals, ry, 24, 400, d.few ? RC.over : RC.ink, "right");
-      b.text(fmtKcal(d.kcal), colR.kcal, ry, 24, 600, RC.ink, "right");
+      b.text(fmtKcal(d.kcal), colR.kcal, ry, 24, 500, RC.ink, "right");
       b.text(String(Math.round(d.protein)), colR.p, ry, 24, 400, RC.ink, "right");
       b.text(String(Math.round(d.carbs)), colR.c, ry, 24, 400, RC.ink, "right");
       b.text(String(Math.round(d.fat)), colR.f, ry, 24, 400, RC.ink, "right");
@@ -552,13 +591,14 @@ export function layoutWeekReport(w: WeekReport, m: Measure): ReportLayout {
     }
   });
   const ay = y + 64 + 7 * TR + 14;
-  b.line(ix, ay, PAD + inner - 36, ay, RC.border, 1);
-  b.text(t("เฉลี่ย (เฉพาะวันที่บันทึก)", "Average (logged days only)"), ix, ay + 38, 22, 600, RC.ink);
+  b.line(ix, ay, PAD + inner - 36, ay, RC.line, 1);
+  b.rect(ix - 16, ay + 8, inner - 40, 54, 20, RC.proteinTint);
+  b.text(t("เฉลี่ย (เฉพาะวันที่บันทึก)", "Average (logged days only)"), ix, ay + 38, 22, 500, RC.ink);
   if (w.avg) {
-    b.text(fmtKcal(w.avg.kcal), colR.kcal, ay + 38, 24, 600, RC.ink, "right");
-    b.text(String(Math.round(w.avg.protein)), colR.p, ay + 38, 24, 600, RC.ink, "right");
-    b.text(String(Math.round(w.avg.carbs)), colR.c, ay + 38, 24, 600, RC.ink, "right");
-    b.text(String(Math.round(w.avg.fat)), colR.f, ay + 38, 24, 600, RC.ink, "right");
+    b.text(fmtKcal(w.avg.kcal), colR.kcal, ay + 38, 24, 500, RC.ink, "right");
+    b.text(String(Math.round(w.avg.protein)), colR.p, ay + 38, 24, 500, RC.ink, "right");
+    b.text(String(Math.round(w.avg.carbs)), colR.c, ay + 38, 24, 500, RC.ink, "right");
+    b.text(String(Math.round(w.avg.fat)), colR.f, ay + 38, 24, 500, RC.ink, "right");
   } else b.text("–", colR.kcal, ay + 38, 24, 400, RC.noData, "right");
   y += TH + 24;
 
