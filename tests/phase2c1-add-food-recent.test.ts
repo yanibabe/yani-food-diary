@@ -59,7 +59,7 @@ test("AI estimate wording is unified (no old วิเคราะห์ / Check
 
 test("the four AI kinds stay distinct", () => {
   assert.match(review, /อธิบายเพิ่ม/);
-  assert.match(read("../app/components/ChatFab.tsx"), /ถามผู้ช่วย/);
+  assert.match(read("../app/components/FoodChat.tsx"), /ถามผู้ช่วย/);
   assert.match(page, /เหลือเท่านี้ กินอะไรดี/);
 });
 
