@@ -13,7 +13,8 @@ import { FoodChat } from "./FoodChat";
 import { useLang } from "../lib/lang";
 import { useStore } from "../lib/store";
 import { useAnyOverlay } from "../lib/overlayFlag";
-import { OPEN_CHAT_EVENT } from "../lib/chatOpen";
+import { CLOSE_CHAT_EVENT, OPEN_CHAT_EVENT } from "../lib/chatOpen";
+import { resetChatUi, setChatUi } from "../lib/chatUi";
 import { thaiDateKey } from "../lib/date";
 import { newId } from "../lib/nutrition";
 import { cleanBufferPct } from "../lib/calorieBuffer";
@@ -39,12 +40,14 @@ export function ChatFab() {
   const depthRef = useRef(0);
   const [review, setReview] = useState<FoodItem | null>(null);
   const afterClose = useRef<"today" | null>(null);
+  const pendingGo = useRef<(() => void) | null>(null); // a tab tapped while the chat is open: runs once the chat has closed
 
 
   // ---- chat layers + history ----
   const syncDepth = (d: number) => {
     depthRef.current = d;
     setDepth(d);
+    setChatUi({ depth: d });
     if (d < 2) setReview(null);
   };
   const pushStep = (d: 1 | 2) => {
@@ -80,6 +83,11 @@ export function ChatFab() {
     if (depth === 0) return;
     const onPop = () => {
       syncDepth(stateDepth());
+      if (stateDepth() === 0 && pendingGo.current) {
+        const go = pendingGo.current;
+        pendingGo.current = null;
+        go();
+      }
       if (stateDepth() === 0 && afterClose.current === "today") {
         afterClose.current = null;
         const u = new URL(window.location.href);
@@ -104,8 +112,30 @@ export function ChatFab() {
     const onOpen = () => {
       if (allowedRef.current) openChat();
     };
+    // The bar's other tabs: close the chat first (history back, no leftover step), then go. Nothing is erased: the chat is saved on the phone.
+    const onClose = (e: Event) => {
+      const go = (e as CustomEvent<{ go?: () => void }>).detail?.go;
+      if (depthRef.current === 0) {
+        go?.();
+        return;
+      }
+      pendingGo.current = go ?? null;
+      if (go) {
+        setTimeout(() => {
+          const f = pendingGo.current;
+          pendingGo.current = null;
+          f?.(); // fallback if the browser never answers
+        }, 700);
+      }
+      window.history.go(-depthRef.current);
+    };
     window.addEventListener(OPEN_CHAT_EVENT, onOpen);
-    return () => window.removeEventListener(OPEN_CHAT_EVENT, onOpen);
+    window.addEventListener(CLOSE_CHAT_EVENT, onClose);
+    return () => {
+      window.removeEventListener(OPEN_CHAT_EVENT, onOpen);
+      window.removeEventListener(CLOSE_CHAT_EVENT, onClose);
+      resetChatUi();
+    };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps -- openChat only uses refs and stable setters
 
   return (

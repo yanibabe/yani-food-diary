@@ -13,6 +13,7 @@ import { useLang } from "../lib/lang";
 import { newId, pickMacros, sumMacros } from "../lib/nutrition";
 import { useStore } from "../lib/store";
 import { Icon } from "./Icon";
+import { setChatUi } from "../lib/chatUi";
 
 function latestWeight(logs: { date: string; weightKg: number | null }[], today: string): number | null {
   const l = logs.filter((x) => x.date <= today && validWeight(x.weightKg)).sort((a, b) => a.date.localeCompare(b.date)).at(-1);
@@ -53,6 +54,29 @@ export function FoodChat({ onBack, onAdd }: { onBack: () => void; onAdd: (s: Sug
       v.removeEventListener("scroll", update);
     };
   }, []);
+
+  // The bottom bar stays visible under the chat (Ask AI is a normal tab). Only while the phone keyboard is up does the bar step aside.
+  const kbOpen = !!vv && typeof window !== "undefined" && vv.height < window.innerHeight - 120;
+  useEffect(() => {
+    setChatUi({ keyboard: kbOpen });
+    return () => setChatUi({ keyboard: false });
+  }, [kbOpen]);
+  const [barH, setBarH] = useState(0);
+  useEffect(() => {
+    if (kbOpen) return; // the bar is hidden while the keyboard is up
+    const bar = document.querySelector<HTMLElement>(".tabbar");
+    if (!bar) return;
+    const measure = () => setBarH(bar.offsetHeight);
+    measure();
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(measure) : null;
+    ro?.observe(bar);
+    window.addEventListener("resize", measure);
+    return () => {
+      ro?.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [kbOpen]);
+  const lift = kbOpen ? 0 : barH; // how much room the bar takes at the bottom
 
   function save(next: ChatMsg[]) {
     msgsRef.current = next;
@@ -141,7 +165,7 @@ export function FoodChat({ onBack, onAdd }: { onBack: () => void; onAdd: (s: Sug
     <div className="add-layer fixed inset-x-0 z-[44]" style={{ top: "-50vh", height: "200vh" }} aria-hidden data-testid="chat-cover" />
     <div
       className="add-layer fixed inset-x-0 z-[45] flex flex-col"
-      style={vv ? { top: vv.top, height: vv.height } : { top: 0, bottom: 0 }}
+      style={vv ? { top: vv.top, height: Math.max(0, vv.height - lift) } : { top: 0, bottom: lift }}
       role="dialog"
       aria-modal="true"
       aria-label={tr("ถามผู้ช่วย", "Ask AI")}
@@ -271,7 +295,7 @@ export function FoodChat({ onBack, onAdd }: { onBack: () => void; onAdd: (s: Sug
 
       <form
         className="shrink-0 border-t border-white/70 bg-[rgba(250,246,240,0.85)]"
-        style={{ paddingBottom: vv && typeof window !== "undefined" && vv.height < window.innerHeight - 120 ? 8 : "calc(env(safe-area-inset-bottom, 0px) + 8px)" }}
+        style={{ paddingBottom: kbOpen || lift > 0 ? 8 : "calc(env(safe-area-inset-bottom, 0px) + 8px)" }}
         onSubmit={(e) => {
           e.preventDefault();
           send(text);

@@ -21,15 +21,17 @@ test("bottom bar keeps the three destinations and adds one Ask AI action between
 });
 
 test("Ask AI is an action, not a page: no href, no router push", () => {
-  const btn = bar.slice(bar.indexOf('data-testid="ask-ai-tab"') - 400, bar.indexOf('data-testid="ask-ai-tab"') + 50);
+  const btn = bar.slice(bar.indexOf('data-testid="ask-ai-tab"') - 600, bar.indexOf('data-testid="ask-ai-tab"') + 50);
   assert.doesNotMatch(btn, /href=/);
-  assert.doesNotMatch(bar, /router\.push/);
+  assert.match(btn, /onClick=\{requestOpenChat\}/);
+  // the only router use is for the three real destinations, while the chat is open (see ask-ai-tab-nav.test.ts)
+  assert.equal((bar.match(/router\.push/g) ?? []).length, 1);
 });
 
 test("same size and look as the other items (min 72px wide, px-1 so My recipes stays on one line at 320px, same padding, so the bar stays 72px high)", () => {
   const items = bar.match(/flex min-w-\[72px\] flex-1 flex-col items-center gap-0\.5 rounded-2xl px-1 py-1\.5 text-\[12\.5px\]/g) ?? [];
   assert.equal(items.length, 2, "one class string for links, one for the Ask AI button");
-  assert.match(bar, /tabbar fixed inset-x-0 bottom-0 z-30 safe-bottom/);
+  assert.match(bar, /tabbar fixed inset-x-0 bottom-0 \$\{chat\.depth > 0 \? "z-\[48\]" : "z-30"\} safe-bottom/);
 });
 
 test("the bar is still hidden on the same full-screen pages (chat is NOT added anywhere new)", () => {
