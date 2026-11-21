@@ -5,6 +5,7 @@
 
 import { trFor } from "@/app/lib/i18n";
 import { passcodeBlock } from "@/app/lib/server/passcode";
+import { aiGuard } from "@/app/lib/server/aiGuard";
 import { translateForUsda } from "@/app/lib/server/ai";
 import { UsdaClient, UsdaError, sharedUsdaClient } from "@/app/lib/food/usda";
 import { mockUsdaFetch } from "@/app/lib/food/usdaMock";
@@ -58,7 +59,7 @@ export async function POST(req: Request) {
     const out = await searchUsda(
       { search: (...a) => live().search(...a) },
       { name, query: typeof body.query === "string" ? body.query : null, branded: body.branded === true, local: process.env.USDA_MOCK !== "1" },
-      canTranslate ? async (n) => (await translateForUsda({ name: n, lang })).query || null : null,
+      canTranslate ? async (n) => (aiGuard(req, "usda-translate", lang) ? null : (await translateForUsda({ name: n, lang })).query || null) : null,
     );
     return Response.json({ ...out, mock: process.env.USDA_MOCK === "1" });
   } catch (e) {

@@ -1,5 +1,6 @@
 import { AiError, suggestMeals } from "@/app/lib/server/ai";
 import { passcodeBlock } from "@/app/lib/server/passcode";
+import { aiGuard } from "@/app/lib/server/aiGuard";
 
 export const maxDuration = 60;
 
@@ -18,6 +19,8 @@ export async function POST(req: Request) {
   const lang = body?.lang === "en" ? "en" : "th";
   const blocked = await passcodeBlock(req, lang);
   if (blocked) return blocked;
+  const limited = aiGuard(req, "suggest", lang);
+  if (limited) return limited;
   try {
     const result = await suggestMeals({
       kcalLeft: n(body.kcalLeft, 10000),

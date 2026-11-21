@@ -2,6 +2,7 @@ import { AiError } from "@/app/lib/server/ai";
 import { drawMealPicture, type PictureInput } from "@/app/lib/server/mealPicture";
 import { trFor } from "@/app/lib/i18n";
 import { passcodeBlock } from "@/app/lib/server/passcode";
+import { aiGuard } from "@/app/lib/server/aiGuard";
 
 export const maxDuration = 60;
 
@@ -17,6 +18,8 @@ export async function POST(req: Request) {
   const lang = body?.lang === "en" ? "en" : "th";
   const blocked = await passcodeBlock(req, lang);
   if (blocked) return blocked;
+  const limited = aiGuard(req, "meal-picture", lang);
+  if (limited) return limited;
   const title = typeof body?.title === "string" ? body.title.trim().slice(0, 200) : "";
   if (!title || !Array.isArray(body.items)) {
     return Response.json({ error: "bad-request", message: trFor(lang)("ไม่มีชื่อมื้ออาหาร", "The meal has no name") }, { status: 400 });

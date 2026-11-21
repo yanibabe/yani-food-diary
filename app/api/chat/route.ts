@@ -2,6 +2,7 @@ import { AiError, chatReply } from "@/app/lib/server/ai";
 import { ChatRequestSchema } from "@/app/lib/foodChat";
 import { trFor } from "@/app/lib/i18n";
 import { passcodeBlock } from "@/app/lib/server/passcode";
+import { aiGuard } from "@/app/lib/server/aiGuard";
 
 export const maxDuration = 60;
 
@@ -16,6 +17,8 @@ export async function POST(req: Request) {
   const lang = guess === "en" ? "en" : "th";
   const blocked = await passcodeBlock(req, lang);
   if (blocked) return blocked;
+  const limited = aiGuard(req, "chat", lang);
+  if (limited) return limited;
   // Unknown fields are dropped here, so nothing but the allowed numbers and messages can reach the AI.
   const parsed = ChatRequestSchema.safeParse(raw);
   if (!parsed.success) {

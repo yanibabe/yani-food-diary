@@ -2,6 +2,7 @@ import { AiError, lookupIngredient } from "@/app/lib/server/ai";
 import { trFor } from "@/app/lib/i18n";
 import { UNITS, type IngredientUnit } from "@/app/lib/types";
 import { passcodeBlock } from "@/app/lib/server/passcode";
+import { aiGuard } from "@/app/lib/server/aiGuard";
 
 export const maxDuration = 60;
 
@@ -15,6 +16,8 @@ export async function POST(req: Request) {
   const lang = body.lang === "en" ? "en" : "th";
   const blocked = await passcodeBlock(req, lang);
   if (blocked) return blocked;
+  const limited = aiGuard(req, "ingredient", lang);
+  if (limited) return limited;
   const name = typeof body.name === "string" ? body.name.trim().slice(0, 120) : "";
   if (!name) return Response.json({ error: "bad-request", message: trFor(lang)("ยังไม่ได้ใส่ชื่อวัตถุดิบ", "No ingredient name") }, { status: 400 });
   try {

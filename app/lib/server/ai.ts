@@ -4,6 +4,7 @@
 
 import { z } from "zod";
 import { trFor, type Lang } from "../i18n.ts";
+import { aiDisabled } from "./aiGuard.ts";
 import { LEGACY_MARGIN_PCT, cleanBufferPct } from "../calorieBuffer.ts";
 import { MAX_MEAL_PHOTOS } from "../mealPhotos.ts";
 import { UNITS, type IngredientUnit } from "../types.ts";
@@ -155,7 +156,8 @@ export class AiError extends Error {
 
 export function aiStatus() {
   return {
-    configured: Boolean(process.env.OPENROUTER_API_KEY),
+    configured: Boolean(process.env.OPENROUTER_API_KEY) && !aiDisabled(),
+    disabled: aiDisabled(),
     mock: process.env.AI_MOCK === "1",
     model: MODEL,
     passcode: Boolean(process.env.APP_PASSCODE?.trim()),

@@ -4,6 +4,7 @@ import { AiError, readNutritionLabel } from "@/app/lib/server/ai";
 import { fixIsValid } from "@/app/lib/food/labelFix";
 import { trFor } from "@/app/lib/i18n";
 import { passcodeBlock } from "@/app/lib/server/passcode";
+import { aiGuard } from "@/app/lib/server/aiGuard";
 
 export const maxDuration = 60;
 
@@ -17,6 +18,8 @@ export async function POST(req: Request) {
   const lang = body.lang === "en" ? "en" : "th";
   const blocked = await passcodeBlock(req, lang);
   if (blocked) return blocked;
+  const limited = aiGuard(req, "label-photo", lang);
+  if (limited) return limited;
   if (typeof body.image !== "string" || !body.image) {
     return Response.json({ error: "bad-request", message: trFor(lang)("ยังไม่ได้เลือกรูป", "No picture chosen") }, { status: 400 });
   }

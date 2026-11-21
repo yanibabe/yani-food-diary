@@ -1,6 +1,7 @@
 import { AiError, refineMeal, type RefineInput } from "@/app/lib/server/ai";
 import { trFor } from "@/app/lib/i18n";
 import { passcodeBlock } from "@/app/lib/server/passcode";
+import { aiGuard } from "@/app/lib/server/aiGuard";
 
 export const maxDuration = 60;
 
@@ -14,6 +15,8 @@ export async function POST(req: Request) {
   const lang = body?.lang === "en" ? "en" : "th";
   const blocked = await passcodeBlock(req, lang);
   if (blocked) return blocked;
+  const limited = aiGuard(req, "refine", lang);
+  if (limited) return limited;
   if (!body?.message?.trim() || !Array.isArray(body.items)) {
     return Response.json({ error: "bad-request", message: trFor(lang)("พิมพ์ข้อความก่อนส่ง", "Type a message first") }, { status: 400 });
   }

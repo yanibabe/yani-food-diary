@@ -2,6 +2,7 @@ import { AiError, analyzeMeal } from "@/app/lib/server/ai";
 import { trFor } from "@/app/lib/i18n";
 import { parseAnalyzeImages, MAX_MEAL_PHOTOS } from "@/app/lib/mealPhotos";
 import { passcodeBlock } from "@/app/lib/server/passcode";
+import { aiGuard } from "@/app/lib/server/aiGuard";
 
 export const maxDuration = 60;
 
@@ -15,6 +16,8 @@ export async function POST(req: Request) {
   const lang = body.lang === "en" ? "en" : "th";
   const blocked = await passcodeBlock(req, lang);
   if (blocked) return blocked;
+  const limited = aiGuard(req, "analyze", lang);
+  if (limited) return limited;
   const parsed = parseAnalyzeImages(body);
   const t = trFor(lang);
   if (!parsed.ok && parsed.reason === "too-many")

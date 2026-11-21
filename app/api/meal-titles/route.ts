@@ -2,6 +2,7 @@ import { AiError } from "@/app/lib/server/ai";
 import { checkMealTitles } from "@/app/lib/server/mealTitles";
 import { parseTitleRequest } from "@/app/lib/mealTitles";
 import { passcodeBlock } from "@/app/lib/server/passcode";
+import { aiGuard } from "@/app/lib/server/aiGuard";
 
 export const maxDuration = 60;
 
@@ -15,6 +16,8 @@ export async function POST(req: Request) {
   const lang = body.lang === "en" ? "en" : "th";
   const blocked = await passcodeBlock(req, lang);
   if (blocked) return blocked;
+  const limited = aiGuard(req, "meal-titles", lang);
+  if (limited) return limited;
   const checked = parseTitleRequest(body);
   if (!checked.ok) return Response.json({ error: "bad-request", message: checked.error }, { status: 400 });
   try {

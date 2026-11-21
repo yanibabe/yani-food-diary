@@ -5,6 +5,7 @@ import { AiError, lookupIngredient, readPackPhotos } from "@/app/lib/server/ai";
 import { fixIsValid } from "@/app/lib/food/labelFix";
 import { trFor } from "@/app/lib/i18n";
 import { passcodeBlock } from "@/app/lib/server/passcode";
+import { aiGuard } from "@/app/lib/server/aiGuard";
 
 export const maxDuration = 60;
 const MAX_PHOTOS = 4;
@@ -20,6 +21,8 @@ export async function POST(req: Request) {
   const t = trFor(lang);
   const blocked = await passcodeBlock(req, lang);
   if (blocked) return blocked;
+  const limited = aiGuard(req, "pack-photos", lang);
+  if (limited) return limited;
   const images = Array.isArray(body.images) ? body.images.filter((i): i is string => typeof i === "string" && !!i) : [];
   if (!images.length) return Response.json({ error: "bad-request", message: t("ยังไม่ได้เลือกรูป", "No picture chosen") }, { status: 400 });
   if (images.length > MAX_PHOTOS)
