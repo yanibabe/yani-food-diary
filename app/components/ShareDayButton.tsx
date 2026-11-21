@@ -1,222 +1,62 @@
 "use client";
-// "Share this day": draws the whole day as one picture,
-// then sends it through the iPhone share sheet (LINE, Messages, save to Photos…).
+// Sharing a nutrition report (for a trainer / coach). Opened from the "Share report" tile on Today.
+// ONE place to choose what to send: Day | Week (the day starts as the date being viewed on Today).
+// The picture is made on the phone from the saved meals (see lib/nutritionReport.ts); nothing is uploaded and no AI is used.
 import { useEffect, useState } from "react";
 import { Sheet } from "./ui";
 import { useLang } from "../lib/lang";
-import { thaiDateLabel } from "../lib/date";
-import { buildShareDay, shareFileName } from "../lib/shareDay";
-import { CARD_COLORS, layoutShareCard, type CardInput, type Measure } from "../lib/shareCard";
-import { MEAL_PICS_KEY, parseMealPics } from "../lib/mealPics";
-import { getPhoto } from "../lib/photos";
-import { type Entry } from "../lib/types";
-import { Icon } from "./Icon";
-import { weekFileName } from "../lib/shareWeek";
-import { weekRange } from "../lib/jar";
-import { makeWeekPicture } from "./shareWeekDraw";
+import { shortDayLabel } from "../lib/date";
+import { buildDayReport, buildWeekReport, layoutDayReport, layoutWeekReport, reportFileName } from "../lib/nutritionReport";
+import { weekRangeLabel } from "../lib/shareWeek";
+import { weekStart } from "../lib/body";
+import { shiftDateKey } from "../lib/date";
+import { makeReportPicture } from "./reportDraw";
+import type { Entry } from "../lib/types";
 
-// "Frosted Calm" look. The layout (what goes where, how tall) is worked out in lib/shareCard.ts;
-// here we only draw its commands on a canvas. A still picture can't blur, so the glass cards
-// are white ~58% fill + a thin white border, and the color clouds are soft radial gradients.
-const CLOUDS = [
-  { x: 0.18, y: 0.06, r: 0.62, c: "243,217,200" }, // peach, top-left
-  { x: 0.9, y: 0.5, r: 0.66, c: "227,224,242" }, // lavender, right
-  { x: 0.28, y: 0.97, r: 0.66, c: "230,238,221" }, // sage, bottom
-];
-
-function calmFont(): string {
-  const s = getComputedStyle(document.documentElement);
-  const calm = s.getPropertyValue("--font-calm").trim();
-  const thai = s.getPropertyValue("--font-thai").trim();
-  return [calm, thai, "sans-serif"].filter(Boolean).join(", ");
-}
-
-/** Load a picture (her character file, or a meal picture from the phone). */
-function loadImg(src: string): Promise<HTMLImageElement> {
-  return new Promise((ok, bad) => {
-    const i = new Image();
-    i.onload = () => ok(i);
-    i.onerror = () => bad(new Error("image " + src.slice(0, 40)));
-    i.src = src;
-  });
-}
-
-/** Draw a picture cut to a rounded square (fills the square, like "cover"). */
-function drawThumb(ctx: CanvasRenderingContext2D, img: HTMLImageElement, x: number, y: number, size: number, r: number) {
-  const s = Math.min(img.width, img.height);
-  ctx.save();
-  ctx.beginPath();
-  ctx.roundRect(x, y, size, size, r);
-  ctx.clip();
-  ctx.drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, x, y, size, size);
-  ctx.restore();
-}
-
-async function makePicture(info: CardInput): Promise<Blob> {
-  const fam = calmFont();
-  // Make sure the thin Thai + number font is ready, or the canvas uses a plain font.
-  await Promise.all([200, 300, 400].map((w) => document.fonts.load(`${w} 32px ${fam}`, "กขค 0123 kcal").catch(() => [])));
-  const canvas = document.createElement("canvas");
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("canvas");
-  const measure: Measure = (t, size, weight) => {
-    ctx.font = `${weight} ${size}px ${fam}`;
-    return ctx.measureText(t).width;
-  };
-  const card = layoutShareCard(info, measure);
-  // The character and the meal pictures are nice to have: if one fails to load, the picture still works.
-  const char = await loadImg("/character-lines.png").catch(() => null);
-  const photos = new Map<string, HTMLImageElement>();
-  const ids = [...new Set(card.cmds.flatMap((c) => (c.t === "pic" ? [c.id] : [])))];
-  await Promise.all(
-    ids.map(async (id) => {
-      const src = await getPhoto(id).catch(() => null);
-      if (src) {
-        const img = await loadImg(src).catch(() => null);
-        if (img) photos.set(id, img);
-      }
-    }),
-  );
-  canvas.width = card.w;
-  canvas.height = card.h;
-  const { w: W, h: H } = card;
-  // Beige page + 3 soft color clouds
-  ctx.fillStyle = CARD_COLORS.bg;
-  ctx.fillRect(0, 0, W, H);
-  for (const cl of CLOUDS) {
-    const cx = cl.x * W;
-    const cy = cl.y * H;
-    const r = cl.r * Math.max(W, Math.min(H, 1500) * 0.7);
-    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
-    g.addColorStop(0, `rgba(${cl.c},1)`);
-    g.addColorStop(1, `rgba(${cl.c},0)`);
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, W, H);
-  }
-  ctx.textBaseline = "alphabetic";
-  for (const c of card.cmds) {
-    if (c.t === "rect") {
-      ctx.beginPath();
-      ctx.roundRect(c.x, c.y, c.w, c.h, c.r);
-      ctx.fillStyle = c.fill;
-      ctx.fill();
-      if (c.stroke) {
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = c.stroke;
-        ctx.stroke();
-      }
-    } else if (c.t === "text") {
-      ctx.font = `${c.weight} ${c.size}px ${fam}`;
-      ctx.fillStyle = c.color;
-      if (c.spacing) {
-        // Wide letter spacing, one letter at a time (works on every iPhone)
-        const chars = Array.from(c.s);
-        const total = chars.reduce((a, ch) => a + ctx.measureText(ch).width, 0) + c.spacing * (chars.length - 1);
-        let x = c.align === "center" ? c.x - total / 2 : c.align === "right" ? c.x - total : c.x;
-        ctx.textAlign = "left";
-        for (const ch of chars) {
-          ctx.fillText(ch, x, c.y);
-          x += ctx.measureText(ch).width + c.spacing;
-        }
-      } else {
-        ctx.textAlign = c.align;
-        ctx.fillText(c.s, c.x, c.y);
-      }
-    } else if (c.t === "dot") {
-      ctx.beginPath();
-      ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2);
-      if (c.fill) {
-        ctx.fillStyle = c.fill;
-        ctx.fill();
-      }
-      if (c.stroke) {
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = c.stroke;
-        ctx.stroke();
-      }
-    } else if (c.t === "bar") {
-      ctx.fillStyle = CARD_COLORS.track;
-      ctx.beginPath();
-      ctx.roundRect(c.x, c.y, c.w, 6, 3);
-      ctx.fill();
-      const pw = c.w * Math.max(0, Math.min(1, c.part));
-      if (pw > 0) {
-        ctx.fillStyle = c.color;
-        ctx.beginPath();
-        ctx.roundRect(c.x, c.y, Math.max(6, pw), 6, 3);
-        ctx.fill();
-      }
-    } else if (c.t === "pic") {
-      const img = photos.get(c.id);
-      if (img) drawThumb(ctx, img, c.x, c.y, c.size, c.r);
-      else {
-        // Picture missing from the phone: the same soft tile as "no picture"
-        ctx.beginPath();
-        ctx.roundRect(c.x, c.y, c.size, c.size, c.r);
-        ctx.fillStyle = CARD_COLORS.tile;
-        ctx.fill();
-      }
-    } else if (c.t === "char" && char) {
-      ctx.drawImage(char, c.x, c.y, c.size, c.size);
-    }
-  }
-  return new Promise((ok, bad) => canvas.toBlob((b) => (b ? ok(b) : bad(new Error("toBlob"))), "image/png"));
-}
-
-/** The dish-name -> picture map (saved on the phone by the meal pictures). */
-function readPics() {
-  try {
-    return parseMealPics(localStorage.getItem(MEAL_PICS_KEY));
-  } catch {
-    return {};
-  }
-}
+export type ShareRange = "day" | "week";
 
 export function ShareDayButton({
   entries,
   date,
+  today,
   target,
   name,
   macroTargets,
   water,
   weightKg = null,
-  tile = false,
   dayHasMeals = true,
   controlled,
 }: {
-  /** Phase 2B step 4: opened from the weekly summary instead of its own button. range = which tab to start on; null = closed. */
-  controlled?: { range: "day" | "week" | null; onClose: () => void };
-  /** Round 76: false = this day has no meals yet, so only the week card can be shared. */
+  /** Which tab to open on (null = closed) and how to close. */
+  controlled: { range: ShareRange | null; onClose: () => void };
+  /** false = the viewed day has no meals: only the week report can be shared. */
   dayHasMeals?: boolean;
-  /** Round 71: the weight she logged on this day, if any. */
   weightKg?: number | null;
-  /** Round 60: true = a small tile in the home row (icon + short label) instead of the wide button. */
-  tile?: boolean;
   entries: Entry[];
+  /** The date being viewed on Today (the report is for THIS date, not for the calendar's today). */
   date: string;
+  today: string;
   target: number;
   name: string;
   macroTargets: { protein: number; carbs: number; fat: number };
   water: { glasses: number; goal: number };
 }) {
   const { tr, lang, dn } = useLang();
-  const [openOwn, setOpen] = useState(false);
-  const open = controlled ? controlled.range !== null : openOwn;
-  // Round 74: "day" (the picture of this day) or "week" (the weekly card for her trainer).
-  const [range, setRange] = useState<"day" | "week">("day");
+  const open = controlled.range !== null;
+  const [range, setRange] = useState<ShareRange>("day");
   const [pic, setPic] = useState<{ blob: Blob; url: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const mt = macroTargets;
   const wt = water;
-  // Opened from outside: start on the asked tab with a clean state (adjusted while rendering, like NumberField does).
-  const askedRange = controlled?.range ?? null;
-  const [seenAsk, setSeenAsk] = useState<"day" | "week" | null>(null);
-  if (askedRange !== seenAsk) {
-    setSeenAsk(askedRange);
-    if (askedRange) {
+  // Opened from outside: start on the asked tab with a clean state (adjusted while rendering).
+  const asked = controlled.range;
+  const [seenAsk, setSeenAsk] = useState<ShareRange | null>(null);
+  if (asked !== seenAsk) {
+    setSeenAsk(asked);
+    if (asked) {
       setPic(null);
       setError(null);
-      setRange(askedRange === "day" && !dayHasMeals ? "week" : askedRange);
+      setRange(asked === "day" && !dayHasMeals ? "week" : asked);
     }
   }
 
@@ -224,21 +64,11 @@ export function ShareDayButton({
     if (!open) return;
     let url = "";
     let stop = false;
-    (range === "week"
-      ? makeWeekPicture({ entries, date, target, proteinTarget: mt.protein, lang })
-      : makePicture(
-      {
-        day: buildShareDay(entries, date, readPics(), dn, lang),
-        date,
-        dateLabel: thaiDateLabel(date, lang),
-        name,
-        target,
-        macroTargets: mt,
-        water: wt,
-        weightKg,
-        lang,
-      },
-    ))
+    const make =
+      range === "week"
+        ? makeReportPicture((m) => layoutWeekReport(buildWeekReport({ entries, date, today, target, macroTargets: mt, lang, name }), m))
+        : makeReportPicture((m) => layoutDayReport(buildDayReport({ entries, date, target, macroTargets: mt, lang, name, show: dn, water: wt, weightKg }), m));
+    make
       .then((blob) => {
         if (stop) return;
         url = URL.createObjectURL(blob);
@@ -251,9 +81,10 @@ export function ShareDayButton({
     };
     // mt / wt are rebuilt from these numbers, so list the numbers (not the objects).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, range, entries, date, target, name, lang, mt.protein, mt.carbs, mt.fat, wt.glasses, wt.goal, weightKg]);
+  }, [open, range, entries, date, today, target, name, lang, mt.protein, mt.carbs, mt.fat, wt.glasses, wt.goal, weightKg]);
 
-  const fileName = range === "week" ? weekFileName(weekRange(date).start) : shareFileName(date);
+  const start = weekStart(date);
+  const fileName = range === "week" ? reportFileName("week", start) : reportFileName("day", date);
   const file = pic ? new File([pic.blob], fileName, { type: "image/png" }) : null;
   const canShare = !!file && typeof navigator !== "undefined" && !!navigator.canShare?.({ files: [file] });
 
@@ -267,82 +98,56 @@ export function ShareDayButton({
     }
   };
 
+  const dayLabel = shortDayLabel(date, today, lang);
+  const weekLabel = weekRangeLabel(start, shiftDateKey(start, 6), lang); // short form for the tab; the report itself shows the full range
+
   return (
-    <>
-      {!controlled && <button
-        className={
-          tile
-            ? "flex min-h-[84px] w-full flex-col items-center justify-center gap-1.5 rounded-[22px] border border-white/90 bg-white/60 px-2 text-[15px] active:scale-[0.98]"
-            : "glass flex min-h-[52px] w-full items-center justify-center gap-2 !rounded-full text-[16px] active:scale-[0.98]"
-        }
-        onClick={() => {
-          setPic(null);
-          setError(null);
-          setRange(dayHasMeals ? "day" : "week");
-          setOpen(true);
-        }}
-        data-testid="share-day-button"
-      >
-        <Icon name="export" className="h-5 w-5" />
-        {!dayHasMeals
-          ? tr("แชร์สัปดาห์", "Share week")
-          : tile
-            ? tr("แชร์วันนี้", "Share day")
-            : tr("แชร์สรุปวันนี้", "Share this day")}
-      </button>}
-      <Sheet open={open} onClose={() => (controlled ? controlled.onClose() : setOpen(false))} title={range === "week" ? tr("สรุปสัปดาห์นี้", "This week") : tr("สรุปวันนี้", "This day")}>
-        <div className="space-y-3 pb-4" data-testid="share-day-sheet">
-          <div className="flex gap-1 rounded-full bg-white/60 p-1" role="tablist" data-testid="share-range">
-            {(["day", "week"] as const).map((r) => (
-              <button
-                key={r}
-                role="tab"
-                aria-selected={range === r}
-                disabled={r === "day" && !dayHasMeals}
-                className={`min-h-[44px] flex-1 rounded-full text-[16px] disabled:opacity-40 ${range === r ? "bg-[#2b2724] text-white" : "text-muted"}`}
-                onClick={() => {
-                  if (r === range) return;
-                  setPic(null);
-                  setError(null);
-                  setRange(r);
-                }}
-                data-testid={`share-range-${r}`}
-              >
-                {r === "day" ? tr("วันนี้", "Today") : tr("สัปดาห์นี้", "This week")}
-              </button>
-            ))}
-          </div>
-          {error && (
-            <p className="rounded-2xl bg-[#f6e1dc] px-4 py-3 text-[14px] text-danger" role="alert">
-              {tr("ทำรูปไม่สำเร็จ", "Couldn't make the picture")}: {error}
-            </p>
-          )}
-          {!pic && !error && <p className="py-10 text-center text-[15px] text-muted">{tr("กำลังทำรูป…", "Making the picture…")}</p>}
-          {pic && (
-            <>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={pic.url} alt={range === "week" ? tr("รูปสรุปสัปดาห์นี้", "Picture of this week") : tr("รูปสรุปวันนี้", "Picture of this day")} className="w-full rounded-[22px] border border-line" data-testid="share-day-image" />
-              {canShare ? (
-                <button className="btn-primary w-full !min-h-[56px] text-[18px]" onClick={share} data-testid="share-day-send">
-                  {tr("แชร์รูปนี้", "Share this picture")}
-                </button>
-              ) : (
-                <a
-                  className="btn-primary flex w-full !min-h-[56px] items-center justify-center text-[18px]"
-                  href={pic.url}
-                  download={fileName}
-                  data-testid="share-day-download"
-                >
-                  {tr("บันทึกรูปนี้", "Save this picture")}
-                </a>
-              )}
-              <p className="text-center text-[13px] text-muted">
-                {tr("ส่งทาง LINE ข้อความ หรือบันทึกลงรูปภาพได้", "Send by LINE, Messages, or save to Photos")}
-              </p>
-            </>
-          )}
+    <Sheet open={open} onClose={controlled.onClose} title={tr("แชร์รายงานโภชนาการ", "Share nutrition report")}>
+      <div className="space-y-3 pb-4" data-testid="share-day-sheet">
+        <div className="grid grid-cols-2 gap-1 rounded-2xl bg-white/60 p-1" role="tablist" data-testid="share-range">
+          {(["day", "week"] as const).map((r) => (
+            <button
+              key={r}
+              role="tab"
+              aria-selected={range === r}
+              disabled={r === "day" && !dayHasMeals}
+              className={`min-h-[56px] rounded-xl px-2 text-left leading-tight disabled:opacity-40 ${range === r ? "bg-[#2b2724] text-white" : "text-ink"}`}
+              onClick={() => {
+                if (r === range) return;
+                setPic(null);
+                setError(null);
+                setRange(r);
+              }}
+              data-testid={`share-range-${r}`}
+            >
+              <span className="block pl-2 text-[16px] font-medium">{r === "day" ? tr("รายวัน", "Daily") : tr("รายสัปดาห์", "Weekly")}</span>
+              <span className={`block truncate pl-2 text-[13px] ${range === r ? "text-white/80" : "text-muted"}`}>{r === "day" ? (dayHasMeals ? dayLabel : tr("ไม่มีบันทึก", "Nothing logged")) : weekLabel}</span>
+            </button>
+          ))}
         </div>
-      </Sheet>
-    </>
+        {error && (
+          <p className="rounded-2xl bg-[#f6e1dc] px-4 py-3 text-[14px] text-danger" role="alert">
+            {tr("ทำรูปไม่สำเร็จ", "Couldn't make the picture")}: {error}
+          </p>
+        )}
+        {!pic && !error && <p className="py-10 text-center text-[15px] text-muted">{tr("กำลังทำรูป…", "Making the picture…")}</p>}
+        {pic && (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={pic.url} alt={range === "week" ? tr("รายงานโภชนาการรายสัปดาห์", "Weekly nutrition report") : tr("รายงานโภชนาการรายวัน", "Daily nutrition report")} className="w-full rounded-[18px] border border-line" data-testid="share-day-image" />
+            {canShare ? (
+              <button className="btn-primary w-full !min-h-[56px] text-[18px]" onClick={share} data-testid="share-day-send">
+                {tr("แชร์รายงานนี้", "Share this report")}
+              </button>
+            ) : (
+              <a className="btn-primary flex w-full !min-h-[56px] items-center justify-center text-[18px]" href={pic.url} download={fileName} data-testid="share-day-download">
+                {tr("บันทึกรูปรายงาน", "Save report image")}
+              </a>
+            )}
+            <p className="text-center text-[13px] text-muted">{tr("ส่งทาง LINE ข้อความ หรือบันทึกลงรูปภาพได้", "Send by LINE, Messages, or save to Photos")}</p>
+          </>
+        )}
+      </div>
+    </Sheet>
   );
 }

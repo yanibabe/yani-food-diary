@@ -19,14 +19,14 @@ test("the big water card and the week chart are not on the page body any more", 
   assert.equal(src.includes("<WeekKcalChart"), false);
 });
 
-test("the share dialog is drawn from the tile row (Phase 2B step 4: opened from the week sheet; still one ShareDayButton, before the meals)", () => {
+test("the share dialog is drawn from the tile row (opened from the Share report tile; still one ShareDayButton, before the meals)", () => {
   assert.equal(src.split("<ShareDayButton").length - 1, 1);
   assert.ok(at("<ShareDayButton") < at("{SLOTS.map("));
   assert.ok(at("<ShareDayButton") > at("<HomeTiles"));
 });
 
-test("the tile row opens the full water card and the week chart", () => {
+test("the tile row opens the full water card and the share report", () => {
   const tiles = readFileSync(new URL("../app/components/HomeTiles.tsx", import.meta.url), "utf8");
-  assert.ok(tiles.includes("<WaterCard") && tiles.includes("<WeekKcalChart"));
+  assert.ok(tiles.includes("<WaterCard") && tiles.includes("home-tile-share"));
   assert.ok(tiles.includes("home-water-plus"), "quick +1 glass on the water tile");
 });

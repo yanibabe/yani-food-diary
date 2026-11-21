@@ -420,8 +420,6 @@ function TodayInner() {
           date={date}
           today={today}
           entries={entries}
-          target={target}
-          onPickDay={go}
           share={
             dayEntries.length > 0 || weekHasMeals ? (ctl) => (
               <ShareDayButton
@@ -429,6 +427,7 @@ function TodayInner() {
                 dayHasMeals={dayEntries.length > 0}
                 entries={entries}
                 date={date}
+                today={today}
                 target={target}
                 name={goals.profile?.name ?? ""}
                 macroTargets={macroTargets(target, proteinTargetG(goals.profile, target))}
