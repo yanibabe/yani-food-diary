@@ -537,7 +537,13 @@ export function layoutWeekReport(w: WeekReport, m: Measure): ReportLayout {
       const bx = cxm - bwid / 2;
       if (d.few) b.rect(bx, base - h, bwid, h, 14, RC.barLight, RC.barBottom, { dash: [8, 6], lw: 2 });
       else b.rect(bx, base - h, bwid, h, 14, undefined, undefined, { grad: d.over ? [RC.barOverTop, RC.barOverBottom] : [RC.barTop, RC.barBottom] });
-      b.text(fmtKcal(d.kcal), cxm, base - h - 12, 22, 500, RC.ink, "center");
+      // If the value would sit on the dashed target line, give it a soft backing so both stay readable.
+      const lblY = base - h - 12;
+      if (w.target > 0 && Math.abs(lblY - 8 - (base - w.target * scale)) < 22) {
+        const lw = m(fmtKcal(d.kcal), 22, 500) + 20;
+        b.rect(cxm - lw / 2, lblY - 26, lw, 36, 12, "#fbf9f6");
+      }
+      b.text(fmtKcal(d.kcal), cxm, lblY, 22, 500, RC.ink, "center");
     }
     b.text(WD[w.lang][n], cxm, base + 34, 22, 500, d.logged ? RC.ink : RC.muted, "center");
     b.text(String(Number(d.date.slice(8, 10))), cxm, base + 62, 22, 400, RC.muted, "center");
